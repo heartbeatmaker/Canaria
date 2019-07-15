@@ -1,0 +1,398 @@
+package com.android.canaria;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.util.Log;
+import android.util.Patterns;
+import android.view.MotionEvent;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+import cz.msebera.android.httpclient.HttpEntity;
+import cz.msebera.android.httpclient.HttpResponse;
+import cz.msebera.android.httpclient.NameValuePair;
+import cz.msebera.android.httpclient.client.ClientProtocolException;
+import cz.msebera.android.httpclient.client.HttpClient;
+import cz.msebera.android.httpclient.client.entity.UrlEncodedFormEntity;
+import cz.msebera.android.httpclient.client.methods.HttpPost;
+import cz.msebera.android.httpclient.impl.client.DefaultHttpClient;
+import cz.msebera.android.httpclient.message.BasicNameValuePair;
+import cz.msebera.android.httpclient.util.EntityUtils;
+
+public class SignUpActivity extends AppCompatActivity {
+
+
+    String username, email, password, password_forConfirmation;
+
+    EditText username_editText, email_editText, password_editText, password2_editText;
+    TextView signup_btn;
+
+    TextView username_warning, email_warning, password_warning, password2_warning;
+
+
+    private String TAG = "signup.class";
+
+
+//    private void isLogin(){
+//        SharedPreferences sp = getSharedPreferences(SignUp.userInfoPreference, MODE_PRIVATE);
+//
+//        //로그인상태가 true이면 -> 바로 메인화면으로 전환
+//        if(sp.getBoolean("isLogin",false)){
+//            Intent intent = new Intent(getApplicationContext(), Main.class);
+//            startActivity(intent);
+//            finish();
+//        }
+//    }
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_sign_up);
+
+        Log.d(TAG,"oncreate");
+
+        //로그인상태가 true이면 -> 바로 메인화면으로 전환
+//        isLogin();
+
+
+        //입력창
+        username_editText = (EditText)findViewById(R.id.signup_username_editText);
+        email_editText = (EditText)findViewById(R.id.signup_email_editText);
+        password_editText = (EditText)findViewById(R.id.signup_password_editText);
+        password2_editText= (EditText)findViewById(R.id.signup_confirm_password_editText);
+
+
+        //사용자가 입력한 값에 문제가 있을 경우, 메시지를 띄워주는 뷰 - 현재 GONE 상태
+        username_warning = (TextView)findViewById(R.id.signup_username_warning_textView);
+        email_warning = (TextView)findViewById(R.id.signup_email_warning_textView);
+        password_warning = (TextView)findViewById(R.id.signup_password_warning_textView);
+        password2_warning = (TextView)findViewById(R.id.signup_password2_warning_textView);
+
+
+        signup_btn = (TextView)findViewById(R.id.signup_cofirm_btn);
+
+
+        //사용자가 입력한 텍스트를 가져온다
+        username = username_editText.getText().toString();
+        email = email_editText.getText().toString();
+        password = password_editText.getText().toString();
+        password_forConfirmation = password2_editText.getText().toString();
+
+
+        //확인 버튼을 누르면
+        signup_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Log.d("tag", "clicked");
+
+               //사용자가 입력한 값을 확인한다 -> 문제가 있는 칸 밑에 warning 메시지를 띄워준다
+                boolean isContentValid = false;
+
+
+                String username_input = username_editText.getText().toString();
+                String email_input = email_editText.getText().toString();
+                String password_input = password_editText.getText().toString();
+                String password2_input = password2_editText.getText().toString();
+
+                //닉네임: 채워졌는지 확인
+                if(username_input.length()==0){
+                    username_warning.setVisibility(View.VISIBLE);
+                    username_warning.setText("Enter your name");
+                    isContentValid=false;
+                    Log.d(TAG, "username is invalid");
+                }else{
+                    isContentValid = true;
+                    Log.d(TAG, "username is valid");
+                }
+
+
+                //이메일: 채워졌는지, 올바른 양식인지 확인(정규표현식 사용)
+                if(email_input.length()==0){
+                    email_warning.setVisibility(View.VISIBLE);
+                    email_warning.setText("Enter your email");
+                    isContentValid=false;
+
+                }else{//사용자가 이메일을 입력했다면
+
+                    //올바른 양식인지 확인
+                    if(Patterns.EMAIL_ADDRESS.matcher(email_input).matches()){
+                        isContentValid = true;
+                    }else{
+                        email_warning.setVisibility(View.VISIBLE);
+                        email_warning.setText("Enter a valid email address");
+                        isContentValid = false;
+                    }
+
+                }
+
+                //첫번째 패스워드: 채워졌는지 + 올바른 양식인지 확인(정규표현식 사용)
+                if(password_input.length()==0){
+                    password_warning.setVisibility(View.VISIBLE);
+                    password_warning.setText("Enter your password");
+                    isContentValid=false;
+
+                }else{ //첫번째 패스워드를 입력했다면
+
+                    //올바른 양식인지 확인 - 6자 이상
+                    if(Pattern.matches("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[$@$!%*#?&])[A-Za-z\\d$@$!%*#?&]{6,20}$", password_input)){
+                        isContentValid = true;
+                    }else{
+                        password_warning.setVisibility(View.VISIBLE);
+                        password_warning.setText("Passwords must be 6 to 20 characters of alphabets and numbers");
+                        isContentValid = false;
+                    }
+
+                    //두번째 패스워드 확인: 채워졌는지 + 첫번째 패스워드와 일치하는지 검사한다
+                    if(password2_input.length()==0){
+                        password2_warning.setVisibility(View.VISIBLE);
+                        password2_warning.setText("Type your password again");
+                        isContentValid=false;
+                    }else{
+                        if(password_input.equals(password2_input)){
+                            isContentValid = true;
+                        }else{
+                            password2_warning.setVisibility(View.VISIBLE);
+                            password2_warning.setText("Passwords must match");
+                            isContentValid = false;
+                        }
+                    }
+                }
+
+                Log.d("tag","isContentValid="+isContentValid);
+                if(isContentValid){
+                    //서버로 입력값을 보낸다
+                    Log.d("tag", "content is valid");
+
+                    try{
+                        String response_fromServer;
+                        SendPost sendPost = new SendPost();
+                        response_fromServer = sendPost.execute(username_input, email_input, password_input).get();
+
+                        //get() : retrieve your result once the work on the thread is done.
+                        //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다
+                        Log.d("tag","response_fromServer="+response_fromServer);
+
+                       if(response_fromServer.equals("success")){
+                           Toast.makeText(SignUpActivity.this, "Welcome", Toast.LENGTH_SHORT).show();
+
+                        }else if(response_fromServer.equals("exists")){
+                           email_warning.setVisibility(View.VISIBLE);
+                           email_warning.setText("Email already exists");
+                        }
+
+                    }catch (Exception e){
+
+                    }
+
+                }
+
+
+                //모든 칸을 입력했고, 알맞은 패스워드를 입력했다면
+
+
+                //-> 서버는 이메일 중복확인을 해서 결과값을 돌려준다
+                //-> 중복되는 메일이 있다면, 다음 액티비티에서 이미 가입한 메일이라고 알려준다
+                //-> 중복되는 메일이 없다면, 해당 이메일로 인증코드를 발송하고, 다음 액티비티에서 이메일을 확인하라고 알려준다
+            }
+        });
+
+
+
+
+
+        username_editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                username_warning.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+        email_editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                email_warning.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+        password_editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                password_warning.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+        password2_editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                password2_warning.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
+
+
+
+
+
+        //'이미 계정이 있습니다'를 클릭하면, 로그인 화면이 뜬다
+        TextView login_btn = (TextView)findViewById(R.id.signup_alreadyHaveAccount_textView);
+
+        login_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+//                Intent intent = new Intent(getApplicationContext(), SignIn.class);
+//                startActivity(intent);
+            }
+        });
+
+    }
+
+
+
+    class SendPost extends AsyncTask<String, Void, String>{
+
+
+        @Override
+        protected String doInBackground(String... strings) {
+
+            String response_line = "";
+
+            //-> 서버로 세 개의 사용자 정보를 보낸다(닉넴, 이메일, 패스워드)
+            Log.d("tag","doInBackground. param1="+strings[0]+"/param2="+strings[1]+"/param3="+strings[2]);
+
+            HttpClient client = new DefaultHttpClient();
+            HttpPost post = new HttpPost("http://54.180.107.44/index.php");
+
+            //POST 방식에서 사용된다
+            ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();
+
+            try {
+                //Post방식으로 넘길 값들을 각각 지정을 해주어야 한다.
+                nameValues.add(new BasicNameValuePair(
+                        "username", URLDecoder.decode(strings[0], "UTF-8")));
+                nameValues.add(new BasicNameValuePair(
+                        "email", URLDecoder.decode(strings[1], "UTF-8")));
+                nameValues.add(new BasicNameValuePair(
+                        "password", URLDecoder.decode(strings[2], "UTF-8")));
+
+                //HttpPost에 넘길 값을들 Set해주기
+                post.setEntity(new UrlEncodedFormEntity(nameValues, "UTF-8"));
+
+            } catch (UnsupportedEncodingException ex) {
+                Log.d("tag", ex.toString());
+            }
+
+            try {
+                //설정한 URL을 실행시키기 -> 응답을 받음
+                HttpResponse response = client.execute(post);
+                //통신 값을 받은 Log 생성. (200이 나오는지 확인할 것~) 200이 나오면 통신이 잘 되었다는 뜻!
+                Log.i("tag", "response.getStatusCode:" + response.getStatusLine().getStatusCode());
+
+                HttpEntity entity = response.getEntity();
+
+                if(entity !=null){
+                    Log.d("tag", "Response length:"+entity.getContentLength());
+
+                    // 콘텐츠를 읽어들임.
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(entity.getContent()));
+
+
+                    while ((response_line = reader.readLine()) != null) {
+                        // 콘텐츠 내용
+                        Log.d("tag", "response: "+response_line);
+                        return response_line;
+                    }
+                }
+
+                //Ensures that the entity content is fully consumed and the content stream, if exists, is closed.
+                EntityUtils.consume(entity);
+
+                post.releaseConnection();
+
+
+            } catch (ClientProtocolException e) {
+                e.printStackTrace();
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+
+            Log.d("tag","onPostExecute. param="+s);
+
+        }
+    }
+
+
+}
