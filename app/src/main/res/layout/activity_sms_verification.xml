@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/grad_bg"
+    tools:context=".SmsVerificationActivity">
+
+
+    <LinearLayout
+        android:layout_marginTop="100dp"
+        android:layout_marginBottom="100dp"
+        android:layout_width="330dp"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical">
+
+
+        <TextView
+            android:id="@+id/signup_username_warning_textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/darkRed"
+            android:visibility="gone"/>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/sms_countryCode_textView"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="match_parent"
+                android:background="#80DCDCDC"
+                android:layout_marginRight="5dp"
+                android:textSize="25dp"
+                android:textAlignment="center"
+                />
+
+            <EditText
+                android:id="@+id/sms_phoneNumber_editText"
+                android:layout_width="0dp"
+                android:layout_weight="3"
+                android:layout_height="60dp"
+                android:background="#80DCDCDC"
+                android:ems="30"
+                android:hint="Your phone number"
+                android:fontFamily="sans-serif-light"
+                android:inputType="phone"
+                android:textAllCaps="false"
+                android:textColor="#4B73E1"
+                android:textSize="25dp" />
+        </LinearLayout>
+
+
+        <TextView
+            android:id="@+id/sms_send_btn"
+            android:layout_marginTop="60dp"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/btn_bg"
+            android:clickable="true"
+            android:fontFamily="sans-serif-light"
+            android:gravity="center_vertical|center_horizontal"
+            android:text="Request code"
+            android:textColor="#DCDCDC"
+            android:textSize="20sp" />
+
+
+    </LinearLayout>
+
+
+
+
+</RelativeLayout>

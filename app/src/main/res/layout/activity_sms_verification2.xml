@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/grad_bg"
+    tools:context=".SmsVerification_SecondActivity">
+
+
+    <LinearLayout
+        android:layout_marginTop="100dp"
+        android:layout_marginBottom="100dp"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical">
+
+
+
+        <EditText
+            android:id="@+id/sms_verify_editText"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:background="#80DCDCDC"
+            android:ems="30"
+            android:hint="Code"
+            android:fontFamily="sans-serif-light"
+            android:inputType="textEmailAddress"
+            android:textAllCaps="false"
+            android:textColor="#4B73E1"
+            android:textSize="30dp" />
+
+        <TextView
+            android:id="@+id/sms_warning_textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/darkRed"
+            android:visibility="gone"/>
+
+
+        <TextView
+            android:id="@+id/sms_verify_btn"
+            android:layout_marginTop="60dp"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/btn_bg"
+            android:clickable="true"
+            android:fontFamily="sans-serif-light"
+            android:gravity="center_vertical|center_horizontal"
+            android:text="Verify"
+            android:textColor="#DCDCDC"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/sms_back_btn"
+            android:layout_marginTop="30dp"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:background="@drawable/btn_bg_red"
+            android:clickable="true"
+            android:fontFamily="sans-serif-light"
+            android:gravity="center_vertical|center_horizontal"
+            android:text="Back"
+            android:textColor="@color/darkRed"
+            android:textSize="20sp"
+            android:visibility="gone"
+            />
+
+    </LinearLayout>
+
+
+
+
+</RelativeLayout>

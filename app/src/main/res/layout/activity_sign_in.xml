@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/grad_bg"
+    tools:context=".SignInActivity">
+
+
+    <LinearLayout
+        android:layout_marginTop="50dp"
+        android:layout_marginBottom="50dp"
+        android:layout_width="300dp"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical"
+        >
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp">
+
+            <Button
+                android:id="@+id/signin_with_facebook_btn"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="60dp"
+                android:text="Facebook"
+                android:layout_marginRight="10dp"/>
+
+            <Button
+                android:id="@+id/signin_with_google_btn"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="60dp"
+                android:text="Google"/>
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/signin_with_email_btn"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginBottom="30dp"
+            android:text="SignIn with Email"/>
+
+        <LinearLayout
+            android:id="@+id/signin_with_email_linearLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+
+            <EditText
+                android:id="@+id/signin_email_editText"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="20dp"
+                android:background="#80DCDCDC"
+                android:ems="30"
+                android:fontFamily="sans-serif-light"
+                android:hint="Email"
+                android:inputType="textEmailAddress"
+                android:textAllCaps="false"
+                android:textColor="#4B73E1"
+                android:textSize="25dp" />
+
+
+            <TextView
+                android:id="@+id/signin_email_warning_textView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@color/darkRed"
+                android:visibility="gone"/>
+
+            <EditText
+            android:id="@+id/signin_password_editText"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="20dp"
+            android:background="#80DCDCDC"
+            android:ems="30"
+            android:fontFamily="sans-serif-light"
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:textAllCaps="false"
+            android:textColor="#4B73E1"
+            android:textSize="25dp" />
+
+
+            <TextView
+                android:id="@+id/signin_password_warning_textView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@color/darkRed"
+                android:visibility="gone"/>
+
+
+            <TextView
+                android:id="@+id/signin_cofirm_btn"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="30dp"
+                android:background="@drawable/btn_bg"
+                android:clickable="true"
+                android:fontFamily="sans-serif-light"
+                android:gravity="center_vertical|center_horizontal"
+                android:text="Sign In"
+                android:textColor="#DCDCDC"
+                android:textSize="20sp" />
+
+        </LinearLayout>
+
+
+
+        <TextView
+            android:id="@+id/signin_register_btn"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="30dp"
+            android:background="@drawable/btn_bg"
+            android:clickable="true"
+            android:fontFamily="sans-serif-light"
+            android:gravity="center_vertical|center_horizontal"
+            android:text="Create an account"
+            android:textColor="#DCDCDC"
+            android:textSize="20sp" />
+
+    </LinearLayout>
+
+
+</RelativeLayout>

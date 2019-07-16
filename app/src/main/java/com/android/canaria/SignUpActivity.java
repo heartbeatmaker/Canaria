@@ -1,10 +1,16 @@
 package com.android.canaria;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -14,8 +20,24 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.gms.auth.api.credentials.Credential;
+import com.google.android.gms.auth.api.credentials.CredentialRequest;
+import com.google.android.gms.auth.api.credentials.CredentialRequestResponse;
+import com.google.android.gms.auth.api.credentials.Credentials;
+import com.google.android.gms.auth.api.credentials.CredentialsClient;
+import com.google.android.gms.auth.api.credentials.IdentityProviders;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -43,16 +65,24 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 
 public class SignUpActivity extends AppCompatActivity {
 
+    Button signup_with_email_btn;
+
+    LinearLayout signup_with_email_linearLayout;
 
     String username, email, password, password_forConfirmation;
 
     EditText username_editText, email_editText, password_editText, password2_editText;
-    TextView signup_btn;
+    TextView signup_btn, signin_btn;
 
     TextView username_warning, email_warning, password_warning, password2_warning;
 
+    String username_input, email_input;
 
+    private int RC_READ = 1000;
     private String TAG = "signup.class";
+
+    CredentialsClient mCredentialsClient;
+    CredentialRequest mCredentialRequest;
 
 
 //    private void isLogin(){
@@ -67,6 +97,8 @@ public class SignUpActivity extends AppCompatActivity {
 //    }
 
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,9 +106,15 @@ public class SignUpActivity extends AppCompatActivity {
 
         Log.d(TAG,"oncreate");
 
+
+        smsPermissionCheck(); //sms 수신 권한을 받지 않으면, 메시지를 읽어올 수 없다
+
+
         //로그인상태가 true이면 -> 바로 메인화면으로 전환
 //        isLogin();
 
+
+        signup_with_email_linearLayout = (LinearLayout)findViewById(R.id.signup_with_email_linearLayout);
 
         //입력창
         username_editText = (EditText)findViewById(R.id.signup_username_editText);
@@ -92,7 +130,35 @@ public class SignUpActivity extends AppCompatActivity {
         password2_warning = (TextView)findViewById(R.id.signup_password2_warning_textView);
 
 
+        signup_with_email_btn = (Button)findViewById(R.id.signup_with_email_btn);
         signup_btn = (TextView)findViewById(R.id.signup_cofirm_btn);
+        signin_btn = (TextView) findViewById(R.id.signup_alreadyHaveAccount_textView);
+
+
+
+        signup_with_email_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                //이메일 가입 양식을 보여준다
+                signup_with_email_linearLayout.setVisibility(View.VISIBLE);
+
+                getCredentials(); //구글 스마트락에 저장된 이메일을 가져온다
+
+            }
+        });
+
+
+        signin_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Log.d("tag","signin_btn clicked");
+
+                Intent intent = new Intent(getApplicationContext(), SignInActivity.class);
+                startActivity(intent);
+            }
+        });
 
 
         //사용자가 입력한 텍스트를 가져온다
@@ -113,8 +179,8 @@ public class SignUpActivity extends AppCompatActivity {
                 boolean isContentValid = false;
 
 
-                String username_input = username_editText.getText().toString();
-                String email_input = email_editText.getText().toString();
+                username_input = username_editText.getText().toString();
+                email_input = email_editText.getText().toString();
                 String password_input = password_editText.getText().toString();
                 String password2_input = password2_editText.getText().toString();
 
@@ -196,10 +262,18 @@ public class SignUpActivity extends AppCompatActivity {
                         //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다
                         Log.d("tag","response_fromServer="+response_fromServer);
 
-                       if(response_fromServer.equals("success")){
-                           Toast.makeText(SignUpActivity.this, "Welcome", Toast.LENGTH_SHORT).show();
 
-                        }else if(response_fromServer.equals("exists")){
+                       if(response_fromServer.equals("success")){//결과가 '성공'이면
+
+                           //sms 코드 인증 화면으로 전환한다
+                           Intent intent = new Intent(getApplicationContext(), SmsVerificationActivity.class);
+                           intent.putExtra("email", email_input);
+                           startActivity(intent);
+                           finish();
+
+                        }else if(response_fromServer.equals("exists")){//결과가 '이미 존재함'이면
+
+                           //이미 존재하는 이메일이라고 띄워준다
                            email_warning.setVisibility(View.VISIBLE);
                            email_warning.setText("Email already exists");
                         }
@@ -219,7 +293,6 @@ public class SignUpActivity extends AppCompatActivity {
                 //-> 중복되는 메일이 없다면, 해당 이메일로 인증코드를 발송하고, 다음 액티비티에서 이메일을 확인하라고 알려준다
             }
         });
-
 
 
 
@@ -293,23 +366,155 @@ public class SignUpActivity extends AppCompatActivity {
         });
 
 
+    }
 
 
 
-
-        //'이미 계정이 있습니다'를 클릭하면, 로그인 화면이 뜬다
-        TextView login_btn = (TextView)findViewById(R.id.signup_alreadyHaveAccount_textView);
-
-        login_btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-//                Intent intent = new Intent(getApplicationContext(), SignIn.class);
-//                startActivity(intent);
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == 1) {
+            for (int i = 0; i < permissions.length; i++) {
+                if (grantResults[i] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, permissions[i] + " granted.", Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, permissions[i] + " denied.", Toast.LENGTH_LONG).show();
+                }
             }
-        });
+        }
+    }
+
+
+    public void smsPermissionCheck(){
+
+        int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS);
+        if(permissionCheck == PackageManager.PERMISSION_GRANTED){
+            Toast.makeText(this, "SMS 수신권한 있음", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "SMS 수신권한 없음", Toast.LENGTH_SHORT).show();
+            if(ActivityCompat.shouldShowRequestPermissionRationale(this,Manifest.permission.RECEIVE_SMS)){
+                Toast.makeText(this, "SMS 권한 설정이 필요함", Toast.LENGTH_SHORT).show();
+            } else {
+                // 권한이 할당되지 않았으면 해당 권한을 요청
+                ActivityCompat.requestPermissions(this,new String[] {Manifest.permission.RECEIVE_SMS},1);
+            }
+        }
+    }
+
+
+    private void getCredentials(){
+        Log.d("tag", "getCredentials");
+
+        mCredentialsClient = Credentials.getClient(this);
+
+        mCredentialRequest = new CredentialRequest.Builder()
+                .setPasswordLoginSupported(true)
+                .setAccountTypes(IdentityProviders.GOOGLE, IdentityProviders.TWITTER)
+                .build();
+
+
+        mCredentialsClient.request(mCredentialRequest).addOnCompleteListener(
+                new OnCompleteListener<CredentialRequestResponse>() {
+                    @Override
+                    public void onComplete(@NonNull Task<CredentialRequestResponse> task) {
+
+                        if (task.isSuccessful()) {
+                            Log.d("tag", "credential is retrieved");
+                            // See "Handle successful credential requests"
+//                            onCredentialRetrieved(task.getResult().getCredential());
+                            return;
+                        }
+
+
+                        Exception e = task.getException();
+                        if (e instanceof ResolvableApiException) {
+                            // This is most likely the case where the user has multiple saved
+                            // credentials and needs to pick one. This requires showing UI to
+                            // resolve the read request.
+                            ResolvableApiException rae = (ResolvableApiException) e;
+                            resolveResult(rae, RC_READ);
+                        } else if (e instanceof ApiException) {
+                            // The user must create an account or sign in manually.
+                            Log.e(TAG, "Unsuccessful credential request.", e);
+
+                            ApiException ae = (ApiException) e;
+                            int code = ae.getStatusCode();
+                            // ...
+                        }
+
+                        // See "Handle unsuccessful and incomplete credential requests"
+                        // ...
+                    }
+                });
 
     }
+
+
+    private void resolveResult(ResolvableApiException rae, int requestCode) {
+        try {
+            rae.startResolutionForResult(this, requestCode);
+//            mIsResolving = true;
+        } catch (IntentSender.SendIntentException e) {
+            Log.e(TAG, "Failed to send resolution.", e);
+//            hideProgress();
+        }
+    }
+
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        // ...
+
+        if (requestCode == RC_READ) {
+            if (resultCode == RESULT_OK) {
+
+                com.google.android.gms.auth.api.credentials.Credential credential = data.getParcelableExtra(Credential.EXTRA_KEY);
+                onCredentialRetrieved(credential);
+            } else {
+                Log.e("tag", "Credential Read: NOT OK");
+//                Toast.makeText(this, "Credential Read Failed", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        // ...
+
+    }
+
+
+    private void onCredentialRetrieved(com.google.android.gms.auth.api.credentials.Credential credential) {
+        Log.d("tag","Credential is selected");
+
+        String accountType = credential.getAccountType();
+//        Log.d("tag","accountType="+accountType);
+        Log.d("tag","id="+credential.getId()+" / name="+credential.getName());
+        email_input = credential.getId();
+        username_input = credential.getName();
+
+        email_editText.setText(email_input);
+        username_editText.setText(username_input);
+
+//        if (accountType == null) {
+//
+//            // Sign the user in with information from the Credential.
+////            signInWithPassword(credential.getId(), credential.getPassword());
+//            Log.d("tag","id="+credential.getId()+" / password="+credential.getPassword());
+//
+//        } else if (accountType.equals(IdentityProviders.GOOGLE)) {
+//            // The user has previously signed in with Google Sign-In. Silently
+//            // sign in the user with the same ID.
+//            // See https://developers.google.com/identity/sign-in/android/
+//            GoogleSignInOptions gso =
+//                    new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+//                            .requestEmail()
+//                            .build();
+//
+//            GoogleSignInClient signInClient = GoogleSignIn.getClient(this, gso);
+//            Task<GoogleSignInAccount> task = signInClient.silentSignIn();
+//
+//        }
+    }
+
 
 
 
@@ -325,13 +530,15 @@ public class SignUpActivity extends AppCompatActivity {
             Log.d("tag","doInBackground. param1="+strings[0]+"/param2="+strings[1]+"/param3="+strings[2]);
 
             HttpClient client = new DefaultHttpClient();
-            HttpPost post = new HttpPost("http://54.180.107.44/index.php");
+            HttpPost post = new HttpPost("http://54.180.107.44/register.php");
 
             //POST 방식에서 사용된다
             ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();
 
             try {
                 //Post방식으로 넘길 값들을 각각 지정을 해주어야 한다.
+                nameValues.add(new BasicNameValuePair(
+                        "sign_up", URLDecoder.decode("1", "UTF-8")));
                 nameValues.add(new BasicNameValuePair(
                         "username", URLDecoder.decode(strings[0], "UTF-8")));
                 nameValues.add(new BasicNameValuePair(

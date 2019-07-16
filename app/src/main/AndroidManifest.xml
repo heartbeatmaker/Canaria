@@ -3,6 +3,8 @@
     package="com.android.canaria">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
 
     <application
         android:allowBackup="true"
@@ -11,13 +13,46 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".SignUpActivity">
+        <activity
+            android:name=".SmsVerification_SecondActivity"
+            android:label="@string/title_activity_sms_verification2"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".SmsVerificationActivity"
+            android:label="@string/title_activity_sms_verification"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity
+            android:name=".RedirectActivity"
+            android:label="@string/redirect"
+            android:theme="@android:style/Theme.NoDisplay" />
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/main"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <activity
+            android:name=".SignInActivity"
+            android:label="@string/sign_in"
+            android:theme="@style/AppTheme.NoActionBar" />
+
+        <activity
+            android:name=".SignUpActivity"
+            android:theme="@style/AppTheme.NoActionBar" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--<receiver-->
+            <!--android:name=".SmsReceiver"-->
+            <!--android:enabled="true"-->
+            <!--android:exported="true">-->
+            <!--<intent-filter android:priority="10000">-->
+                <!--<action android:name="android.provider.Telephony.SMS_RECEIVED" />-->
+            <!--</intent-filter>-->
+        <!--</receiver>-->
     </application>
 
 </manifest>
