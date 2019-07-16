@@ -78,9 +78,10 @@ public class SignUpActivity extends AppCompatActivity {
 
     String username_input, email_input;
 
-    private int RC_READ = 1000;
     private String TAG = "signup.class";
 
+    /*credential 변수*/
+    private int RC_READ = 1000;
     CredentialsClient mCredentialsClient;
     CredentialRequest mCredentialRequest;
 
@@ -296,7 +297,7 @@ public class SignUpActivity extends AppCompatActivity {
 
 
 
-
+        //사용자가 입력하는 동안에는 warning 창을 숨겨놓는다
         username_editText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -384,6 +385,7 @@ public class SignUpActivity extends AppCompatActivity {
     }
 
 
+    //sms 수신권한 확인. 이거 있어야 smsReceiver가 문자 감지할 수 있음
     public void smsPermissionCheck(){
 
         int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.RECEIVE_SMS);
@@ -401,6 +403,8 @@ public class SignUpActivity extends AppCompatActivity {
     }
 
 
+
+    //구글 smart lock에서 사용자 이메일 불러오기 ------------------------------------
     private void getCredentials(){
         Log.d("tag", "getCredentials");
 
@@ -417,14 +421,15 @@ public class SignUpActivity extends AppCompatActivity {
                     @Override
                     public void onComplete(@NonNull Task<CredentialRequestResponse> task) {
 
-                        if (task.isSuccessful()) {
+                        if (task.isSuccessful()) { //저장된 계정이 한 개일 때만 이 코드 사용
                             Log.d("tag", "credential is retrieved");
                             // See "Handle successful credential requests"
 //                            onCredentialRetrieved(task.getResult().getCredential());
                             return;
                         }
 
-
+                        //저장된 계정이 복수일 때는 위의 코드로 결과를 가져올 수 없다(사용자의 선택이 필요)
+                        //아래 코드를 사용한다
                         Exception e = task.getException();
                         if (e instanceof ResolvableApiException) {
                             // This is most likely the case where the user has multiple saved
@@ -482,6 +487,7 @@ public class SignUpActivity extends AppCompatActivity {
     }
 
 
+    //사용자의 구글 id와 이름을 가져오는 메소드
     private void onCredentialRetrieved(com.google.android.gms.auth.api.credentials.Credential credential) {
         Log.d("tag","Credential is selected");
 
@@ -514,6 +520,8 @@ public class SignUpActivity extends AppCompatActivity {
 //
 //        }
     }
+
+    //구글 smart lock에서 사용자 이메일 불러오기 끝 ------------------------------------
 
 
 

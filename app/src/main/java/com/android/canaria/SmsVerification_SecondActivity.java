@@ -160,6 +160,10 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
     }
 
 
+    //이 액티비티가 onCreate() 된 이후에 sms 코드를 전송받는다
+    //따라서 smsReceiver가 보낸 intent는 onCreate()에서 받을 수 없다
+    //onNewIntent()는 onResume() 직전에 실행된다
+    //onNewIntent() -> onResume()
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -231,6 +235,10 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
         smsReceiver.unregisterReceiver(getApplicationContext());
     }
 
+
+
+
+    
     class SendPost extends AsyncTask<String, Void, String> {
 
 
