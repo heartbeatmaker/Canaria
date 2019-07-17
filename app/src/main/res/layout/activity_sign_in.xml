@@ -18,27 +18,27 @@
         >
 
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp">
+        <!--<LinearLayout-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_marginBottom="20dp">-->
 
-            <Button
-                android:id="@+id/signin_with_facebook_btn"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="60dp"
-                android:text="Facebook"
-                android:layout_marginRight="10dp"/>
+            <!--<Button-->
+                <!--android:id="@+id/signin_with_facebook_btn"-->
+                <!--android:layout_width="0dp"-->
+                <!--android:layout_weight="1"-->
+                <!--android:layout_height="60dp"-->
+                <!--android:text="Facebook"-->
+                <!--android:layout_marginRight="10dp"/>-->
 
-            <Button
-                android:id="@+id/signin_with_google_btn"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="60dp"
-                android:text="Google"/>
+            <!--<Button-->
+                <!--android:id="@+id/signin_with_google_btn"-->
+                <!--android:layout_width="0dp"-->
+                <!--android:layout_weight="1"-->
+                <!--android:layout_height="60dp"-->
+                <!--android:text="Google"/>-->
 
-        </LinearLayout>
+        <!--</LinearLayout>-->
 
         <Button
             android:id="@+id/signin_with_email_btn"

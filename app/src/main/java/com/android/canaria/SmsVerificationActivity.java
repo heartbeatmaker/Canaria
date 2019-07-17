@@ -1,5 +1,6 @@
 package com.android.canaria;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -24,6 +25,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 import cz.msebera.android.httpclient.HttpEntity;
 import cz.msebera.android.httpclient.HttpResponse;
@@ -39,9 +41,9 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 public class SmsVerificationActivity extends AppCompatActivity {
 
     EditText phoneNumber_editText;
-    TextView countryCode_textView, requestCode_btn;
+    TextView countryCode_textView, requestCode_btn, warning_textView;
 
-    String zipCode, email;
+    String zipCode, email, phone_number_modified;
 
 
 
@@ -71,6 +73,7 @@ public class SmsVerificationActivity extends AppCompatActivity {
         phoneNumber_editText = (EditText)findViewById(R.id.sms_phoneNumber_editText);
         requestCode_btn = (TextView)findViewById(R.id.sms_send_btn);
         countryCode_textView = (TextView)findViewById(R.id.sms_countryCode_textView);
+        warning_textView = (TextView)findViewById(R.id.sms_code_warning_textView);
 
         zipCode = getCountryZipCode();
         countryCode_textView.setText("+"+zipCode);
@@ -86,46 +89,55 @@ public class SmsVerificationActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-                String phone_number = zipCode + phoneNumber_editText.getText().toString();
-                Log.d("tag","phone_number="+phone_number);
+                String phone_number_noZipCode = phoneNumber_editText.getText().toString();
+                Log.d("tag","phone_number="+phone_number_noZipCode);
 
-                //올바른 번호를 입력했는지 확인해야 한다 - 입력했다고 가정
+                //올바른 번호를 입력했는지 확인해야 한다
+                String regEx = "(01[016789])(\\d{3,4})(\\d{4})";
+                if(!Pattern.matches(regEx, phone_number_noZipCode)){ //잘못된 형식의 번호를 입력했을 경우
 
-                try{
+                    Log.d("tag","phone_number is invalid");
 
-                    //서버로 사용자 이메일과 번호를 전송한다
-                    String response_fromServer;
-                    SmsVerificationActivity.SendPost sendPost = new SmsVerificationActivity.SendPost();
-                    response_fromServer = sendPost.execute(email, phone_number).get();
+                    //다시 입력하라고 경고메시지를 띄워준다
+                    warning_textView.setVisibility(View.VISIBLE);
+                    warning_textView.setText("Phone number is invalid");
 
-                    //get() : retrieve your result once the work on the thread is done.
-                    //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다
-                    Log.d("tag","sms: response_fromServer="+response_fromServer);
+                }else{ //올바른 번호를 입력했을 경우 -> 서버로 사용자 이메일과 번호를 전송한다
 
+                    Log.d("tag","phone_number is valid");
 
-                    String[] resArray = response_fromServer.split(";");
-                    String result = resArray[0];
-                    String code_sent = resArray[1];
+                    phone_number_modified = phone_number_noZipCode.substring(1); //010 에서 맨 앞 0을 잘라낸다
 
-                    if(result.equals("success")){//결과가 '성공'이면
+                    try{
 
-                        //코드 입력 화면으로 넘어간다(이메일, 코드를 인텐트로 보낸다)
-                        Toast.makeText(SmsVerificationActivity.this, "Message has been sent", Toast.LENGTH_SHORT).show();
-                        Intent i = new Intent(getApplicationContext(), SmsVerification_SecondActivity.class);
-                        i.putExtra("email", email);
-                        i.putExtra("code_sent", code_sent);
-                        startActivity(i);
+                        SmsVerificationActivity.SendPost sendPost = new SmsVerificationActivity.SendPost();
+                        sendPost.execute(email, zipCode, phone_number_modified);
 
-                    }else{//이외의 결과이면
-
-                        //다시 시도하라고 메시지를 띄워준다
-                        Toast.makeText(SmsVerificationActivity.this, "Please try again", Toast.LENGTH_SHORT).show();
+                    }catch (Exception e){
+                        Log.d("tag",this.getClass().getName()+ " error :"+e);
                     }
-
-                }catch (Exception e){
 
                 }
 
+
+            }
+        });
+
+
+
+        phoneNumber_editText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                warning_textView.setText("");
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
 
             }
         });
@@ -137,13 +149,26 @@ public class SmsVerificationActivity extends AppCompatActivity {
     class SendPost extends AsyncTask<String, Void, String> {
 
 
+        ProgressDialog dialog = new ProgressDialog(SmsVerificationActivity.this);
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            Log.d("tag","onPreExecute");
+
+            dialog.setMessage("Processing..");
+            dialog.show();
+        }
+
+
+
         @Override
         protected String doInBackground(String... strings) {
 
             String response_line = "";
 
             //-> 서버로 사용자의 이메일과 폰번호를 보낸다
-            Log.d("tag","sms: doInBackground. param1="+strings[0]+"/param2="+strings[1]);
+            Log.d("tag","sms: doInBackground. param0="+strings[0]+"/param1="+strings[1]+"/param2="+strings[2]);
 
             HttpClient client = new DefaultHttpClient();
             HttpPost post = new HttpPost("http://54.180.107.44/sms.php");
@@ -156,7 +181,9 @@ public class SmsVerificationActivity extends AppCompatActivity {
                 nameValues.add(new BasicNameValuePair(
                         "email", URLDecoder.decode(strings[0], "UTF-8")));
                 nameValues.add(new BasicNameValuePair(
-                        "phone_number", URLDecoder.decode(strings[1], "UTF-8")));
+                        "zip_code", URLDecoder.decode(strings[1], "UTF-8")));
+                nameValues.add(new BasicNameValuePair(
+                        "phone_number", URLDecoder.decode(strings[2], "UTF-8")));
 
                 //HttpPost에 넘길 값을들 Set해주기
                 post.setEntity(new UrlEncodedFormEntity(nameValues, "UTF-8"));
@@ -209,6 +236,38 @@ public class SmsVerificationActivity extends AppCompatActivity {
             super.onPostExecute(s);
 
             Log.d("tag","onPostExecute. param="+s);
+            dialog.dismiss();
+
+            String result = "";
+            String code_sent = "";
+            try{
+                String[] resArray = s.split(";");
+                result = resArray[0];
+                code_sent = resArray[1];
+            }catch (Exception e){
+
+                Log.d("tag", this.getClass().getName()+" Error: "+e);
+            }
+
+            if(result.equals("success")){//결과가 '성공'이면
+
+                //코드 입력 화면으로 넘어간다(이메일, 폰번호, 코드를 인텐트로 보낸다)
+                //인증 완료 시 폰번호를 사용자의 db에 저장하도록 하기 위해, 폰번호도 함께 보낸다
+                Toast.makeText(SmsVerificationActivity.this, "Message has been sent", Toast.LENGTH_SHORT).show();
+                Intent i = new Intent(getApplicationContext(), SmsVerification_SecondActivity.class);
+                i.putExtra("email", email);
+                i.putExtra("phone_number", phone_number_modified); // 앞의 0을 제거한 10자리 숫자
+                i.putExtra("code_sent", code_sent);
+                startActivity(i);
+
+            }else if(result.equals("exists")){//이미 존재하는 번호이면
+
+                //다시 입력하라고 경고메시지를 띄워준다
+                warning_textView.setVisibility(View.VISIBLE);
+                warning_textView.setText("The number already exists");
+
+            }
+
 
         }
     }

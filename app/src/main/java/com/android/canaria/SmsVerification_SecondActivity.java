@@ -1,10 +1,13 @@
 package com.android.canaria;
 
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -17,6 +20,14 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.android.gms.auth.api.credentials.Credential;
+import com.google.android.gms.auth.api.credentials.CredentialRequest;
+import com.google.android.gms.auth.api.credentials.Credentials;
+import com.google.android.gms.auth.api.credentials.CredentialsClient;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -42,9 +53,16 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
     EditText code_editText;
     TextView verify_btn, warning_textView, back_btn;
 
-    String email, code_sent, code_received;
+    String email, code_sent, code_received, phone_number;
 
     SmsReceiver smsReceiver = new SmsReceiver();
+
+
+    private String TAG = "Sms_SecondActivity.class";
+
+    /*credential 변수*/
+    private int RC_SAVE = 2000;
+    CredentialsClient mCredentialsClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,6 +82,7 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
         if(intent.hasExtra("code_sent")){
             code_sent = intent.getStringExtra("code_sent");
             email = intent.getStringExtra("email");
+            phone_number = intent.getStringExtra("phone_number");
 
             Log.d("tag","SecondActivity) code_sent="+code_sent+" / email="+email);
         }
@@ -72,29 +91,6 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
 
         //보낸것과 받은 것이 일치하는지 확인해야함
         //일치하면 -> 메인화면으로 넘어감 + 이 사용자를 activate 시킨다(db에 기록)
-
-
-        code_editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-//                String input = code_editText.getText().toString();
-//                if(input.equals(code_sent)){
-//                    Toast.makeText(SmsVerification_SecondActivity.this, "Code matches", Toast.LENGTH_SHORT).show();
-//                }
-
-            }
-        });
 
 
         verify_btn.setOnClickListener(new View.OnClickListener() {
@@ -107,28 +103,11 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
 
                     try{
 
-                        //서버로 사용자 이메일과 번호를 전송한다
+                        //서버로 사용자 이메일과 폰번호를 전송한다
                         String response_fromServer;
                         SmsVerification_SecondActivity.SendPost sendPost = new SmsVerification_SecondActivity.SendPost();
-                        response_fromServer = sendPost.execute(email).get();
+                        sendPost.execute(email, phone_number);
 
-                        //get() : retrieve your result once the work on the thread is done.
-                        //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다
-                        Log.d("tag","sms: response_fromServer="+response_fromServer);
-
-                        if(response_fromServer.equals("success")){//결과가 '성공'이면
-
-                            //메인 화면으로 넘어간다
-                            Intent toMainActivity = new Intent(getApplicationContext(), MainActivity.class);
-                            toMainActivity.putExtra("email", email);
-                            startActivity(toMainActivity);
-                            finish();
-
-                        }else{//이외의 결과이면
-
-                            //다시 시도하라고 메시지를 띄워준다
-                            Toast.makeText(SmsVerification_SecondActivity.this, "Please try again", Toast.LENGTH_SHORT).show();
-                        }
 
                     }catch (Exception e){
                         Log.d("tag", e.toString());
@@ -173,47 +152,6 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
             Log.d("tag","SecondActivity) onNewIntent: code_received="+code_received);
             code_editText.setText(code_received);
 
-            if(code_received.equals(code_sent)){//코드가 일치하면 -> 서버에 이 사실을 저장하고 -> 메인화면으로 이동한다
-                Toast.makeText(SmsVerification_SecondActivity.this, "Code matches.", Toast.LENGTH_SHORT).show();
-
-                try{
-
-                    //서버로 사용자 이메일과 번호를 전송한다
-                    String response_fromServer;
-                    SmsVerification_SecondActivity.SendPost sendPost = new SmsVerification_SecondActivity.SendPost();
-                    response_fromServer = sendPost.execute(email).get();
-
-                    //get() : retrieve your result once the work on the thread is done.
-                    //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다
-                    Log.d("tag","sms: response_fromServer="+response_fromServer);
-
-                    if(response_fromServer.equals("success")){//결과가 '성공'이면
-
-                        //메인 화면으로 넘어간다
-                        Intent toMainActivity = new Intent(getApplicationContext(), MainActivity.class);
-                        toMainActivity.putExtra("email", email);
-                        startActivity(toMainActivity);
-                        finish();
-
-                    }else{//이외의 결과이면
-
-                        //다시 시도하라고 메시지를 띄워준다
-                        Toast.makeText(this, "Please try again", Toast.LENGTH_SHORT).show();
-                    }
-
-                }catch (Exception e){
-                    Log.d("tag", e.toString());
-                }
-
-
-            }else{
-                //코드가 일치하지 않을 경우 -> 이전 화면으로 돌아가는 버튼을 보여줌
-                warning_textView.setVisibility(View.VISIBLE);
-                warning_textView.setText("Code doesn't match. Please try again.");
-
-                back_btn.setVisibility(View.VISIBLE);
-            }
-
         }
     }
 
@@ -238,8 +176,39 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
 
 
 
-    
+
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+
+        if (requestCode == RC_SAVE) {
+            if (resultCode == RESULT_OK) {
+                Log.d(TAG, "SAVE: OK");
+                Toast.makeText(this, "Credentials saved", Toast.LENGTH_SHORT).show();
+            } else {
+                Log.e(TAG, "SAVE: Canceled by user");
+            }
+        }
+
+    }
+
+
+
     class SendPost extends AsyncTask<String, Void, String> {
+
+
+        ProgressDialog dialog = new ProgressDialog(SmsVerification_SecondActivity.this);
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            Log.d("tag","onPreExecute");
+
+            dialog.setMessage("Processing..");
+            dialog.show();
+        }
 
 
         @Override
@@ -262,6 +231,8 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
                         "activate", URLDecoder.decode("1", "UTF-8")));
                 nameValues.add(new BasicNameValuePair(
                         "email", URLDecoder.decode(strings[0], "UTF-8")));
+                nameValues.add(new BasicNameValuePair(
+                        "phone_number", URLDecoder.decode(strings[1], "UTF-8")));
 
                 //HttpPost에 넘길 값을들 Set해주기
                 post.setEntity(new UrlEncodedFormEntity(nameValues, "UTF-8"));
@@ -314,6 +285,72 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
             super.onPostExecute(s);
 
             Log.d("tag","onPostExecute. param="+s);
+            dialog.dismiss();
+
+            Log.d("tag", "onPostExecute result: "+s);
+
+            if(s.equals("success")){//결과가 '성공'이면
+
+//                //smart lock에 해당 아이디를 저장한다
+//
+//                //Credential 저장
+//                Credential credential = new Credential.Builder(email)
+//                        .setPassword("abc").setAccountType("CANARIA")
+//                        // Important: only store passwords in this field.
+//                        // Android autofill uses this value to complete
+//                        // sign-in forms, so repurposing this field will
+//                        // likely cause errors.
+//                        .build();
+//
+//
+//                mCredentialsClient = Credentials.getClient(SmsVerification_SecondActivity.this);
+//
+//                mCredentialsClient.save(credential).addOnCompleteListener(
+//                        new OnCompleteListener() {
+//                            @Override
+//                            public void onComplete(@NonNull Task task) {
+//                                if (task.isSuccessful()) {
+//                                    Log.d(TAG, "SAVE: OK");
+//                                    Toast.makeText(SmsVerification_SecondActivity.this, "Credentials saved", Toast.LENGTH_SHORT).show();
+//                                    return;
+//                                }
+//
+//                                Exception e = task.getException();
+//                                if (e instanceof ResolvableApiException) {
+//                                    // Try to resolve the save request. This will prompt the user if
+//                                    // the credential is new.
+//                                    ResolvableApiException rae = (ResolvableApiException) e;
+//                                    try {
+//                                        rae.startResolutionForResult(SmsVerification_SecondActivity.this, RC_SAVE);
+//                                    } catch (IntentSender.SendIntentException ex) {
+//                                        // Could not resolve the request
+//                                        Log.e(TAG, "Failed to send resolution.", ex);
+//                                        Toast.makeText(SmsVerification_SecondActivity.this, "Save failed", Toast.LENGTH_SHORT).show();
+//                                    }
+//                                } else {
+//                                    // Request has no resolution
+//                                    Toast.makeText(SmsVerification_SecondActivity.this, "Save failed", Toast.LENGTH_SHORT).show();
+//                                }
+//                            }
+//                        });
+
+
+
+
+
+                //메인 화면으로 넘어간다
+                Intent toMainActivity = new Intent(getApplicationContext(), MainActivity.class);
+                toMainActivity.putExtra("email", email);
+                startActivity(toMainActivity);
+                finish();
+
+            }else{//이외의 결과면
+
+                //다시 시도하라고 메시지를 띄워준다
+                warning_textView.setVisibility(View.VISIBLE);
+                warning_textView.setText("Error: Please try again.");
+            }
+
 
         }
     }

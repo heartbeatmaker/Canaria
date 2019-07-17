@@ -1,8 +1,13 @@
 package com.android.canaria;
 
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
@@ -14,6 +19,18 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.android.gms.auth.api.credentials.Credential;
+import com.google.android.gms.auth.api.credentials.CredentialRequest;
+import com.google.android.gms.auth.api.credentials.CredentialRequestResponse;
+import com.google.android.gms.auth.api.credentials.Credentials;
+import com.google.android.gms.auth.api.credentials.CredentialsClient;
+import com.google.android.gms.auth.api.credentials.IdentityProviders;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -45,10 +62,22 @@ public class SignInActivity extends AppCompatActivity {
 
     EditText email_editText, password_editText;
 
+    String email_input, password_input;
+
+    private String TAG = "signin.class";
+
+    /*credential 변수*/
+    private int RC_SAVE = 2000;
+    private int RC_READ = 1000;
+    CredentialsClient mCredentialsClient;
+    CredentialRequest mCredentialRequest;
+
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_in);
+
 
         signin_btn = (TextView)findViewById(R.id.signin_cofirm_btn);
         signup_btn = (TextView)findViewById(R.id.signin_register_btn);
@@ -63,12 +92,14 @@ public class SignInActivity extends AppCompatActivity {
         password_warning_textView = (TextView)findViewById(R.id.signin_password_warning_textView);
 
 
-        //이메일로 로그인하기 버튼을 누르면 -> 로그인 양식이 나타난다
+        //이메일로 로그인하기 버튼을 누르면 -> 로그인 양식이 나타난다 + smart lock에 저장된 id 목록이 나타난다
         signin_with_email_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
                 signin_with_email_linearLayout.setVisibility(View.VISIBLE);
+
+                getCredentials();
             }
         });
 
@@ -98,8 +129,8 @@ public class SignInActivity extends AppCompatActivity {
                 boolean isContentValid = false;
 
                 //사용자가 입력한 텍스트를 가져온다
-                String email_input = email_editText.getText().toString();
-                String password_input = password_editText.getText().toString();
+                email_input = email_editText.getText().toString();
+                password_input = password_editText.getText().toString();
 
 
 
@@ -138,37 +169,12 @@ public class SignInActivity extends AppCompatActivity {
                     //서버로 입력값을 보낸다
 
                     try{
-                        String response_fromServer;
+
                         SignInActivity.SendPost sendPost = new SignInActivity.SendPost();
-                        response_fromServer = sendPost.execute(email_input, password_input).get();
-
-                        //get() : retrieve your result once the work on the thread is done.
-                        //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다
-                        Log.d("tag","signin) response_fromServer="+response_fromServer);
-
-
-                        if(response_fromServer.equals("success")){//결과가 '성공'이면
-
-                            //메인 화면으로 전환한다
-                            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-                            startActivity(intent);
-                            finish();
-
-                        }else if(response_fromServer.equals("none")){//존재하지 않는 계정일 경우
-
-                            //이미 존재하는 이메일이라고 띄워준다
-                            email_warning_textView.setVisibility(View.VISIBLE);
-                            email_warning_textView.setText("Account does not exist");
-
-                        }else if(response_fromServer.equals("password")){//패스워드가 틀렸을 때
-
-                            //이미 존재하는 이메일이라고 띄워준다
-                            password_warning_textView.setVisibility(View.VISIBLE);
-                            password_warning_textView.setText("Password is incorrect");
-                        }
+                        sendPost.execute(email_input, password_input);
 
                     }catch (Exception e){
-
+                        Log.d("tag", this.getClass().getName()+" Error: "+e);
                     }
 
                 }
@@ -217,9 +223,131 @@ public class SignInActivity extends AppCompatActivity {
 
 
 
+    //구글 smart lock에서 사용자 이메일 불러오기 ------------------------------------
+    private void getCredentials(){
+        Log.d("tag", "getCredentials");
+
+        mCredentialsClient = Credentials.getClient(this);
+
+        mCredentialRequest = new CredentialRequest.Builder()
+                .setPasswordLoginSupported(true)
+                .setAccountTypes(IdentityProviders.GOOGLE, IdentityProviders.TWITTER)
+                .build();
+
+
+        mCredentialsClient.request(mCredentialRequest).addOnCompleteListener(
+                new OnCompleteListener<CredentialRequestResponse>() {
+                    @Override
+                    public void onComplete(@NonNull Task<CredentialRequestResponse> task) {
+
+                        if (task.isSuccessful()) { //저장된 계정이 한 개일 때만 이 코드 사용
+                            Log.d("tag", "credential is retrieved");
+                            // See "Handle successful credential requests"
+//                            onCredentialRetrieved(task.getResult().getCredential());
+                            return;
+                        }
+
+                        //저장된 계정이 복수일 때는 위의 코드로 결과를 가져올 수 없다(사용자의 선택이 필요)
+                        //아래 코드를 사용한다
+                        Exception e = task.getException();
+                        if (e instanceof ResolvableApiException) {
+                            // This is most likely the case where the user has multiple saved
+                            // credentials and needs to pick one. This requires showing UI to
+                            // resolve the read request.
+                            ResolvableApiException rae = (ResolvableApiException) e;
+                            resolveResult(rae, RC_READ);
+                        } else if (e instanceof ApiException) {
+                            // The user must create an account or sign in manually.
+                            Log.e(TAG, "Unsuccessful credential request.", e);
+
+                            ApiException ae = (ApiException) e;
+                            int code = ae.getStatusCode();
+                            // ...
+                        }
+
+                        // See "Handle unsuccessful and incomplete credential requests"
+                        // ...
+                    }
+                });
+
+    }
+
+
+    private void resolveResult(ResolvableApiException rae, int requestCode) {
+        try {
+            rae.startResolutionForResult(this, requestCode);
+//            mIsResolving = true;
+        } catch (IntentSender.SendIntentException e) {
+            Log.e(TAG, "Failed to send resolution.", e);
+//            hideProgress();
+        }
+    }
+
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == RC_READ) {
+            if (resultCode == RESULT_OK) {
+
+                com.google.android.gms.auth.api.credentials.Credential credential = data.getParcelableExtra(Credential.EXTRA_KEY);
+                onCredentialRetrieved(credential);
+            } else {
+                Log.e("tag", "Credential Read: NOT OK");
+//                Toast.makeText(this, "Credential Read Failed", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        if (requestCode == RC_SAVE) {
+            if (resultCode == RESULT_OK) {
+                Log.d(TAG, "SAVE: OK");
+                Toast.makeText(this, "Credentials saved", Toast.LENGTH_SHORT).show();
+            } else {
+                Log.e(TAG, "SAVE: Canceled by user");
+            }
+        }
+
+    }
+
+
+    //사용자의 구글 id와 이름을 가져오는 메소드
+    private void onCredentialRetrieved(com.google.android.gms.auth.api.credentials.Credential credential) {
+        Log.d("tag","Credential is selected");
+
+        String accountType = credential.getAccountType();
+//        Log.d("tag","accountType="+accountType);
+        Log.d("tag","id="+credential.getId()+" / name="+credential.getName());
+        String email_saved = credential.getId();
+        String password_saved = credential.getPassword();
+
+        email_editText.setText(email_saved);
+        password_editText.setText(password_saved);
+
+    }
+
+    //구글 smart lock에서 사용자 이메일 불러오기 끝 ------------------------------------
+
+
+
+
+
+
 
     class SendPost extends AsyncTask<String, Void, String> {
 
+
+
+        ProgressDialog dialog = new ProgressDialog(SignInActivity.this);
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            Log.d("tag","onPreExecute");
+
+            dialog.setMessage("Processing..");
+            dialog.show();
+        }
 
         @Override
         protected String doInBackground(String... strings) {
@@ -295,6 +423,101 @@ public class SignInActivity extends AppCompatActivity {
             super.onPostExecute(s);
 
             Log.d("tag","signin) onPostExecute. param="+s);
+            dialog.dismiss();
+
+
+            if(s.equals("success")){//결과가 '성공'이면
+
+
+//                //Credential 저장
+//                Credential credential = new Credential.Builder(email_input)
+//                        .setPassword(password_input)  // Important: only store passwords in this field.
+//                        // Android autofill uses this value to complete
+//                        // sign-in forms, so repurposing this field will
+//                        // likely cause errors.
+//                        .build();
+//
+//
+//                mCredentialsClient.save(credential).addOnCompleteListener(
+//                        new OnCompleteListener() {
+//                            @Override
+//                            public void onComplete(@NonNull Task task) {
+//                                if (task.isSuccessful()) {
+//                                    Log.d(TAG, "SAVE: OK");
+//                                    Toast.makeText(SignInActivity.this, "Credentials saved", Toast.LENGTH_SHORT).show();
+//                                    return;
+//                                }
+//
+//                                Exception e = task.getException();
+//                                if (e instanceof ResolvableApiException) {
+//                                    // Try to resolve the save request. This will prompt the user if
+//                                    // the credential is new.
+//                                    ResolvableApiException rae = (ResolvableApiException) e;
+//                                    try {
+//                                        rae.startResolutionForResult(SignInActivity.this, RC_SAVE);
+//                                    } catch (IntentSender.SendIntentException ex) {
+//                                        // Could not resolve the request
+//                                        Log.e(TAG, "Failed to send resolution.", ex);
+//                                        Toast.makeText(SignInActivity.this, "Save failed", Toast.LENGTH_SHORT).show();
+//                                    }
+//                                } else {
+//                                    // Request has no resolution
+//                                    Toast.makeText(SignInActivity.this, "Save failed", Toast.LENGTH_SHORT).show();
+//                                }
+//                            }
+//                        });
+
+
+
+                //메인 화면으로 전환한다
+                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                startActivity(intent);
+                finish();
+
+            }else if(s.equals("none")){//존재하지 않는 계정일 경우
+
+                //이미 존재하는 이메일이라고 띄워준다
+                email_warning_textView.setVisibility(View.VISIBLE);
+                email_warning_textView.setText("Account does not exist");
+
+            }else if(s.equals("password")){//패스워드가 틀렸을 때
+
+                //이미 존재하는 이메일이라고 띄워준다
+                password_warning_textView.setVisibility(View.VISIBLE);
+                password_warning_textView.setText("Password is incorrect");
+
+            }else if(s.equals("activation")){//sms 인증이 되어 있지 않을 경우
+
+
+                final AlertDialog.Builder builder = new AlertDialog.Builder(SignInActivity.this);
+                builder.setTitle("SMS verification is needed");
+                builder.setMessage("You need to verify your account to continue.");
+                builder.setPositiveButton("Verify now",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+
+                                //sms 인증 화면으로 전환한다
+                                Intent intent = new Intent(getApplicationContext(), SmsVerificationActivity.class);
+                                intent.putExtra("email", email_input);
+                                startActivity(intent);
+                                finish();
+
+                            }
+                        });
+                builder.setNegativeButton("Cancel",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+
+                                dialog.dismiss();
+                            }
+                        });
+                builder.show();
+
+
+            }else{
+
+                Toast.makeText(SignInActivity.this, "Error", Toast.LENGTH_SHORT).show();
+            }
 
         }
     }

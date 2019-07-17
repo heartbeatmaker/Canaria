@@ -1,10 +1,13 @@
 package com.android.canaria;
 
 import android.Manifest;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.drm.ProcessedData;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -24,6 +27,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.credentials.Credential;
 import com.google.android.gms.auth.api.credentials.CredentialRequest;
 import com.google.android.gms.auth.api.credentials.CredentialRequestResponse;
@@ -36,6 +40,8 @@ import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
+import com.google.android.gms.common.api.Result;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
@@ -76,12 +82,13 @@ public class SignUpActivity extends AppCompatActivity {
 
     TextView username_warning, email_warning, password_warning, password2_warning;
 
-    String username_input, email_input;
+    String username_input, email_input, password_input;
 
     private String TAG = "signup.class";
 
     /*credential 변수*/
     private int RC_READ = 1000;
+//    private int RC_SAVE = 2000;
     CredentialsClient mCredentialsClient;
     CredentialRequest mCredentialRequest;
 
@@ -96,7 +103,6 @@ public class SignUpActivity extends AppCompatActivity {
 //            finish();
 //        }
 //    }
-
 
 
 
@@ -182,7 +188,7 @@ public class SignUpActivity extends AppCompatActivity {
 
                 username_input = username_editText.getText().toString();
                 email_input = email_editText.getText().toString();
-                String password_input = password_editText.getText().toString();
+                password_input = password_editText.getText().toString();
                 String password2_input = password2_editText.getText().toString();
 
                 //닉네임: 채워졌는지 확인
@@ -255,43 +261,20 @@ public class SignUpActivity extends AppCompatActivity {
                     Log.d("tag", "content is valid");
 
                     try{
-                        String response_fromServer;
+
                         SendPost sendPost = new SendPost();
-                        response_fromServer = sendPost.execute(username_input, email_input, password_input).get();
+                        sendPost.execute(username_input, email_input, password_input);
 
-                        //get() : retrieve your result once the work on the thread is done.
-                        //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다
-                        Log.d("tag","response_fromServer="+response_fromServer);
-
-
-                       if(response_fromServer.equals("success")){//결과가 '성공'이면
-
-                           //sms 코드 인증 화면으로 전환한다
-                           Intent intent = new Intent(getApplicationContext(), SmsVerificationActivity.class);
-                           intent.putExtra("email", email_input);
-                           startActivity(intent);
-                           finish();
-
-                        }else if(response_fromServer.equals("exists")){//결과가 '이미 존재함'이면
-
-                           //이미 존재하는 이메일이라고 띄워준다
-                           email_warning.setVisibility(View.VISIBLE);
-                           email_warning.setText("Email already exists");
-                        }
+                        //execute(~~~).get() : retrieve your result once the work on the thread is done.
+                        //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다. 쓰레드 실행 중에 ui 변경이 불가 (ex.로딩바)
+                        //따라서 get()을 사용하지 않는다. 서버와 통신 후 처리는 onPostExecute()에서 한다
 
                     }catch (Exception e){
-
+                        Log.d("tag", this.getClass().getName()+" Error: "+e);
                     }
 
                 }
 
-
-                //모든 칸을 입력했고, 알맞은 패스워드를 입력했다면
-
-
-                //-> 서버는 이메일 중복확인을 해서 결과값을 돌려준다
-                //-> 중복되는 메일이 있다면, 다음 액티비티에서 이미 가입한 메일이라고 알려준다
-                //-> 중복되는 메일이 없다면, 해당 이메일로 인증코드를 발송하고, 다음 액티비티에서 이메일을 확인하라고 알려준다
             }
         });
 
@@ -412,7 +395,7 @@ public class SignUpActivity extends AppCompatActivity {
 
         mCredentialRequest = new CredentialRequest.Builder()
                 .setPasswordLoginSupported(true)
-                .setAccountTypes(IdentityProviders.GOOGLE, IdentityProviders.TWITTER)
+                .setAccountTypes("CANARIA")
                 .build();
 
 
@@ -469,8 +452,6 @@ public class SignUpActivity extends AppCompatActivity {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        // ...
-
         if (requestCode == RC_READ) {
             if (resultCode == RESULT_OK) {
 
@@ -482,7 +463,15 @@ public class SignUpActivity extends AppCompatActivity {
             }
         }
 
-        // ...
+
+//        if (requestCode == RC_SAVE) {
+//            if (resultCode == RESULT_OK) {
+//                Log.d(TAG, "SAVE: OK");
+//                Toast.makeText(this, "Credentials saved", Toast.LENGTH_SHORT).show();
+//            } else {
+//                Log.e(TAG, "SAVE: Canceled by user");
+//            }
+//        }
 
     }
 
@@ -528,6 +517,16 @@ public class SignUpActivity extends AppCompatActivity {
 
     class SendPost extends AsyncTask<String, Void, String>{
 
+        ProgressDialog dialog = new ProgressDialog(SignUpActivity.this);
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            Log.d("tag","onPreExecute");
+
+            dialog.setMessage("Processing..");
+            dialog.show();
+        }
 
         @Override
         protected String doInBackground(String... strings) {
@@ -600,14 +599,33 @@ public class SignUpActivity extends AppCompatActivity {
             return null;
         }
 
+
         @Override
         protected void onPostExecute(String s) {
             super.onPostExecute(s);
 
+            dialog.dismiss();
             Log.d("tag","onPostExecute. param="+s);
+
+            if(s.equals("success")){//결과가 '성공'이면
+
+
+                //sms 코드 인증 화면으로 전환한다
+                Intent intent = new Intent(getApplicationContext(), SmsVerificationActivity.class);
+                intent.putExtra("email", email_input);
+                startActivity(intent);
+                finish();
+
+            }else if(s.equals("exists")){//결과가 '이미 존재함'이면
+
+                //이미 존재하는 이메일이라고 띄워준다
+                email_warning.setVisibility(View.VISIBLE);
+                email_warning.setText("Email already exists");
+            }
 
         }
     }
+
 
 
 }
