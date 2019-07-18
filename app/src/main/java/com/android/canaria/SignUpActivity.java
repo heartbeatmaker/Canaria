@@ -11,6 +11,7 @@ import android.drm.ProcessedData;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -93,16 +94,16 @@ public class SignUpActivity extends AppCompatActivity {
     CredentialRequest mCredentialRequest;
 
 
-//    private void isLogin(){
-//        SharedPreferences sp = getSharedPreferences(SignUp.userInfoPreference, MODE_PRIVATE);
-//
-//        //로그인상태가 true이면 -> 바로 메인화면으로 전환
-//        if(sp.getBoolean("isLogin",false)){
-//            Intent intent = new Intent(getApplicationContext(), Main.class);
-//            startActivity(intent);
-//            finish();
-//        }
-//    }
+    private void automaticLogin(){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        //로그인상태가 true이면 -> 바로 메인화면으로 전환
+        if(!pref.getString("user_id", "null").equals("null")){
+            Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+            startActivity(intent);
+            finish();
+        }
+    }
 
 
 
@@ -113,6 +114,7 @@ public class SignUpActivity extends AppCompatActivity {
 
         Log.d(TAG,"oncreate");
 
+        automaticLogin();//이미 로그인 상태면, 메인화면으로 전환한다
 
         smsPermissionCheck(); //sms 수신 권한을 받지 않으면, 메시지를 읽어올 수 없다
 
@@ -607,7 +609,27 @@ public class SignUpActivity extends AppCompatActivity {
             dialog.dismiss();
             Log.d("tag","onPostExecute. param="+s);
 
-            if(s.equals("success")){//결과가 '성공'이면
+            String result = "";
+            String user_id = "";
+            try{
+                String[] resArray = s.split(";");
+                result = resArray[0];
+                user_id = resArray[1];
+            }catch (Exception e){
+
+                Log.d("tag", this.getClass().getName()+" Error: "+e);
+            }
+
+
+            if(result.equals("success")){//결과가 '성공'이면
+
+                //사용자의 정보를 저장한다
+                SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = pref.edit();
+                editor.putString("user_id", user_id);
+                editor.putString("username", username);
+                editor.putString("email", email_input);
+                editor.commit();
 
 
                 //sms 코드 인증 화면으로 전환한다

@@ -5,8 +5,10 @@ import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
@@ -32,23 +34,35 @@ import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.CookieManager;
 import java.net.MalformedURLException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import cz.msebera.android.httpclient.HttpEntity;
 import cz.msebera.android.httpclient.HttpResponse;
 import cz.msebera.android.httpclient.NameValuePair;
 import cz.msebera.android.httpclient.client.ClientProtocolException;
+import cz.msebera.android.httpclient.client.CookieStore;
 import cz.msebera.android.httpclient.client.HttpClient;
 import cz.msebera.android.httpclient.client.entity.UrlEncodedFormEntity;
 import cz.msebera.android.httpclient.client.methods.HttpPost;
+import cz.msebera.android.httpclient.cookie.Cookie;
+import cz.msebera.android.httpclient.impl.client.BasicCookieStore;
 import cz.msebera.android.httpclient.impl.client.DefaultHttpClient;
+import cz.msebera.android.httpclient.impl.cookie.BasicClientCookie;
 import cz.msebera.android.httpclient.message.BasicNameValuePair;
 import cz.msebera.android.httpclient.util.EntityUtils;
 
@@ -71,6 +85,7 @@ public class SignInActivity extends AppCompatActivity {
     private int RC_READ = 1000;
     CredentialsClient mCredentialsClient;
     CredentialRequest mCredentialRequest;
+
 
 
     @Override
@@ -360,6 +375,8 @@ public class SignInActivity extends AppCompatActivity {
             HttpClient client = new DefaultHttpClient();
             HttpPost post = new HttpPost("http://54.180.107.44/register.php");
 
+
+
             //POST 방식에서 사용된다
             ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();
 
@@ -384,6 +401,8 @@ public class SignInActivity extends AppCompatActivity {
                 HttpResponse response = client.execute(post);
                 //통신 값을 받은 Log 생성. (200이 나오는지 확인할 것~) 200이 나오면 통신이 잘 되었다는 뜻!
                 Log.i("tag", "signin) response.getStatusCode:" + response.getStatusLine().getStatusCode());
+
+
 
                 HttpEntity entity = response.getEntity();
 
@@ -426,52 +445,42 @@ public class SignInActivity extends AppCompatActivity {
             dialog.dismiss();
 
 
-            if(s.equals("success")){//결과가 '성공'이면
+            String result = "";
+            String user_id = "";
+            String username = "";
+            try{
+
+                JSONObject result_object = new JSONObject(s);
+
+                result = result_object.getString("result");
+                user_id = result_object.getString("id");
+                username = result_object.getString("username");
+
+                Log.d("tag","signin) result="+result+"/user_id="+user_id+"/username="+username);
+
+            }
+            catch (JSONException e){
+
+                Log.d("tag","error: "+e);
+            }
 
 
-//                //Credential 저장
-//                Credential credential = new Credential.Builder(email_input)
-//                        .setPassword(password_input)  // Important: only store passwords in this field.
-//                        // Android autofill uses this value to complete
-//                        // sign-in forms, so repurposing this field will
-//                        // likely cause errors.
-//                        .build();
-//
-//
-//                mCredentialsClient.save(credential).addOnCompleteListener(
-//                        new OnCompleteListener() {
-//                            @Override
-//                            public void onComplete(@NonNull Task task) {
-//                                if (task.isSuccessful()) {
-//                                    Log.d(TAG, "SAVE: OK");
-//                                    Toast.makeText(SignInActivity.this, "Credentials saved", Toast.LENGTH_SHORT).show();
-//                                    return;
-//                                }
-//
-//                                Exception e = task.getException();
-//                                if (e instanceof ResolvableApiException) {
-//                                    // Try to resolve the save request. This will prompt the user if
-//                                    // the credential is new.
-//                                    ResolvableApiException rae = (ResolvableApiException) e;
-//                                    try {
-//                                        rae.startResolutionForResult(SignInActivity.this, RC_SAVE);
-//                                    } catch (IntentSender.SendIntentException ex) {
-//                                        // Could not resolve the request
-//                                        Log.e(TAG, "Failed to send resolution.", ex);
-//                                        Toast.makeText(SignInActivity.this, "Save failed", Toast.LENGTH_SHORT).show();
-//                                    }
-//                                } else {
-//                                    // Request has no resolution
-//                                    Toast.makeText(SignInActivity.this, "Save failed", Toast.LENGTH_SHORT).show();
-//                                }
-//                            }
-//                        });
 
+            if(result.equals("success")){//결과가 '성공'이면
+
+                //사용자의 정보를 저장한다
+                SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor editor = pref.edit();
+                editor.putString("user_id", user_id);
+                editor.putString("username", username);
+                editor.putString("email", email_input);
+                editor.commit();
 
 
                 //메인 화면으로 전환한다
                 Intent intent = new Intent(getApplicationContext(), MainActivity.class);
                 startActivity(intent);
+
                 finish();
 
             }else if(s.equals("none")){//존재하지 않는 계정일 경우
@@ -516,6 +525,7 @@ public class SignInActivity extends AppCompatActivity {
 
             }else{
 
+                Log.d("tag", "response:"+s);
                 Toast.makeText(SignInActivity.this, "Error", Toast.LENGTH_SHORT).show();
             }
 

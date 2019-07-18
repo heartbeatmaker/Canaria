@@ -118,19 +118,18 @@
         </LinearLayout>
 
 
-
         <TextView
             android:id="@+id/signin_register_btn"
+            android:background="@color/transparent"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="wrap_content"
             android:layout_marginTop="30dp"
-            android:background="@drawable/btn_bg"
             android:clickable="true"
             android:fontFamily="sans-serif-light"
-            android:gravity="center_vertical|center_horizontal"
+            android:gravity="center"
             android:text="Create an account"
-            android:textColor="#DCDCDC"
-            android:textSize="20sp" />
+            android:padding="10dp"
+            android:textSize="15sp" />
 
     </LinearLayout>
 

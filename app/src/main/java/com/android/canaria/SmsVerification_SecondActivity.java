@@ -340,7 +340,6 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
 
                 //메인 화면으로 넘어간다
                 Intent toMainActivity = new Intent(getApplicationContext(), MainActivity.class);
-                toMainActivity.putExtra("email", email);
                 startActivity(toMainActivity);
                 finish();
 
