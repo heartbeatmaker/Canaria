@@ -4,10 +4,12 @@ public class FriendListItem {
 
 //    private Bitmap profileImage;
     private String friendName;
+    private String friendId;
 
 
-    public FriendListItem(String friendName) {
+    public FriendListItem(String friendName, String friendId) {
         this.friendName = friendName;
+        this.friendId = friendId;
 //        this.roomImage = roomImage;
     }
 
@@ -26,6 +28,14 @@ public class FriendListItem {
 
     public void setFriendName(String friendName) {
         this.friendName = friendName;
+    }
+
+    public String getFriendId() {
+        return friendId;
+    }
+
+    public void setFriendId(String friendId) {
+        this.friendId = friendId;
     }
 
 

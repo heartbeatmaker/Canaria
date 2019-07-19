@@ -8,6 +8,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+/*더보기 fragment*/
+
 public class Main_Fragment3 extends Fragment {
 
     @Nullable

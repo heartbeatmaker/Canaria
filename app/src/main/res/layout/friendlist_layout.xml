@@ -27,12 +27,19 @@
 
         <TextView
             android:id="@+id/friendList_name"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginLeft="10dp"
             android:gravity="center_vertical"
             android:text="Name"
+            android:layout_weight="1"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/friendList_friendId_textView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="0" />
 
     </LinearLayout>
 </RelativeLayout>

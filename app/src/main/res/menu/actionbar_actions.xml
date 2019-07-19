@@ -21,10 +21,6 @@
         android:title="Settings"/>
 
     <item
-        android:id="@+id/settings_more"
-        android:title="Scan" />
-
-    <item
         android:id="@+id/settings_logout"
         android:title="Sign out" />
 

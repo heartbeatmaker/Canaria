@@ -42,6 +42,7 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
 
 //        viewHolder.profileImage_imageView.setImageBitmap(item.getProfileImage());
         viewHolder.friendName_textView.setText(item.getFriendName());
+        viewHolder.friendId_textView.setText(item.getFriendId());
 
         viewHolder.parentLayout.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -62,13 +63,14 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
     public class ViewHolder extends RecyclerView.ViewHolder {
 
 //        ImageView profileImage_imageView;
-        TextView friendName_textView;
+        TextView friendName_textView, friendId_textView;
         RelativeLayout parentLayout;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
 //            this.roomImage_imageView = itemView.findViewById(R.id.friendList_profileImage);
             this.friendName_textView = itemView.findViewById(R.id.friendList_name);
+            this.friendId_textView = itemView.findViewById(R.id.friendList_friendId_textView);
             this.parentLayout = itemView.findViewById(R.id.friendList_relativeLayout);
 //            parentLayout.setOnLongClickListener(readMessageActivity);
         }

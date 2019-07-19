@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menuitem_bottombar_scan"
+        android:icon="@drawable/ic_settings_overscan_black_24dp"
+        android:title="Scan"
+        app:showAsAction="ifRoom"/>
+
+    <item
+        android:id="@+id/menuitem_bottombar_myCode"
+        android:icon="@drawable/ic_person_outline_black_24dp"
+        android:title="My Code"
+        app:showAsAction="ifRoom"/>
+
+
+</menu>

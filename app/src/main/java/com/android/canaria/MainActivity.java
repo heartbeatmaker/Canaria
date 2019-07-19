@@ -100,12 +100,12 @@ public class MainActivity extends AppCompatActivity {
 
                 break;
 
-
         }
-
 
         return super.onOptionsItemSelected(item);
     }
+
+
 
     private void openFragment(final Fragment fragment){
         FragmentManager fragmentManager = getSupportFragmentManager();

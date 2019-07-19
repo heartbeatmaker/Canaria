@@ -13,6 +13,9 @@ import android.view.ViewGroup;
 
 import java.util.ArrayList;
 
+
+/*채팅방 목록 fragment*/
+
 public class Main_Fragment2 extends Fragment {
 
     RecyclerView rcv;

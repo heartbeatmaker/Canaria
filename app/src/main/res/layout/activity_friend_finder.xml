@@ -8,24 +8,22 @@
 
     <LinearLayout
         android:id="@+id/friendFinder_linearLayout"
-        android:layout_marginTop="30dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <Button
-            android:id="@+id/friendFinder_scanner_btn"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="wrap_content"
-            android:text="Scan"
-            android:background="@drawable/tab_bg_selector"/>
+        <!--<Button-->
+            <!--android:id="@+id/friendFinder_scanner_btn"-->
+            <!--android:layout_width="0dp"-->
+            <!--android:layout_weight="1"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:text="Scan"-->
+            <!--android:background="@drawable/tab_bg_selector"/>-->
 
         <Button
             android:id="@+id/friendFinder_addById_btn"
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="10dp"
             android:text="Add by Email"
             android:background="@drawable/tab_bg_selector"/>
     </LinearLayout>
