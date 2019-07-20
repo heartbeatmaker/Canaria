@@ -51,12 +51,23 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
             }
         });
 
+        viewHolder.parentLayout.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(mContext, "item long clicked", Toast.LENGTH_SHORT).show();
+
+                return false;
+            }
+        });
+
+
     }
 
     @Override
     public int getItemCount() {
         return mItemArrayList.size();
     }
+
 
 
 

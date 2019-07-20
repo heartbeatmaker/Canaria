@@ -66,12 +66,11 @@ public class Main_Fragment1 extends Fragment {
         adapter = new FriendListAdapter(friendItemList, getActivity());
         rcv.setAdapter(adapter);
 
+
         user_id = Function.getString(getContext(), "user_id");
         new SendPost().execute(user_id);
 
-        for(int i=0; i<20; i++){
-            friendItemList.add(0, new FriendListItem("Charlize Theron", "1"));
-        }
+
 
         return view;
     }
@@ -186,16 +185,19 @@ public class Main_Fragment1 extends Fragment {
 
                         Log.d(TAG,i+"번째 친구의 id = "+friend_id+" / name = "+friend_username);
 
-//                        friendItemList.add(0, new FriendListItem(friend_username, friend_id));
+                        friendItemList.add(0, new FriendListItem(friend_username, friend_id));
+                        adapter.notifyDataSetChanged();
 
                     }
 
                 }else if(s.equals("zero")){ //친구 목록이 비어있을 때
 
+                    Log.d(TAG,"This user has no friend");
                     Toast.makeText(getContext(), "You have no friend.", Toast.LENGTH_SHORT).show();
                 }else{
+                    Log.d(TAG,"Error: failed to retrieve data");
 
-                    Toast.makeText(getContext(), "Error: failed to retrieve data.", Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(getContext(), "Error: failed to retrieve data.", Toast.LENGTH_SHORT).show();
                 }
 
 

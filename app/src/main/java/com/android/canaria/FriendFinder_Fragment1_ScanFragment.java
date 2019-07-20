@@ -48,7 +48,7 @@ public class FriendFinder_Fragment1_ScanFragment extends Fragment {
         if(result != null) {
             if(result.getContents() == null) {
                 Toast.makeText(getActivity(), "Cancelled", Toast.LENGTH_LONG).show();
-            
+
             } else {
                 Toast.makeText(getActivity(), "Scanned: " + result.getContents(), Toast.LENGTH_LONG).show();
                 String barcode = result.getContents();
