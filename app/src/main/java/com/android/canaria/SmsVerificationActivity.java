@@ -14,7 +14,10 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,20 +44,60 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 public class SmsVerificationActivity extends AppCompatActivity {
 
     EditText phoneNumber_editText;
-    TextView countryCode_textView, requestCode_btn, warning_textView;
+    TextView requestCode_btn, warning_textView;
+    Spinner countryCode_spinner;
 
     String zipCode, email, phone_number_modified;
 
+    ArrayList<String> arrayList;
+    ArrayAdapter<String> arrayAdapter;
 
-
-    public String getCountryZipCode(){
+    public void getCountryZipCode(){
         String CountryID="";
         String CountryZipCode="";
 
         TelephonyManager manager = (TelephonyManager) this.getSystemService(Context.TELEPHONY_SERVICE);
         //getNetworkCountryIso
         CountryID= manager.getSimCountryIso().toUpperCase();
-        String[] rl=this.getResources().getStringArray(R.array.CountryCodes);
+        String[] rl=this.getResources().getStringArray(R.array.CountryCodes); //zipCode와 국가이름이 같이 있는 형태
+
+        arrayList = new ArrayList<>();
+
+        int index = 0; //현재 사용자가 있는 국가의 zipCode position
+        for(int i=0;i<rl.length;i++){
+            String[] g=rl[i].split(",");
+
+            arrayList.add(g[0].trim()); //arrayList에 zipCode만 담는다
+
+            if(g[1].trim().equals(CountryID.trim())){
+                index = i;
+                CountryZipCode=g[0];
+                Log.d("tag", "countryZipCode="+CountryZipCode);
+            }
+        }
+
+
+        arrayAdapter = new ArrayAdapter<>(getApplicationContext(), android.R.layout.simple_spinner_item, arrayList);
+        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        countryCode_spinner.setAdapter(arrayAdapter);
+        countryCode_spinner.setSelection(index); //spinner 기본값 = 현재 사용자가 있는 국가의 zipCode
+
+
+        countryCode_spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+                //사용자가 선택한 zipCode를 가져온다
+                zipCode = arrayList.get(position);
+                Log.d("tag", "selected zipCode= "+zipCode);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
         for(int i=0;i<rl.length;i++){
             String[] g=rl[i].split(",");
             if(g[1].trim().equals(CountryID.trim())){
@@ -62,7 +105,7 @@ public class SmsVerificationActivity extends AppCompatActivity {
                 break;
             }
         }
-        return CountryZipCode;
+//        return CountryZipCode;
     }
 
     @Override
@@ -72,11 +115,12 @@ public class SmsVerificationActivity extends AppCompatActivity {
 
         phoneNumber_editText = (EditText)findViewById(R.id.sms_phoneNumber_editText);
         requestCode_btn = (TextView)findViewById(R.id.sms_send_btn);
-        countryCode_textView = (TextView)findViewById(R.id.sms_countryCode_textView);
+        countryCode_spinner = (Spinner)findViewById(R.id.sms_countryCode_spinner);
         warning_textView = (TextView)findViewById(R.id.sms_code_warning_textView);
 
-        zipCode = getCountryZipCode();
-        countryCode_textView.setText("+"+zipCode);
+        getCountryZipCode();
+
+//        countryCode_textView.setText("+"+zipCode);
 
         Intent intent = getIntent();
 

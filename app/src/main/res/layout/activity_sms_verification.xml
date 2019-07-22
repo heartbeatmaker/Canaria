@@ -16,44 +16,47 @@
         android:layout_centerInParent="true"
         android:orientation="vertical">
 
-
-
-        <LinearLayout
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:text="Select your zipCode"
+            android:textSize="14sp"
+            android:textColor="@color/white" />
 
-            <TextView
-                android:id="@+id/sms_countryCode_textView"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:background="#80DCDCDC"
+            android:layout_marginBottom="10dp">
+
+            <Spinner
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#80DCDCDC"
-                android:layout_marginRight="5dp"
-                android:textSize="25dp"
-                android:textAlignment="center"
-                />
+                android:id="@+id/sms_countryCode_spinner"
+                android:textAllCaps="false">
+            </Spinner>
+        </RelativeLayout>
 
-            <EditText
-                android:id="@+id/sms_phoneNumber_editText"
-                android:layout_width="0dp"
-                android:layout_weight="3"
-                android:layout_height="60dp"
-                android:background="#80DCDCDC"
-                android:ems="30"
-                android:hint="Your phone number"
-                android:fontFamily="sans-serif-light"
-                android:inputType="phone"
-                android:textAllCaps="false"
-                android:textColor="#4B73E1"
-                android:textSize="25dp" />
-        </LinearLayout>
+
+        <EditText
+            android:id="@+id/sms_phoneNumber_editText"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:background="#80DCDCDC"
+            android:ems="30"
+            android:hint="Your phone number"
+            android:fontFamily="sans-serif-light"
+            android:inputType="phone"
+            android:textAllCaps="false"
+            android:textSize="25dp" />
+
 
         <TextView
             android:id="@+id/sms_code_warning_textView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="12sp"
-            android:textColor="@color/darkRed" />
+            android:textColor="@color/white" />
 
 
         <TextView

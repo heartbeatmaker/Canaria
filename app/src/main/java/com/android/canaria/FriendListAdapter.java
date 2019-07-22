@@ -19,6 +19,7 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
     private ArrayList<FriendListItem> mItemArrayList;
     private Context mContext;
 
+
     public FriendListAdapter(ArrayList<FriendListItem> mItemArrayList, Context mContext) {
         this.mItemArrayList = mItemArrayList;
         this.mContext = mContext;

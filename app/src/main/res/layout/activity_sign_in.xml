@@ -75,7 +75,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="@color/darkRed"
+                android:textColor="@color/white"
                 android:visibility="gone"/>
 
             <EditText
@@ -98,7 +98,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="@color/darkRed"
+                android:textColor="@color/white"
                 android:visibility="gone"/>
 
 
@@ -120,7 +120,7 @@
 
         <TextView
             android:id="@+id/signin_register_btn"
-            android:background="@color/transparent"
+            android:background="@drawable/border"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="30dp"
@@ -129,6 +129,8 @@
             android:gravity="center"
             android:text="Create an account"
             android:padding="10dp"
+            android:textColor="@color/white"
+
             android:textSize="15sp" />
 
     </LinearLayout>

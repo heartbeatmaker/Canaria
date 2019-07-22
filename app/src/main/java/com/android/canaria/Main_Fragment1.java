@@ -28,6 +28,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.List;
 
 import cz.msebera.android.httpclient.HttpEntity;
 import cz.msebera.android.httpclient.HttpResponse;
@@ -42,7 +43,7 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 
 /*친구목록 fragment*/
 
-public class Main_Fragment1 extends Fragment {
+public class Main_Fragment1 extends Fragment{
 
     RecyclerView rcv;
     ArrayList<FriendListItem> friendItemList;
@@ -52,6 +53,7 @@ public class Main_Fragment1 extends Fragment {
     String TAG = "tag "+this.getClass().getSimpleName();
 
     String user_id;
+    boolean noMoreItem;
 
     @Nullable
     @Override
@@ -66,17 +68,60 @@ public class Main_Fragment1 extends Fragment {
         adapter = new FriendListAdapter(friendItemList, getActivity());
         rcv.setAdapter(adapter);
 
+        rcv.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+            }
+
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+                int lastItemPosition = linearLayoutManager.findLastCompletelyVisibleItemPosition();
+                int itemTotalCount = adapter.getItemCount();
+
+//                Log.d(TAG, "onScrolled. lastVisibleItemPosition = "+lastItemPosition+" / itemTotalCount = "+itemTotalCount);
+
+                //리스트의 마지막에 도달했을 때 -> 다음 페이지 로드
+                if (dy > 0 && lastItemPosition == (itemTotalCount - 1)) {
+                    Log.d(TAG, "last item. lastVisibleItemPosition = "+lastItemPosition+" Loading more item");
+                    loadMoreItem(lastItemPosition);
+//                    mAdapter.showLoading();
+                }
+            }
+        });
+
+
+//        for(int k=0; k<30; k++){
+//            friendItemList.add(0, new FriendListItem("Huck Finn "+k, "1"));
+//        }
 
         user_id = Function.getString(getContext(), "user_id");
-        new SendPost().execute(user_id);
-
-
+        loadFirstPage();
 
         return view;
     }
 
 
-    class SendPost extends AsyncTask<String, Void, String> {
+
+    public void loadFirstPage(){
+        new SendPost().execute(user_id, 0); //해당 유저의 친구목록중에, 1페이지(0~9번째 친구) 데이터를 가져온다
+    }
+
+    public void loadMoreItem(int lastItemPosition){
+        //다음에 받아야 할 페이지를 적어서 서버에 데이터 요청
+
+        if(!noMoreItem){
+            int nextPage_firstItemPosition = lastItemPosition +1;
+            new SendPost().execute(user_id, nextPage_firstItemPosition);
+        }else{
+            Toast.makeText(getContext(), "no more item", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    class SendPost extends AsyncTask<Object, Void, String> {
 
         ProgressDialog dialog = new ProgressDialog(getContext());
 
@@ -90,7 +135,11 @@ public class Main_Fragment1 extends Fragment {
         }
 
         @Override
-        protected String doInBackground(String... strings) {
+        protected String doInBackground(Object... objects) {
+
+            String user_id = (String)objects[0];
+            int nextPage_firstItemPosition = (int)objects[1];
+
 
             String response_line = "";
 
@@ -105,7 +154,9 @@ public class Main_Fragment1 extends Fragment {
                 nameValues.add(new BasicNameValuePair(
                         "get_friendList", URLDecoder.decode("y", "UTF-8")));
                 nameValues.add(new BasicNameValuePair(
-                        "user_id", URLDecoder.decode(strings[0], "UTF-8")));
+                        "user_id", URLDecoder.decode(user_id, "UTF-8")));
+                nameValues.add(new BasicNameValuePair(
+                        "first_item_position", URLDecoder.decode(String.valueOf(nextPage_firstItemPosition), "UTF-8")));
 
 
                 //HttpPost에 넘길 값을들 Set해주기
@@ -168,6 +219,8 @@ public class Main_Fragment1 extends Fragment {
                 String result = result_object.getString("result");
                 Log.d(TAG,"result="+result);
 
+                noMoreItem = result_object.getBoolean("no_more_item");
+
                 if(result.equals("success")){//결과가 '성공'이면
 
                     //jsonArray 구조로 전달된 친구정보를 파싱한다
@@ -177,15 +230,15 @@ public class Main_Fragment1 extends Fragment {
 
                     for(int i=0; i<friendInfo_array.length(); i++){
                         JSONObject individual_friendInfo_object = (JSONObject)friendInfo_array.get(i);
-                        Log.d(TAG,i+"번째 friendInfo_object = "+individual_friendInfo_object);
+//                        Log.d(TAG,i+"번째 friendInfo_object = "+individual_friendInfo_object);
 
                         String friend_id = (String)individual_friendInfo_object.get("friend_id");
                         String friend_username = (String)individual_friendInfo_object.get("friend_username");
 //            String friend_profileImage = (String)individual_friendInfo_object.get("friend_profileImage");
 
-                        Log.d(TAG,i+"번째 친구의 id = "+friend_id+" / name = "+friend_username);
+//                        Log.d(TAG,i+"번째 친구의 id = "+friend_id+" / name = "+friend_username);
 
-                        friendItemList.add(0, new FriendListItem(friend_username, friend_id));
+                        friendItemList.add(new FriendListItem(friend_username, friend_id));
                         adapter.notifyDataSetChanged();
 
                     }
