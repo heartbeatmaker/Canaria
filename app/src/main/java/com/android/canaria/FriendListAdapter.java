@@ -1,6 +1,7 @@
 package com.android.canaria;
 
 import android.content.Context;
+import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -41,16 +42,27 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
 
         final FriendListItem item = mItemArrayList.get(position);
 
-//        viewHolder.profileImage_imageView.setImageBitmap(item.getProfileImage());
-        viewHolder.friendName_textView.setText(item.getFriendName());
-        viewHolder.friendId_textView.setText(item.getFriendId());
+        final String friend_username = item.getFriendName();
+        final String friend_userId = item.getFriendId();
 
+//        viewHolder.profileImage_imageView.setImageBitmap(item.getProfileImage());
+        viewHolder.friendName_textView.setText(friend_username);
+        viewHolder.friendId_textView.setText(friend_userId);
+
+
+        //임시 - 친구목록에서 아이템을 선택하면 채팅방이 열린다
         viewHolder.parentLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(mContext, "item clicked", Toast.LENGTH_SHORT).show();
+
+                Intent intent = new Intent(mContext, ChatRoomActivity.class);
+                intent.putExtra("friend_userId", friend_userId);
+                intent.putExtra("friend_username", friend_username);
+                mContext.startActivity(intent);
+
             }
         });
+
 
         viewHolder.parentLayout.setOnLongClickListener(new View.OnLongClickListener() {
             @Override

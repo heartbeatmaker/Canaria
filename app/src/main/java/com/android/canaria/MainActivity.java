@@ -82,7 +82,6 @@ public class MainActivity extends AppCompatActivity {
     BufferedReader bufferedReader;
 
 
-
     public void initSocketClient() {
 
         new Thread(new Runnable() {
@@ -100,8 +99,8 @@ public class MainActivity extends AppCompatActivity {
                     OutputStreamWriter osw = new OutputStreamWriter(os);
                     bufferedWriter = new BufferedWriter(osw); //서버에 메시지를 쓰는 객체
 
-                    //입장알림 - 서버에 보내는 신호/ 사용자 이름
-                    sendMsg("enter/" + user_id);
+                    //입장알림 - 서버에 보내는 신호/ 사용자 id /username
+                    sendMsg("connect/" + user_id + "/" +username);
 
                 } catch (Exception e) {
                     Log.d(TAG, "socket connection error: "+e);
@@ -116,7 +115,17 @@ public class MainActivity extends AppCompatActivity {
                         //맨 앞 문자열: 클라이언트에게 보내는 신호(어떤 행동을 해라)
                         //그다음부터는 화면에 띄워줄 데이터
                         String line = bufferedReader.readLine();
-                        Log.d(TAG, "readMsg(). message: "+line); //동작하지 않음
+                        Log.d(TAG, "readMsg(). message: "+line);
+
+//                        if(isDestroyed){
+//                            try{
+//                                sendMsg("disconnect/"+user_id);
+//                                Log.d(TAG, "소켓 해제");
+//                                break;
+//                            }catch (Exception e){
+//                                Log.d(TAG, "socket msg error: "+e);
+//                            }
+//                        }
 
                     }
                 }catch(IOException e) {
@@ -204,6 +213,15 @@ public class MainActivity extends AppCompatActivity {
 
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        Log.d(TAG, "onDestroy()");
+
+        new Disconnect();
+    }
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.actionbar_actions, menu);
 
@@ -272,6 +290,22 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+
+    class Disconnect extends Thread{
+        public void run(){
+
+            try{
+                if(socket != null){
+                    socket.close();
+                    Log.d(TAG, "socket closed");
+                }
+
+            }catch (Exception e){
+                Log.d(TAG, "disconnect error: "+e);
+            }
+
+        }
+    }
 
 
 

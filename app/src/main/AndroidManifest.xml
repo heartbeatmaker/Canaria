@@ -10,12 +10,13 @@
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/AppTheme">
-        <activity android:name=".FriendFinder_Fragment1_MyCodeFragment"></activity>
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
+        <activity android:name=".ChatRoomActivity"></activity>
+        <activity android:name=".FriendFinder_Fragment1_MyCodeFragment" />
         <activity android:name=".FriendFinder_Fragment1_ScanFragment" />
         <activity android:name=".FriendFinder_Fragment2" />
         <activity android:name=".FriendFinder_Fragment1" />
@@ -41,12 +42,12 @@
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".FriendFinderActivity"
-            android:label="friend_finder"
-            android:theme="@style/AppTheme"
-            android:parentActivityName=".MainActivity"
             android:hardwareAccelerated="true"
+            android:label="friend_finder"
+            android:parentActivityName=".MainActivity"
             android:screenOrientation="fullSensor"
-            tools:replace="screenOrientation"/>
+            android:theme="@style/AppTheme"
+            tools:replace="screenOrientation" />
         <activity
             android:name=".SignUpActivity"
             android:theme="@style/AppTheme.NoActionBar">
