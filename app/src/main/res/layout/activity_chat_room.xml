@@ -1,9 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ChatRoomActivity">
 
-</android.support.constraint.ConstraintLayout>
+    <TextView
+        android:layout_alignParentTop="true"
+        android:id="@+id/chat_roomInfo_textView"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@color/colorPrimary"/>
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/chat_message_rcv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/chat_roomInfo_textView"
+        android:layout_above="@id/chat_input_linearLayout">
+
+    </android.support.v7.widget.RecyclerView>
+
+    <LinearLayout
+        android:layout_alignParentBottom="true"
+        android:id="@+id/chat_input_linearLayout"
+        android:layout_width="match_parent"
+        android:layout_height="100dp">
+
+        <EditText
+            android:id="@+id/chat_message_editText"
+            android:layout_width="0dp"
+            android:layout_weight="2"
+            android:hint="Type Your Message"
+            android:layout_height="match_parent" />
+
+        <Button
+            android:id="@+id/chat_send_btn"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:text="Send"/>
+
+    </LinearLayout>
+
+
+
+</RelativeLayout>

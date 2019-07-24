@@ -15,11 +15,15 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
-        <activity android:name=".ChatRoomActivity"></activity>
-        <activity android:name=".FriendFinder_Fragment1_MyCodeFragment" />
-        <activity android:name=".FriendFinder_Fragment1_ScanFragment" />
-        <activity android:name=".FriendFinder_Fragment2" />
-        <activity android:name=".FriendFinder_Fragment1" />
+        <activity android:name=".SelectFriendsActivity"
+            android:theme="@style/AppTheme.NoActionBar"/>
+        <activity
+            android:name=".UserProfileActivity"
+            android:theme="@style/AppTheme.NoActionBar" />
+        <activity android:name=".ChatRoomActivity" /> <!-- <activity android:name=".FriendFinder_Fragment1_MyCodeFragment" /> -->
+        <!-- <activity android:name=".FriendFinder_Fragment1_ScanFragment" /> -->
+        <!-- <activity android:name=".FriendFinder_Fragment2" /> -->
+        <!-- <activity android:name=".FriendFinder_Fragment1" /> -->
         <activity
             android:name=".SmsVerification_SecondActivity"
             android:label="@string/title_activity_sms_verification2"

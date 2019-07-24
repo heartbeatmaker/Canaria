@@ -5,16 +5,21 @@ import android.graphics.Bitmap;
 public class RoomListItem {
 
 //    private Bitmap roomImage;
-    private String roomName, recentMessage, updatedTime;
+    private String roomName;
+    private String recentMessage;
+    private String updatedTime;
+
+    private int roomId;
     private int numberOfMembers;
 
 
-    public RoomListItem(String roomName, int numberOfMembers, String recentMessage, String updatedTime) {
+    public RoomListItem(String roomName, int numberOfMembers, String recentMessage, String updatedTime, int roomId) {
 //        this.roomImage = roomImage;
         this.roomName = roomName;
         this.recentMessage = recentMessage;
         this.updatedTime = updatedTime;
         this.numberOfMembers = numberOfMembers;
+        this.roomId = roomId;
     }
 
 
@@ -25,6 +30,15 @@ public class RoomListItem {
 //    public void setRoomImage(Bitmap roomImage) {
 //        this.roomImage = roomImage;
 //    }
+
+
+    public int getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(int roomId) {
+        this.roomId = roomId;
+    }
 
     public String getRoomName() {
         return roomName;

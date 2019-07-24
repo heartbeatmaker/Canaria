@@ -50,15 +50,15 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
         viewHolder.friendId_textView.setText(friend_userId);
 
 
-        //임시 - 친구목록에서 아이템을 선택하면 채팅방이 열린다
+        //친구목록에서 아이템을 선택하면 채팅방이 열린다
         viewHolder.parentLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
-                Intent intent = new Intent(mContext, ChatRoomActivity.class);
-                intent.putExtra("friend_userId", friend_userId);
-                intent.putExtra("friend_username", friend_username);
-                mContext.startActivity(intent);
+            Intent intent = new Intent(mContext, UserProfileActivity.class);
+            intent.putExtra("friend_id", friend_userId);
+            intent.putExtra("friend_username", friend_username);
+            mContext.startActivity(intent);
 
             }
         });
@@ -102,12 +102,5 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
 
     }
 
-    public void updateAdapter(ArrayList<RoomListItem> list){ //리스트에 담긴 항목을 삭제한다
-
-        for(RoomListItem message : list){
-            mItemArrayList.remove(message);
-        }
-        notifyDataSetChanged();
-    }
 
 }

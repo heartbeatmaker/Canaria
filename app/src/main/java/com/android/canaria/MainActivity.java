@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.icu.util.Output;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
@@ -73,6 +74,9 @@ public class MainActivity extends AppCompatActivity {
     private Main_Fragment3 fragment3 = new Main_Fragment3();
 
     Fragment active_fragment = fragment1;
+    int active_fragment_int = 1;
+
+    MenuItem addFriend_menuItem, addRoom_menuItem;
 
 
     //클라이언트 소켓 관련 변수
@@ -100,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
                     bufferedWriter = new BufferedWriter(osw); //서버에 메시지를 쓰는 객체
 
                     //입장알림 - 서버에 보내는 신호/ 사용자 id /username
-                    sendMsg("connect/" + user_id + "/" +username);
+//                    sendMsg("connect/" + user_id + "/" +username);
 
                 } catch (Exception e) {
                     Log.d(TAG, "socket connection error: "+e);
@@ -137,14 +141,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        initSocketClient();
+//        initSocketClient();
 
         //상단 액션바 설정
         actionBar = getSupportActionBar();
@@ -185,6 +187,7 @@ public class MainActivity extends AppCompatActivity {
                                 actionBar.setTitle("Friends");
                                 fragmentManager.beginTransaction().hide(active_fragment).show(fragment1).commit();
                                 active_fragment = fragment1;
+                                active_fragment_int = 1;
 
                                 return true;
 
@@ -193,6 +196,7 @@ public class MainActivity extends AppCompatActivity {
                                 actionBar.setTitle("Chat");
                                 fragmentManager.beginTransaction().hide(active_fragment).show(fragment2).commit();
                                 active_fragment = fragment2;
+                                active_fragment_int = 2;
 
                                 return true;
 
@@ -201,6 +205,7 @@ public class MainActivity extends AppCompatActivity {
                                 actionBar.setTitle("More");
                                 fragmentManager.beginTransaction().hide(active_fragment).show(fragment3).commit();
                                 active_fragment = fragment3;
+                                active_fragment_int = 3;
 
                                 return true;
                         }
@@ -218,23 +223,27 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(TAG, "onDestroy()");
 
-        new Disconnect();
+//        new Disconnect();
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.actionbar_actions, menu);
 
-        return super.onCreateOptionsMenu(menu);
+        addFriend_menuItem = menu.findItem(R.id.action_add_friends);
+        addRoom_menuItem = menu.findItem(R.id.action_add_room);
 
+        return super.onCreateOptionsMenu(menu);
     }
+
+
 
     @SuppressLint("NewApi")
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
         switch (item.getItemId()){
-            case R.id.settings_logout: //로그아웃 옵션을 눌렀을 때
+            case R.id.logout: //로그아웃 옵션을 눌렀을 때
 
                 //저장된 사용자 정보를 지운다
                 SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
@@ -255,6 +264,12 @@ public class MainActivity extends AppCompatActivity {
 
                 Intent intent_add_friends = new Intent(getApplicationContext(), FriendFinderActivity.class);
                 startActivity(intent_add_friends);
+
+                break;
+            case R.id.action_add_room: //방만들기 옵션을 눌렀을 때
+
+                Intent intent_select_friends = new Intent(getApplicationContext(), SelectFriendsActivity.class);
+                startActivity(intent_select_friends);
 
                 break;
 
@@ -279,33 +294,33 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-    void sendMsg(String msg) throws Exception {
+//    void sendMsg(String msg) throws Exception {
+//
+//        try{
+//            Log.d(TAG, "sendMsg() to server. message:"+msg);
+//            bufferedWriter.write(msg + "\n");
+//            bufferedWriter.flush();
+//        } catch(Exception e){
+//            Log.d(TAG, "sendMsg() error: "+e);
+//        }
+//    }
 
-        try{
-            Log.d(TAG, "sendMsg() to server. message:"+msg);
-            bufferedWriter.write(msg + "\n");
-            bufferedWriter.flush();
-        } catch(Exception e){
-            Log.d(TAG, "sendMsg() error: "+e);
-        }
-    }
 
-
-    class Disconnect extends Thread{
-        public void run(){
-
-            try{
-                if(socket != null){
-                    socket.close();
-                    Log.d(TAG, "socket closed");
-                }
-
-            }catch (Exception e){
-                Log.d(TAG, "disconnect error: "+e);
-            }
-
-        }
-    }
+//    class Disconnect extends Thread{
+//        public void run(){
+//
+//            try{
+//                if(socket != null){
+//                    socket.close();
+//                    Log.d(TAG, "socket closed");
+//                }
+//
+//            }catch (Exception e){
+//                Log.d(TAG, "disconnect error: "+e);
+//            }
+//
+//        }
+//    }
 
 
 

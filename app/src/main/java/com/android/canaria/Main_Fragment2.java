@@ -38,8 +38,8 @@ public class Main_Fragment2 extends Fragment {
         rcv.setAdapter(adapter);
 
 
-        for(int i=0; i<20; i++){
-            roomItemList.add(0, new RoomListItem("Name", 3, "HiHi", "12:30"));
+        for(int i=1; i<=5; i++){
+            roomItemList.add(0, new RoomListItem("Room"+i, 3, "HiHi", "12:30", i));
         }
 
         return view;
