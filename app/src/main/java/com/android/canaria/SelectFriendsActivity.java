@@ -1,29 +1,20 @@
 package com.android.canaria;
 
 
-import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,7 +31,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
-import java.util.List;
 
 import cz.msebera.android.httpclient.HttpEntity;
 import cz.msebera.android.httpclient.HttpResponse;
@@ -75,7 +65,7 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
     String user_id;
     boolean noMoreItem;
 
-    TextView counter_text_view;
+    TextView counter_text_view, selectedFriends_textView;
 
     Context context = SelectFriendsActivity.this;
 
@@ -85,14 +75,16 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
         return true;
     }
 
+
+
     @Override
     public boolean onLongClick(View v) {
 
         toolbar.getMenu().clear(); //길게누르면 -> 툴바 clear
-        toolbar.inflateMenu(R.menu.menu_delete);
+        toolbar.inflateMenu(R.menu.menu_select);
         counter_text_view.setVisibility(View.VISIBLE);
         is_in_action_mode = true;
-        adapter.notifyDataSetChanged();
+        adapter.notifyDataSetChanged();//이건 왜 하는거지?
 
         return true;
     }
@@ -100,7 +92,7 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
 
 
     public void prepareSelection(View view, final int position) {
-
+        Log.d("메시지","prepareSelection");
         if (((CheckBox)view).isChecked()) { //체크 됐을 때
             selection_list.add(friendItemList.get(position));
             selected_position.add(position); //해당 아이템의 위치를 리스트에 담는다
@@ -137,10 +129,27 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
 
     public void updateCounter(int counter){
         if(counter == 0){
-            counter_text_view.setText("0 item selected");
+            counter_text_view.setText("0 selected");
         }
         else{
-            counter_text_view.setText(counter+" items selected");
+            selectedFriends_textView.setVisibility(View.VISIBLE);
+
+            //선택한 친구의 username을 가져온다 화면에 보여준다
+            String friend_username = "";
+            for(int i=0; i<selection_list.size(); i++){
+                if(i==0){
+                    friend_username = selection_list.get(i).getFriendName();
+                }else{
+                    friend_username += ", " + selection_list.get(i).getFriendName();
+                }
+            }
+            selectedFriends_textView.setText(friend_username);
+
+            if(counter == 1){
+                counter_text_view.setText(counter+" friend selected");
+            }else{
+                counter_text_view.setText(counter+" friends selected");
+            }
         }
     }
 
@@ -148,9 +157,16 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
     public boolean onOptionsItemSelected(MenuItem item){
         if(item.getItemId() == R.id.item_ok){ //ok 아이콘을 누르면
 
+            //선택한 친구의 id와 username을 가져온다 -> 채팅 액티비티로 넘긴다
+            for(int i=0; i<selection_list.size(); i++){
+                String friend_id = selection_list.get(i).getFriendId();
+                String friend_username = selection_list.get(i).getFriendName();
+
+                Log.d("메시지", "selected friend: id="+friend_id+" / username="+friend_username);
+            }
+
             adapter.updateAdapter(selection_list); //selection_list에 있는 아이템을 지움
             clearActionMode(); //액션바, 각종 변수를 초기화
-
             selected_position.clear();
 
         }
@@ -162,11 +178,14 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
         toolbar.getMenu().clear();
         toolbar.inflateMenu(R.menu.item_menu);
         counter_text_view.setVisibility(View.GONE);
+        selectedFriends_textView.setVisibility(View.GONE);
 
         //변수 초기화
         counter_text_view.setText("0 item selected");
+        selectedFriends_textView.setText("");
         counter = 0;
         selection_list.clear();
+        adapter.itemStateArray.clear(); //checkBox 가 선택됐는지 여부 확인하는 array. 초기화해줘야 한다
     }
 
     //action mode에서 뒤로가기 눌렀을 때, 해당 액티비티 자체를 벗어남. 이 문제를 해결하기 위한 메소드
@@ -196,6 +215,8 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
         setSupportActionBar(toolbar);
         counter_text_view = (TextView)findViewById(R.id.counter_textView);
         counter_text_view.setVisibility(View.GONE);
+        selectedFriends_textView = (TextView)findViewById(R.id.selectFriends_selectedFriends_textView);
+        selectedFriends_textView.setVisibility(View.GONE);
 
 
         //initialize recyclerView

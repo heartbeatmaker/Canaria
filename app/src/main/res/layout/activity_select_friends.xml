@@ -13,6 +13,16 @@
         android:text="Friends"
         android:padding="10dp"/>
 
+    <TextView
+        android:id="@+id/selectFriends_selectedFriends_textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="@color/colorAccent"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingBottom="10dp"/>
+
     <android.support.v7.widget.RecyclerView
         android:id="@+id/selectFriends_rcv"
         android:layout_width="match_parent"
