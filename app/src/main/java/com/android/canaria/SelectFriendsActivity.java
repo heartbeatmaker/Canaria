@@ -3,6 +3,7 @@ package com.android.canaria;
 
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -45,7 +46,7 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 
 /*채팅방 만들기, 친구 초대하기 버튼을 눌렀을 때 나타나는 친구목록 화면*/
 
-public class SelectFriendsActivity extends AppCompatActivity implements View.OnLongClickListener{
+public class SelectFriendsActivity extends AppCompatActivity {
 
     //다중선택을 위한 변수
     ArrayList<FriendListItem> selection_list = new ArrayList<>(); //지울 아이템
@@ -71,36 +72,36 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu){
-        getMenuInflater().inflate(R.menu.item_menu,menu);
+        getMenuInflater().inflate(R.menu.menu_select,menu);
         return true;
     }
 
 
 
-    @Override
-    public boolean onLongClick(View v) {
-
-        toolbar.getMenu().clear(); //길게누르면 -> 툴바 clear
-        toolbar.inflateMenu(R.menu.menu_select);
-        counter_text_view.setVisibility(View.VISIBLE);
-        is_in_action_mode = true;
-        adapter.notifyDataSetChanged();//이건 왜 하는거지?
-
-        return true;
-    }
+//    @Override
+//    public boolean onLongClick(View v) {
+//
+//        toolbar.getMenu().clear(); //길게누르면 -> 툴바 clear
+//        toolbar.inflateMenu(R.menu.menu_select);
+//        counter_text_view.setVisibility(View.VISIBLE);
+//        is_in_action_mode = true;
+//        adapter.notifyDataSetChanged();//이건 왜 하는거지?
+//
+//        return true;
+//    }
 
 
 
     public void prepareSelection(View view, final int position) {
-        Log.d("메시지","prepareSelection");
+        Log.d(TAG,"prepareSelection");
         if (((CheckBox)view).isChecked()) { //체크 됐을 때
             selection_list.add(friendItemList.get(position));
             selected_position.add(position); //해당 아이템의 위치를 리스트에 담는다
             counter = counter + 1;
             updateCounter(counter);
 
-            Log.d("메시지",position+"을 고름");
-            Log.d("메시지",position+"을 selectedList에 담음: "+selected_position);
+            Log.d(TAG,position+"을 고름");
+            Log.d(TAG,position+"을 selectedList에 담음: "+selected_position);
         } else { //isChecked()=false 일 때 (uncheck 됐을 때)
             selection_list.remove(friendItemList.get(position));
 //            selected_position.removeIf(p -> p.equals(position)); //해당 아이템의 위치값을 리스트에서 제거한다
@@ -113,14 +114,14 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
                     }
                 }
 
-                Log.d("메시지", position + "을 삭제 취소함");
-                Log.d("메시지", position + "을 selectedList에서 지움: " + selected_position);
+                Log.d(TAG, position + "을 삭제 취소함");
+                Log.d(TAG, position + "을 selectedList에서 지움: " + selected_position);
             }catch (Exception e){
                 StringWriter sw = new StringWriter();
                 e.printStackTrace(new PrintWriter(sw));
                 String ex = sw.toString();
 
-                Log.d("메시지",ex);
+                Log.d(TAG,ex);
             }
         }
 
@@ -157,18 +158,36 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
     public boolean onOptionsItemSelected(MenuItem item){
         if(item.getItemId() == R.id.item_ok){ //ok 아이콘을 누르면
 
+            JSONArray friendInfo_array = new JSONArray();
             //선택한 친구의 id와 username을 가져온다 -> 채팅 액티비티로 넘긴다
             for(int i=0; i<selection_list.size(); i++){
                 String friend_id = selection_list.get(i).getFriendId();
                 String friend_username = selection_list.get(i).getFriendName();
 
-                Log.d("메시지", "selected friend: id="+friend_id+" / username="+friend_username);
+                try{
+                    JSONObject friendInfo = new JSONObject();
+                    friendInfo.put("id", friend_id);
+                    friendInfo.put("username", friend_username);
+
+                    friendInfo_array.put(friendInfo);
+                }catch (Exception e){
+                    Log.d(TAG, "JSONError");
+                    e.printStackTrace();
+                }
+
             }
+
+            Log.d(TAG, "friendInfo_array="+friendInfo_array);
 
             adapter.updateAdapter(selection_list); //selection_list에 있는 아이템을 지움
             clearActionMode(); //액션바, 각종 변수를 초기화
             selected_position.clear();
 
+            Intent intent = new Intent(this, ChatRoomActivity.class);
+            intent.putExtra("isNewRoom", "Y");
+            intent.putExtra("friendInfo_jsonArray", friendInfo_array.toString());
+            startActivity(intent);
+            finish();
         }
         return super.onOptionsItemSelected(item);
     }
@@ -191,17 +210,15 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
     //action mode에서 뒤로가기 눌렀을 때, 해당 액티비티 자체를 벗어남. 이 문제를 해결하기 위한 메소드
     @Override
     public void onBackPressed(){
-        if(is_in_action_mode){
-            clearActionMode();
-            selected_position.clear();
-            adapter.notifyDataSetChanged();
-        }
-        else{
+//        if(is_in_action_mode){
+//            clearActionMode();
+//            selected_position.clear();
+//            adapter.notifyDataSetChanged();
+//        }
+//        else{
             super.onBackPressed();
-
             finish();
-        }
-
+//        }
     }
 
 
@@ -213,8 +230,9 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
         //다중선택을 위한 리소스 초기화: 툴바를 숨겨놓는다
         toolbar =(Toolbar)findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
         counter_text_view = (TextView)findViewById(R.id.counter_textView);
-        counter_text_view.setVisibility(View.GONE);
+        is_in_action_mode = true;
         selectedFriends_textView = (TextView)findViewById(R.id.selectFriends_selectedFriends_textView);
         selectedFriends_textView.setVisibility(View.GONE);
 
@@ -383,7 +401,7 @@ public class SelectFriendsActivity extends AppCompatActivity implements View.OnL
                     //jsonArray 구조로 전달된 친구정보를 파싱한다
                     Object friendInfo_object = result_object.get("friendInfo");
                     JSONArray friendInfo_array = (JSONArray)friendInfo_object;
-                    Log.d(TAG,"friendInfo_array = "+friendInfo_array);
+//                    Log.d(TAG,"friendInfo_array = "+friendInfo_array);
 
                     for(int i=0; i<friendInfo_array.length(); i++){
                         JSONObject individual_friendInfo_object = (JSONObject)friendInfo_array.get(i);

@@ -229,12 +229,14 @@ public class FriendFinder_Fragment2 extends Fragment {
 
 
                     //Add 버튼을 누르면 -> 친구추가
+                    final String finalFriend_username = friend_username;
                     addBtn.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
                             addFriend(friend_id);
                             addBtn.setVisibility(View.GONE);
                             //친구를 추가한다(저장하기)
+                            Main_Fragment1.friendItemList.add(0, new FriendListItem(finalFriend_username, friend_id));
                         }
                     });
 

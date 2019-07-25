@@ -46,7 +46,7 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 public class Main_Fragment1 extends Fragment{
 
     RecyclerView rcv;
-    ArrayList<FriendListItem> friendItemList;
+    public static ArrayList<FriendListItem> friendItemList;
     FriendListAdapter adapter;
     LinearLayoutManager linearLayoutManager;
 
@@ -85,7 +85,7 @@ public class Main_Fragment1 extends Fragment{
 
                 //리스트의 마지막에 도달했을 때 -> 다음 페이지 로드
                 if (dy > 0 && lastItemPosition == (itemTotalCount - 1)) {
-                    Log.d(TAG, "last item. lastVisibleItemPosition = "+lastItemPosition+" Loading more item");
+//                    Log.d(TAG, "last item. lastVisibleItemPosition = "+lastItemPosition+" Loading more item");
                     loadMoreItem(lastItemPosition);
 //                    mAdapter.showLoading();
                 }
@@ -121,6 +121,13 @@ public class Main_Fragment1 extends Fragment{
     }
 
 
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        adapter.notifyDataSetChanged();
+    }
+
     class SendPost extends AsyncTask<Object, Void, String> {
 
         ProgressDialog dialog = new ProgressDialog(getContext());
@@ -128,7 +135,7 @@ public class Main_Fragment1 extends Fragment{
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            Log.d(TAG,"onPreExecute");
+//            Log.d(TAG,"onPreExecute");
 
             dialog.setMessage("Processing..");
             dialog.show();
@@ -170,19 +177,19 @@ public class Main_Fragment1 extends Fragment{
                 //설정한 URL을 실행시키기 -> 응답을 받음
                 HttpResponse response = client.execute(post);
                 //통신 값을 받은 Log 생성. (200이 나오는지 확인할 것~) 200이 나오면 통신이 잘 되었다는 뜻!
-                Log.i(TAG, "response.getStatusCode:" + response.getStatusLine().getStatusCode());
+//                Log.i(TAG, "response.getStatusCode:" + response.getStatusLine().getStatusCode());
 
                 HttpEntity entity = response.getEntity();
 
                 if(entity !=null){
-                    Log.d(TAG, "Response length:"+entity.getContentLength());
+//                    Log.d(TAG, "Response length:"+entity.getContentLength());
 
                     // 콘텐츠를 읽어들임.
                     BufferedReader reader = new BufferedReader(new InputStreamReader(entity.getContent()));
 
                     while ((response_line = reader.readLine()) != null) {
                         // 콘텐츠 내용
-                        Log.d(TAG, "response: "+response_line);
+//                        Log.d(TAG, "response: "+response_line);
                         return response_line;
                     }
                 }
@@ -210,14 +217,14 @@ public class Main_Fragment1 extends Fragment{
             super.onPostExecute(s);
 
             dialog.dismiss();
-            Log.d(TAG,"onPostExecute");
+//            Log.d(TAG,"onPostExecute");
 
 
             try{
 
                 JSONObject result_object = new JSONObject(s);
                 String result = result_object.getString("result");
-                Log.d(TAG,"result="+result);
+//                Log.d(TAG,"result="+result);
 
                 noMoreItem = result_object.getBoolean("no_more_item");
 
@@ -226,7 +233,7 @@ public class Main_Fragment1 extends Fragment{
                     //jsonArray 구조로 전달된 친구정보를 파싱한다
                     Object friendInfo_object = result_object.get("friendInfo");
                     JSONArray friendInfo_array = (JSONArray)friendInfo_object;
-                    Log.d(TAG,"friendInfo_array = "+friendInfo_array);
+//                    Log.d(TAG,"friendInfo_array = "+friendInfo_array);
 
                     for(int i=0; i<friendInfo_array.length(); i++){
                         JSONObject individual_friendInfo_object = (JSONObject)friendInfo_array.get(i);
@@ -238,17 +245,17 @@ public class Main_Fragment1 extends Fragment{
 
 //                        Log.d(TAG,i+"번째 친구의 id = "+friend_id+" / name = "+friend_username);
 
-                        friendItemList.add(new FriendListItem(friend_username, friend_id));
+                        friendItemList.add(0, new FriendListItem(friend_username, friend_id));
                         adapter.notifyDataSetChanged();
 
                     }
 
                 }else if(s.equals("zero")){ //친구 목록이 비어있을 때
 
-                    Log.d(TAG,"This user has no friend");
+//                    Log.d(TAG,"This user has no friend");
                     Toast.makeText(getContext(), "You have no friend.", Toast.LENGTH_SHORT).show();
                 }else{
-                    Log.d(TAG,"Error: failed to retrieve data");
+                    Log.d(TAG,"Error: failed to retrieve friend data");
 
 //                    Toast.makeText(getContext(), "Error: failed to retrieve data.", Toast.LENGTH_SHORT).show();
                 }

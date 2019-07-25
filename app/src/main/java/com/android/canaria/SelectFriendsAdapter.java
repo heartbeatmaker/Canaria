@@ -114,7 +114,7 @@ public class SelectFriendsAdapter extends RecyclerView.Adapter<SelectFriendsAdap
             //아래: 다중선택 하는데 필요
             this.selectFriendsActivity = selectFriendsActivity;
             this.checkBox = (CheckBox)itemView.findViewById(R.id.selectFriends_checkBox);
-            parentLayout.setOnLongClickListener(selectFriendsActivity);
+//            parentLayout.setOnLongClickListener(selectFriendsActivity);
             checkBox.setOnClickListener(this);
         }
 
