@@ -1,9 +1,11 @@
-package com.android.canaria;
+package com.android.canaria.connect_to_server;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+
+import com.android.canaria.login.SmsVerification_SecondActivity;
 
 
 /*SmsReceiver -> sms 코드입력 액티비티로 리다이렉트하는 액티비티이다

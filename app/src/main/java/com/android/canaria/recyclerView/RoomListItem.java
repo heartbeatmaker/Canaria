@@ -1,4 +1,4 @@
-package com.android.canaria;
+package com.android.canaria.recyclerView;
 
 import android.graphics.Bitmap;
 

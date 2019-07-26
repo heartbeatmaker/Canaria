@@ -1,4 +1,4 @@
-package com.android.canaria;
+package com.android.canaria.recyclerView;
 
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +10,9 @@ import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.android.canaria.R;
+import com.android.canaria.UserProfileActivity;
 
 import java.util.ArrayList;
 

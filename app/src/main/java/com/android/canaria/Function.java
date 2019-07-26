@@ -1,7 +1,9 @@
 package com.android.canaria;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.ProgressDialog;
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -21,6 +23,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +46,19 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 public class Function {
 
     public static String domain = "http://54.180.107.44";
+    public static String dbName = "canaria.db";
+    public static int dbVersion = 1;
+    public static int activeRoomId = 0;
+
+
+    //현재 날짜, 시간을 구하기
+    public static String getCurrentTime(){
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd aaa hh:mm");
+        String time = format.format(System.currentTimeMillis());
+        return time;
+    }
+
 
 
     public static String getString(Context context, String key){
@@ -51,6 +67,17 @@ public class Function {
     }
 
 
+    public static boolean isForegroundActivity(Context context, Class<?> cls) {
+        if(cls == null)
+            return false;
+
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        List<ActivityManager.RunningTaskInfo> info = activityManager.getRunningTasks(1);
+        ActivityManager.RunningTaskInfo running = info.get(0);
+        ComponentName componentName = running.topActivity;
+
+        return cls.getName().equals(componentName.getClassName());
+    }
 
 
 

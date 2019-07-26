@@ -1,4 +1,4 @@
-package com.android.canaria;
+package com.android.canaria.connect_to_server;
 
 import android.app.ProgressDialog;
 import android.content.ContentValues;

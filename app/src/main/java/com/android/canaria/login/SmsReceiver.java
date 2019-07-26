@@ -1,4 +1,4 @@
-package com.android.canaria;
+package com.android.canaria.login;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -7,6 +7,8 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.telephony.SmsMessage;
 import android.util.Log;
+
+import com.android.canaria.connect_to_server.RedirectActivity;
 
 /*sms 수신을 감지하는 클래스*/
 

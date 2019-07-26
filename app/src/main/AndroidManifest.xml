@@ -7,6 +7,21 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
 
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.SET_ALARM" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="true" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -20,20 +35,20 @@
         <activity
             android:name=".UserProfileActivity"
             android:theme="@style/AppTheme.NoActionBar" />
-        <activity android:name=".ChatRoomActivity" /> <!-- <activity android:name=".FriendFinder_Fragment1_MyCodeFragment" /> -->
+        <activity android:name=".ChatActivity" /> <!-- <activity android:name=".FriendFinder_Fragment1_MyCodeFragment" /> -->
         <!-- <activity android:name=".FriendFinder_Fragment1_ScanFragment" /> -->
         <!-- <activity android:name=".FriendFinder_Fragment2" /> -->
         <!-- <activity android:name=".FriendFinder_Fragment1" /> -->
         <activity
-            android:name=".SmsVerification_SecondActivity"
+            android:name=".login.SmsVerification_SecondActivity"
             android:label="@string/title_activity_sms_verification2"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".SmsVerificationActivity"
+            android:name=".login.SmsVerificationActivity"
             android:label="@string/title_activity_sms_verification"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".RedirectActivity"
+            android:name=".connect_to_server.RedirectActivity"
             android:label="@string/redirect"
             android:theme="@android:style/Theme.NoDisplay" />
         <activity
@@ -41,7 +56,7 @@
             android:label="@string/main"
             android:theme="@style/AppTheme" />
         <activity
-            android:name=".SignInActivity"
+            android:name=".login.SignInActivity"
             android:label="@string/sign_in"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
@@ -53,7 +68,7 @@
             android:theme="@style/AppTheme"
             tools:replace="screenOrientation" />
         <activity
-            android:name=".SignUpActivity"
+            android:name=".login.SignUpActivity"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -61,6 +76,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".connect_to_server.RestartService"
+            android:enabled="true"
+            android:exported="true" />
+        <service
+            android:name=".connect_to_server.MainService"
+            android:enabled="true"
+            android:exported="true" />
+
+        <receiver
+            android:name=".connect_to_server.ServiceStopReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:process=":remote">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

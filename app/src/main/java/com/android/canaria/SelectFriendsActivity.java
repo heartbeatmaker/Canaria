@@ -20,6 +20,9 @@ import android.widget.CheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.canaria.recyclerView.FriendListItem;
+import com.android.canaria.recyclerView.SelectFriendsAdapter;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -53,7 +56,7 @@ public class SelectFriendsActivity extends AppCompatActivity {
     ArrayList<Integer> selected_position = new ArrayList<>(); //지우려고 선택한 아이템의 위치
     int counter = 0;
     Toolbar toolbar;
-    boolean is_in_action_mode = false;
+    public boolean is_in_action_mode = false; // 다른 패키지 클래스인 selectFriendsAdapter에서 이 변수에 접근해야 함 -> public으로 바꿈
 
     //리사이클러뷰 기본 변수
     RecyclerView rcv;
@@ -183,7 +186,7 @@ public class SelectFriendsActivity extends AppCompatActivity {
             clearActionMode(); //액션바, 각종 변수를 초기화
             selected_position.clear();
 
-            Intent intent = new Intent(this, ChatRoomActivity.class);
+            Intent intent = new Intent(this, ChatActivity.class);
             intent.putExtra("isNewRoom", "Y");
             intent.putExtra("friendInfo_jsonArray", friendInfo_array.toString());
             startActivity(intent);

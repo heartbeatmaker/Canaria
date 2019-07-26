@@ -1,12 +1,14 @@
 package com.android.canaria;
 
 import android.app.ProgressDialog;
+import android.database.Cursor;
+import android.database.DatabaseUtils;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -15,12 +17,18 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.android.canaria.db.DBHelper;
+import com.android.canaria.recyclerView.RoomListAdapter;
+import com.android.canaria.recyclerView.RoomListItem;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URLDecoder;
@@ -52,10 +60,28 @@ public class Main_Fragment2 extends Fragment {
     String user_id;
     boolean noMoreItem;
 
+    DBHelper dbHelper;
+    SQLiteDatabase db;
+    int results_per_page = 10;
+
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.main_fragment2, container, false);
+
+        dbHelper = new DBHelper(getContext(), Function.dbName, null, Function.dbVersion);
+        db = dbHelper.getWritableDatabase();
+
+        //String tableName, String room_name, String members, String updateTime
+//        for(int i=0; i<33; i++){
+//            dbHelper.insert("chat_rooms", "room"+i, "me;you", Function.getCurrentTime());
+//        }
+//
+//        String result = dbHelper.getResult_table_chatRooms();
+//        Log.d(TAG, "result="+result);
+
+
 
         rcv = (RecyclerView)view.findViewById(R.id.main_fragment2_rcv);
         linearLayoutManager = new LinearLayoutManager(getActivity());
@@ -65,7 +91,19 @@ public class Main_Fragment2 extends Fragment {
         adapter = new RoomListAdapter(roomItemList, getActivity());
         rcv.setAdapter(adapter);
 
+        user_id = Function.getString(getContext(), "user_id");
 
+        loadAllItem();
+//        adapter.notifyDataSetChanged();
+//        loadItem(0);
+
+//        rcvScroll(); -- 페이징 - 나중에 하기
+
+        return view;
+    }
+
+
+    public void rcvScroll(){
         rcv.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
@@ -84,34 +122,88 @@ public class Main_Fragment2 extends Fragment {
                 //리스트의 마지막에 도달했을 때 -> 다음 페이지 로드
                 if (dy > 0 && lastItemPosition == (itemTotalCount - 1)) {
                     Log.d(TAG, "last item. lastVisibleItemPosition = "+lastItemPosition+" Loading more item");
-                    loadMoreItem(lastItemPosition);
-//                    mAdapter.showLoading();
+                    loadItem(lastItemPosition);
+
                 }
             }
         });
 
-        user_id = Function.getString(getContext(), "user_id");
-        loadFirstPage();
-
-        return view;
     }
 
 
-    public void loadFirstPage(){
-        new Main_Fragment2.SendPost().execute(user_id, 0); //해당 유저의 친구목록중에, 1페이지(0~9번째 친구) 데이터를 가져온다
+    public void loadAllItem(){
+        Cursor cursor = db.rawQuery("SELECT * FROM chat_rooms", null);
+        while (cursor.moveToNext()) {
+
+            int room_id = cursor.getInt(0);
+            String room_name = cursor.getString(1);
+            String updateTime = cursor.getString(2);
+            String members = cursor.getString(3);
+
+            String[] members_array = members.split(";");
+
+            if(room_name != null){
+                roomItemList.add(0, new RoomListItem(room_name, members_array.length,
+                        "hahaha", updateTime, room_id));
+
+            }
+        }
     }
 
-    public void loadMoreItem(int lastItemPosition){
+
+    public void loadItem(int lastItemPosition){
         //다음에 받아야 할 페이지를 적어서 서버에 데이터 요청
 
+        int first_item_position = lastItemPosition +1;
+
+        long count = DatabaseUtils.queryNumEntries(db, "chat_rooms");
+
+        //방의 개수를 조회한다
+        int number_of_rooms = (int)count;
+
+        //페이지마다 몇번째 행부터 데이터를 출력할 지
+        int number_of_pages = (int)Math.ceil(number_of_rooms/results_per_page);
+
+        int page = (int)(Math.floor(first_item_position/results_per_page))+1;
+        int start_from = (page - 1)*results_per_page;
+
+        Log.d(TAG, "numberOfRooms="+number_of_rooms+" firstItemPosition="+first_item_position+" page="+page+" startFrom="+start_from);
+
         if(!noMoreItem){
-            int nextPage_firstItemPosition = lastItemPosition +1;
-            new Main_Fragment2.SendPost().execute(user_id, nextPage_firstItemPosition);
+
+            Cursor cursor = db.rawQuery("SELECT * FROM chat_rooms ORDER BY datetime(updateTime) LIMIT "+start_from+" OFFSET "+results_per_page, null);
+            while (cursor.moveToNext()) {
+
+                int room_id = cursor.getInt(0);
+                String room_name = cursor.getString(1);
+                String updateTime = cursor.getString(2);
+                String members = cursor.getString(3);
+
+                String[] members_array = members.split(";");
+
+                if(room_name != null){
+                    roomItemList.add(0, new RoomListItem(room_name, members_array.length,
+                            "hahaha", updateTime, room_id));
+
+                }else{
+                    noMoreItem = true;
+                    Log.d(TAG, "NO MORE ITEM");
+                }
+
+            }
+
+            rcv.post(new Runnable() {
+                public void run() {
+                    adapter.notifyDataSetChanged();
+                }
+            });
+//            new Main_Fragment2.SendPost().execute(user_id, nextPage_firstItemPosition);
         }else{
             Log.d(TAG, "loadMoreItem) no more item");
             Toast.makeText(getContext(), "no more item", Toast.LENGTH_SHORT).show();
         }
     }
+
 
     @Override
     public void onResume() {
@@ -120,138 +212,158 @@ public class Main_Fragment2 extends Fragment {
         adapter.notifyDataSetChanged();
     }
 
-    class SendPost extends AsyncTask<Object, Void, String> {
-
-        ProgressDialog dialog = new ProgressDialog(getContext());
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            Log.d(TAG,"onPreExecute");
-
-            dialog.setMessage("Processing..");
-            dialog.show();
-        }
-
-        @Override
-        protected String doInBackground(Object... objects) {
-
-            String user_id = (String)objects[0];
-            int nextPage_firstItemPosition = (int)objects[1];
-
-
-            String response_line = "";
-
-            HttpClient client = new DefaultHttpClient();
-            HttpPost post = new HttpPost("http://54.180.107.44/management.php");
-
-            //POST 방식에서 사용된다
-            ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();
-
-            try {
-                //Post방식으로 넘길 값들을 각각 지정을 해주어야 한다.
-                nameValues.add(new BasicNameValuePair(
-                        "get_roomList", URLDecoder.decode("y", "UTF-8")));
-                nameValues.add(new BasicNameValuePair(
-                        "user_id", URLDecoder.decode(user_id, "UTF-8")));
-                nameValues.add(new BasicNameValuePair(
-                        "first_item_position", URLDecoder.decode(String.valueOf(nextPage_firstItemPosition), "UTF-8")));
-
-
-                //HttpPost에 넘길 값을들 Set해주기
-                post.setEntity(new UrlEncodedFormEntity(nameValues, "UTF-8"));
-
-            } catch (UnsupportedEncodingException ex) {
-                Log.d(TAG, ex.toString());
-            }
-
-            try {
-                //설정한 URL을 실행시키기 -> 응답을 받음
-                HttpResponse response = client.execute(post);
-                //통신 값을 받은 Log 생성. (200이 나오는지 확인할 것~) 200이 나오면 통신이 잘 되었다는 뜻!
-                Log.i(TAG, "response.getStatusCode:" + response.getStatusLine().getStatusCode());
-
-                HttpEntity entity = response.getEntity();
-
-                if(entity !=null){
-                    Log.d(TAG, "Response length:"+entity.getContentLength());
-
-                    // 콘텐츠를 읽어들임.
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(entity.getContent()));
-
-                    while ((response_line = reader.readLine()) != null) {
-                        // 콘텐츠 내용
-                        Log.d(TAG, "response: "+response_line);
-                        return response_line;
-                    }
-                }
-
-                //Ensures that the entity content is fully consumed and the content stream, if exists, is closed.
-                EntityUtils.consume(entity);
-
-                post.releaseConnection();
-
-
-            } catch (ClientProtocolException e) {
-                e.printStackTrace();
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            return null;
-        }
-
-
-        @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-
-            dialog.dismiss();
-            Log.d(TAG,"onPostExecute");
-
-
-            try{
-
-                JSONObject result_object = new JSONObject(s);
-                String result = result_object.getString("result");
-                Log.d(TAG,"result="+result);
-
-                noMoreItem = result_object.getBoolean("no_more_item");
-
-                if(result.equals("success")){//결과가 '성공'이면
-
-                    //jsonArray 구조로 전달된 방정보를 파싱한다
-                    Object rooms_Jobject = result_object.get("rooms_id_array");
-                    JSONArray rooms_Jarray = (JSONArray)rooms_Jobject;
-                    Log.d(TAG,"rooms_Jarray = "+rooms_Jarray);
-
-                    for (int i=0;i<rooms_Jarray.length();i++){
-                        String room_id = rooms_Jarray.getString(i);
-
-                        roomItemList.add(0, new RoomListItem("room"+room_id, 5,
-                                "hahaha", "12:00", Integer.valueOf(room_id)));
-                        adapter.notifyDataSetChanged();
-                    }
-
-                }else if(s.equals("zero")){ //방 목록이 비어있을 때
-
-                    Log.d(TAG,"This user has joined no room");
-//                    Toast.makeText(getContext(), "no room.", Toast.LENGTH_SHORT).show();
-                }else{
-                    Log.d(TAG,"Error: failed to retrieve room data");
-
-//                    Toast.makeText(getContext(), "Error: failed to retrieve room data.", Toast.LENGTH_SHORT).show();
-                }
-
-
-            }catch (Exception e){
-                Log.d(TAG, "Error: "+e);
-            }
-
-
-        }
-    }
+//    class SendPost extends AsyncTask<Object, Void, String> {
+//
+//        ProgressDialog dialog = new ProgressDialog(getContext());
+//
+//        @Override
+//        protected void onPreExecute() {
+//            super.onPreExecute();
+//            Log.d(TAG,"onPreExecute");
+//
+//            dialog.setMessage("Processing..");
+//            dialog.show();
+//        }
+//
+//        @Override
+//        protected String doInBackground(Object... objects) {
+//
+//            String user_id = (String)objects[0];
+//            int nextPage_firstItemPosition = (int)objects[1];
+//
+//
+//            String response_line = "";
+//
+//            HttpClient client = new DefaultHttpClient();
+//            HttpPost post = new HttpPost("http://54.180.107.44/management.php");
+//
+//            //POST 방식에서 사용된다
+//            ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();
+//
+//            try {
+//                //Post방식으로 넘길 값들을 각각 지정을 해주어야 한다.
+//                nameValues.add(new BasicNameValuePair(
+//                        "get_roomList", URLDecoder.decode("y", "UTF-8")));
+//                nameValues.add(new BasicNameValuePair(
+//                        "user_id", URLDecoder.decode(user_id, "UTF-8")));
+//                nameValues.add(new BasicNameValuePair(
+//                        "first_item_position", URLDecoder.decode(String.valueOf(nextPage_firstItemPosition), "UTF-8")));
+//
+//
+//                //HttpPost에 넘길 값을들 Set해주기
+//                post.setEntity(new UrlEncodedFormEntity(nameValues, "UTF-8"));
+//
+//            } catch (UnsupportedEncodingException ex) {
+//                StringWriter sw = new StringWriter();
+//                ex.printStackTrace(new PrintWriter(sw));
+//                String exx = sw.toString();
+//
+//                Log.d(TAG,exx);
+//            }
+//
+//            try {
+//                //설정한 URL을 실행시키기 -> 응답을 받음
+//                HttpResponse response = client.execute(post);
+//                //통신 값을 받은 Log 생성. (200이 나오는지 확인할 것~) 200이 나오면 통신이 잘 되었다는 뜻!
+//                Log.i(TAG, "response.getStatusCode:" + response.getStatusLine().getStatusCode());
+//
+//                HttpEntity entity = response.getEntity();
+//
+//                if(entity !=null){
+//                    Log.d(TAG, "Response length:"+entity.getContentLength());
+//
+//                    // 콘텐츠를 읽어들임.
+//                    BufferedReader reader = new BufferedReader(new InputStreamReader(entity.getContent()));
+//
+//                    while ((response_line = reader.readLine()) != null) {
+//                        // 콘텐츠 내용
+//                        Log.d(TAG, "response: "+response_line);
+//                        return response_line;
+//                    }
+//                }
+//
+//                //Ensures that the entity content is fully consumed and the content stream, if exists, is closed.
+//                EntityUtils.consume(entity);
+//
+//                post.releaseConnection();
+//
+//
+//            } catch (ClientProtocolException e) {
+//                StringWriter sw = new StringWriter();
+//                e.printStackTrace(new PrintWriter(sw));
+//                String ex = sw.toString();
+//
+//                Log.d(TAG,ex);
+//            } catch (MalformedURLException e) {
+//                StringWriter sw = new StringWriter();
+//                e.printStackTrace(new PrintWriter(sw));
+//                String ex = sw.toString();
+//
+//                Log.d(TAG,ex);
+//            } catch (IOException e) {
+//                StringWriter sw = new StringWriter();
+//                e.printStackTrace(new PrintWriter(sw));
+//                String ex = sw.toString();
+//
+//                Log.d(TAG,ex);
+//            }
+//
+//            return null;
+//        }
+//
+//
+//        @Override
+//        protected void onPostExecute(String s) {
+//            super.onPostExecute(s);
+//
+//            dialog.dismiss();
+//            Log.d(TAG,"onPostExecute");
+//
+//
+//            try{
+//
+//                JSONObject result_object = new JSONObject(s);
+//                String result = result_object.getString("result");
+//                Log.d(TAG,"result="+result);
+//
+//                noMoreItem = result_object.getBoolean("no_more_item");
+//
+//                if(result.equals("success")){//결과가 '성공'이면
+//
+//                    //jsonArray 구조로 전달된 방정보를 파싱한다
+//                    Object rooms_Jobject = result_object.get("rooms_id_array");
+//                    JSONArray rooms_Jarray = (JSONArray)rooms_Jobject;
+//                    Log.d(TAG,"rooms_Jarray = "+rooms_Jarray);
+//
+//                    for (int i=0;i<rooms_Jarray.length();i++){
+//                        String room_id = rooms_Jarray.getString(i);
+//
+//                        roomItemList.add(0, new RoomListItem("room"+room_id, 5,
+//                                "hahaha", "12:00", Integer.valueOf(room_id)));
+//                        adapter.notifyDataSetChanged();
+//                    }
+//
+//                }else if(s.equals("zero")){ //방 목록이 비어있을 때
+//
+//                    Log.d(TAG,"This user has joined no room");
+////                    Toast.makeText(getContext(), "no room.", Toast.LENGTH_SHORT).show();
+//                }else{
+//                    Log.d(TAG,"Error: failed to retrieve room data");
+//
+////                    Toast.makeText(getContext(), "Error: failed to retrieve room data.", Toast.LENGTH_SHORT).show();
+//                }
+//
+//
+//            }catch (Exception e){
+//                StringWriter sw = new StringWriter();
+//                e.printStackTrace(new PrintWriter(sw));
+//                String ex = sw.toString();
+//
+//                Log.d(TAG,ex);
+//            }
+//
+//
+//        }
+//    }
 
 }

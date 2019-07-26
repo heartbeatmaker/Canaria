@@ -1,33 +1,19 @@
-package com.android.canaria;
+package com.android.canaria.login;
 
 import android.app.ProgressDialog;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentSender;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
-import android.telephony.TelephonyManager;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.auth.api.credentials.Credential;
-import com.google.android.gms.auth.api.credentials.CredentialRequest;
-import com.google.android.gms.auth.api.credentials.Credentials;
+import com.android.canaria.MainActivity;
+import com.android.canaria.R;
 import com.google.android.gms.auth.api.credentials.CredentialsClient;
-import com.google.android.gms.common.api.ResolvableApiException;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
 
 import java.io.BufferedReader;
 import java.io.IOException;

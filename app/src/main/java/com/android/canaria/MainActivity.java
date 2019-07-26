@@ -1,16 +1,10 @@
 package com.android.canaria;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
-import android.app.ProgressDialog;
+import android.app.ActivityManager;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.icu.util.Output;
-import android.os.AsyncTask;
-import android.os.Build;
-import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
@@ -23,9 +17,10 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
-import android.widget.Toast;
+
+import com.android.canaria.connect_to_server.MainService;
+import com.android.canaria.db.DBHelper;
+import com.android.canaria.login.SignInActivity;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -34,34 +29,19 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.Socket;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.List;
-
-import cz.msebera.android.httpclient.HttpEntity;
-import cz.msebera.android.httpclient.HttpResponse;
-import cz.msebera.android.httpclient.NameValuePair;
-import cz.msebera.android.httpclient.client.ClientProtocolException;
-import cz.msebera.android.httpclient.client.CookieStore;
-import cz.msebera.android.httpclient.client.HttpClient;
-import cz.msebera.android.httpclient.client.entity.UrlEncodedFormEntity;
-import cz.msebera.android.httpclient.client.methods.HttpPost;
-import cz.msebera.android.httpclient.cookie.Cookie;
-import cz.msebera.android.httpclient.impl.client.BasicCookieStore;
-import cz.msebera.android.httpclient.impl.client.DefaultHttpClient;
-import cz.msebera.android.httpclient.impl.conn.DefaultHttpClientConnectionOperator;
-import cz.msebera.android.httpclient.impl.cookie.BasicClientCookie;
-import cz.msebera.android.httpclient.message.BasicNameValuePair;
-import cz.msebera.android.httpclient.util.EntityUtils;
 
 public class MainActivity extends AppCompatActivity {
 
     String TAG = "tag "+this.getClass().getSimpleName();
 
+
+    MainService mainService;
+    Intent serviceIntent;
     Context context;
+
     String user_id, username, email;
 
     ActionBar actionBar;
@@ -79,81 +59,30 @@ public class MainActivity extends AppCompatActivity {
     MenuItem addFriend_menuItem, addRoom_menuItem;
 
 
-    //클라이언트 소켓 관련 변수
-    public static final String ServerIP = "54.180.107.44";
-    Socket socket;
-    BufferedWriter bufferedWriter;
-    BufferedReader bufferedReader;
-
-
-    public void initSocketClient() {
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    socket = new Socket("54.180.107.44", 8000);
-                    Log.d(TAG, "connected to chat server");
-
-                    InputStream is = socket.getInputStream();
-                    OutputStream os = socket.getOutputStream();
-                    InputStreamReader isr = new InputStreamReader(is);
-                    bufferedReader = new BufferedReader(isr); //서버로부터 메시지를 읽어들이는 객체
-
-                    OutputStreamWriter osw = new OutputStreamWriter(os);
-                    bufferedWriter = new BufferedWriter(osw); //서버에 메시지를 쓰는 객체
-
-                    //입장알림 - 서버에 보내는 신호/ 사용자 id /username
-//                    sendMsg("connect/" + user_id + "/" +username);
-
-                } catch (Exception e) {
-                    Log.d(TAG, "socket connection error: "+e);
-                }
-
-                try {
-                    Log.d(TAG, "trying to read message");
-                    //클라이언트의 메인 쓰레드는 서버로부터 데이터 읽어들이는 것만 반복
-                    while(true) {
-
-                        //서버에서 데이터를 보낼 때, 데이터를 '/'을 기준으로 한 문장으로 구성해서 보냄
-                        //맨 앞 문자열: 클라이언트에게 보내는 신호(어떤 행동을 해라)
-                        //그다음부터는 화면에 띄워줄 데이터
-                        String line = bufferedReader.readLine();
-                        Log.d(TAG, "readMsg(). message: "+line);
-
-//                        if(isDestroyed){
-//                            try{
-//                                sendMsg("disconnect/"+user_id);
-//                                Log.d(TAG, "소켓 해제");
-//                                break;
-//                            }catch (Exception e){
-//                                Log.d(TAG, "socket msg error: "+e);
-//                            }
-//                        }
-
-                    }
-                }catch(IOException e) {
-                    Log.d(TAG, "socket reader error: "+e);
-                }
-
-            }
-        }).start();
-    }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
 //        initSocketClient();
+        context = getApplicationContext();
+
+        mainService = new MainService(getApplicationContext());
+        serviceIntent = new Intent(context, MainService.class);
+
+        //지금 서비스가 실행되고 있지 않다면 -> 서비스를 실행한다
+        if(!isMyServiceRunning(mainService.getClass())){
+            startService(serviceIntent);
+        }
+
+
 
         //상단 액션바 설정
         actionBar = getSupportActionBar();
         actionBar.show();
         actionBar.setTitle("Friends");
-
-        context = getApplicationContext();
 
         //이 회원의 기본 정보를 불러온다
         user_id = Function.getString(context, "user_id");
@@ -217,12 +146,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+
+        ActivityManager manager = (ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
+        for(ActivityManager.RunningServiceInfo service: manager.getRunningServices(Integer.MAX_VALUE)){
+            if(serviceClass.getName().equals(service.service.getClassName())){
+                Log.d(TAG, "isMyServiceRunning? "+true);
+                return true;
+            }
+        }
+        Log.d(TAG, "isMyServiceRunning? "+false);
+        return false;
+    }
+
+
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
-
         Log.d(TAG, "onDestroy()");
 
+        try {
+            stopService(serviceIntent);
+        }catch (Exception e){
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String ex = sw.toString();
+
+            Log.d(TAG,ex);
+        }
 //        new Disconnect();
     }
 

@@ -1,4 +1,4 @@
-package com.android.canaria;
+package com.android.canaria.recyclerView;
 
 import android.content.Context;
 import android.content.Intent;
@@ -9,7 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
+
+import com.android.canaria.ChatActivity;
+import com.android.canaria.R;
 
 import java.util.ArrayList;
 
@@ -54,7 +56,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
             @Override
             public void onClick(View v) {
 
-                Intent intent = new Intent(mContext, ChatRoomActivity.class);
+                Intent intent = new Intent(mContext, ChatActivity.class);
                 intent.putExtra("roomId", item.getRoomId());
                 intent.putExtra("roomName", item.getRoomName());
                 mContext.startActivity(intent);

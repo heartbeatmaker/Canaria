@@ -1,22 +1,19 @@
-package com.android.canaria;
+package com.android.canaria.recyclerView;
 
 import android.content.Context;
-import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import com.android.canaria.R;
+import com.android.canaria.SelectFriendsActivity;
+
 import java.util.ArrayList;
 
 

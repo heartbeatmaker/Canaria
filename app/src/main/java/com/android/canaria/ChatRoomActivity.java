@@ -12,6 +12,11 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import com.android.canaria.connect_to_server.HttpRequest;
+import com.android.canaria.recyclerView.MessageAdapter;
+import com.android.canaria.recyclerView.MessageItem;
+import com.android.canaria.recyclerView.RoomListItem;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 

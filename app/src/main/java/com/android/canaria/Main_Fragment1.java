@@ -1,15 +1,11 @@
 package com.android.canaria;
 
 import android.app.ProgressDialog;
-import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -18,17 +14,21 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.android.canaria.recyclerView.FriendListAdapter;
+import com.android.canaria.recyclerView.FriendListItem;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
-import java.util.List;
 
 import cz.msebera.android.httpclient.HttpEntity;
 import cz.msebera.android.httpclient.HttpResponse;
@@ -170,7 +170,11 @@ public class Main_Fragment1 extends Fragment{
                 post.setEntity(new UrlEncodedFormEntity(nameValues, "UTF-8"));
 
             } catch (UnsupportedEncodingException ex) {
-                Log.d(TAG, ex.toString());
+                StringWriter sw = new StringWriter();
+                ex.printStackTrace(new PrintWriter(sw));
+                String exx = sw.toString();
+
+                Log.d(TAG,exx);
             }
 
             try {
@@ -201,11 +205,23 @@ public class Main_Fragment1 extends Fragment{
 
 
             } catch (ClientProtocolException e) {
-                e.printStackTrace();
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d(TAG,ex);
             } catch (MalformedURLException e) {
-                e.printStackTrace();
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d(TAG,ex);
             } catch (IOException e) {
-                e.printStackTrace();
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d(TAG,ex);
             }
 
             return null;
@@ -262,7 +278,11 @@ public class Main_Fragment1 extends Fragment{
 
 
             }catch (Exception e){
-                Log.d(TAG, "Error: "+e);
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d(TAG,ex);
             }
 
 
