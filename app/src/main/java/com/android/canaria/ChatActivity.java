@@ -32,8 +32,9 @@ public class ChatActivity extends AppCompatActivity {
     EditText msgInput_editText;
     Button sendMsg_btn;
 
-    String userId, username, roomName;
-    int roomId;
+    int userId;
+    String username, roomName;
+    public static int roomId;
 
     String TAG = "tag "+this.getClass().getSimpleName();
 
@@ -45,6 +46,14 @@ public class ChatActivity extends AppCompatActivity {
 
     Handler handler;
     boolean isNewRoom = false;
+
+    int msg_sender_id;
+    String msg_sender_username;
+    String msg_text;
+
+    String[] message_array;
+
+    String myMsg;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,14 +70,16 @@ public class ChatActivity extends AppCompatActivity {
 
 
         //현재 사용자의 정보를 가져온다
-        userId = Function.getString(getApplicationContext(), "user_id");
+        userId = Integer.valueOf(Function.getString(getApplicationContext(), "user_id"));
         username = Function.getString(getApplicationContext(), "username");
 
 
         try{
             String isNewRoom_string = getIntent().getStringExtra("isNewRoom");
-            if(isNewRoom_string != null && isNewRoom_string.length() > 0){
+            if(isNewRoom_string.equals("Y")){
                 isNewRoom = true;
+            }else{
+                isNewRoom = false;
             }
         }catch (Exception e){
             Log.d(TAG, "intent error");
@@ -101,6 +112,7 @@ public class ChatActivity extends AppCompatActivity {
                     }
                 }
 
+                //서비스에 메시지 전달
                 sendMsg("new_room/"+friendInfo_string);
 
             }catch (Exception e){
@@ -118,6 +130,11 @@ public class ChatActivity extends AppCompatActivity {
             roomName = getIntent().getStringExtra("roomName");
             roomId = getIntent().getIntExtra("roomId", 10000);
 
+            //서비스에 메시지 전달
+            sendMsg("return/"+roomId+"/"+roomName);
+
+            //저장된 메시지를 가져온다
+            
         }
 
 
@@ -138,7 +155,7 @@ public class ChatActivity extends AppCompatActivity {
                 Log.d(TAG, "onClick");
 
                 String message_input = msgInput_editText.getText().toString();
-//                sendMsg("msg/"+message_input);
+                sendMsg("msg/"+roomId+"/"+message_input);
                 msgInput_editText.setText("");
             }
         });
@@ -169,37 +186,58 @@ public class ChatActivity extends AppCompatActivity {
             String message = intent.getStringExtra("message");
             Log.d(TAG, "Receiver) message received: " + message);
 
-            String[] message_array = message.split("/");
+            message_array = message.split("/");
             String signal = message_array[0];
-            final String content = message_array[1];
 
             switch (signal){
-                case "roomInfo":
+                case "room_created": //방이 최초로 만들어졌을 때, 방 id를 전달받는다
+                    roomId = Integer.valueOf(message_array[1]);
+
+                    break;
+                case "roomInfo": //방 최초생성 시 or 기존 방에 들어왔을 때, 방 정보를 전달받는다
+
+                    final String roomInfo_atTitleBar = message_array[1];
+                    String memberInfo_string = message_array[2]; //참여자 정보(id;username;id;username..형식). 나중에 drawerLayout에 띄워줄 것
+
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
-                            roomInfo_textView.setText(content);
+
+                            roomInfo_textView.setText(roomInfo_atTitleBar);
                         }
                     });
                     break;
 
-                case "serverMsg":
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            messageItemList.add(0, new MessageItem("", content));
-                            adapter.notifyItemInserted(adapter.getItemCount()-1);
-                        }
-                    });
-                    break;
                 case "msg":
-                    handler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            messageItemList.add(0, new MessageItem("", content));
-                            adapter.notifyItemInserted(adapter.getItemCount()-1);
-                        }
-                    });
+//                    msg/roomId/sender_id/sender_username/message
+
+                    int roomId_msg = Integer.valueOf(message_array[1]);
+                    msg_sender_id = Integer.valueOf(message_array[2]);
+                    msg_sender_username = message_array[3];
+                    msg_text = message_array[4];
+
+                    if(roomId_msg == roomId){ //이 예외처리는 이미 서비스에서 했음. 재확인용
+
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+
+                                //서버에서 보낸 알림 메시지와 일반 사용자가 보낸 메시지를 구분한다
+                                if(msg_sender_id == 0 && msg_sender_username.equals("server")){ //서버 메시지
+                                    Log.d(TAG, "adding server message..");
+                                    messageItemList.add(new MessageItem("", msg_text));
+
+                                }else if(msg_sender_id == userId){//내가 보낸 메시지일때
+                                    messageItemList.add(new MessageItem("[Me]", msg_text));
+
+                                }else{//다른 사람이 보낸 메시지
+                                    messageItemList.add(new MessageItem(msg_sender_username, msg_text));
+                                }
+                                adapter.notifyItemInserted(adapter.getItemCount()-1);
+                            }
+                        });
+                    }
+
                     break;
 
             }

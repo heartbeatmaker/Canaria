@@ -53,8 +53,8 @@ public class MainActivity extends AppCompatActivity {
     private Main_Fragment2 fragment2 = new Main_Fragment2();
     private Main_Fragment3 fragment3 = new Main_Fragment3();
 
-    Fragment active_fragment = fragment1;
-    int active_fragment_int = 1;
+    public Fragment active_fragment = fragment1;
+    public static int active_fragment_int = 1;
 
     MenuItem addFriend_menuItem, addRoom_menuItem;
 

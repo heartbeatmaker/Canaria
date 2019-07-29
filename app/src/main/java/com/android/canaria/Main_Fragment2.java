@@ -1,14 +1,20 @@
 package com.android.canaria;
 
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -18,6 +24,7 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.android.canaria.db.DBHelper;
+import com.android.canaria.recyclerView.MessageItem;
 import com.android.canaria.recyclerView.RoomListAdapter;
 import com.android.canaria.recyclerView.RoomListItem;
 
@@ -64,7 +71,55 @@ public class Main_Fragment2 extends Fragment {
     SQLiteDatabase db;
     int results_per_page = 10;
 
+    Handler handler;
 
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        handler = new Handler();
+        LocalBroadcastManager.getInstance(getContext()).registerReceiver(messageReceiver, new IntentFilter("roomList_event"));
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+
+        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(messageReceiver);
+    }
+
+
+    private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String message = intent.getStringExtra("message");
+            Log.d(TAG, "Receiver) message received: " + message);
+
+            final String[] message_array = message.split("/");
+            String signal = message_array[0];
+
+            switch (signal){
+                case "inserted":
+
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            adapter.notifyDataSetChanged();
+                            rcv.scrollToPosition(0);
+                        }
+                    });
+                    break;
+
+            }
+
+
+        }
+    };
+
+
+    //UI 리소스 초기화
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -103,6 +158,7 @@ public class Main_Fragment2 extends Fragment {
     }
 
 
+
     public void rcvScroll(){
         rcv.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -129,6 +185,21 @@ public class Main_Fragment2 extends Fragment {
         });
 
     }
+
+
+    //메인화면의 fragment는 show/hide를 반복한다.
+    //show에서 adapter를 refresh 해준다 (서비스에서 item 추가되었을 경우 대비)
+//    @Override
+//    public void setUserVisibleHint(boolean isVisibleToUser) {
+//        super.setUserVisibleHint(isVisibleToUser);
+//        if (isVisibleToUser) {
+//            Log.d(TAG, "fragment2 is visible. notifyDataSetChanged() is called");
+//            adapter.notifyDataSetChanged();
+//        } else {
+//            Log.d(TAG, "fragment2 is invisible");
+//        }
+//    }
+
 
 
     public void loadAllItem(){
@@ -209,10 +280,18 @@ public class Main_Fragment2 extends Fragment {
     public void onResume() {
         super.onResume();
 
+        Log.d(TAG, "onResume");
         adapter.notifyDataSetChanged();
     }
 
-//    class SendPost extends AsyncTask<Object, Void, String> {
+    @Override
+    public void onPause() {
+        super.onPause();
+
+        Log.d(TAG, "onPause");
+    }
+
+    //    class SendPost extends AsyncTask<Object, Void, String> {
 //
 //        ProgressDialog dialog = new ProgressDialog(getContext());
 //

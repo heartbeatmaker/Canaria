@@ -57,10 +57,10 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
             public void onClick(View v) {
 
                 Intent intent = new Intent(mContext, ChatActivity.class);
+                intent.putExtra("isNewRoom", "N"); //기존 방에 입장한다는 표시
                 intent.putExtra("roomId", item.getRoomId());
                 intent.putExtra("roomName", item.getRoomName());
                 mContext.startActivity(intent);
-
             }
         });
 

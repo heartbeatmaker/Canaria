@@ -17,7 +17,9 @@ import android.util.Log;
 import com.android.canaria.ChatActivity;
 import com.android.canaria.Function;
 import com.android.canaria.MainActivity;
+import com.android.canaria.Main_Fragment2;
 import com.android.canaria.db.DBHelper;
+import com.android.canaria.recyclerView.RoomListItem;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -128,7 +130,7 @@ public class MainService extends Service {
         sendBroadcast(broadcastIntent);
 
 //        setAlarmTimer();
-        stopTimerTask();
+//        stopTimerTask();
 
 
         try{
@@ -161,7 +163,7 @@ public class MainService extends Service {
         private BufferedWriter bufferedWriter;
         private BufferedReader bufferedReader;
 
-        private int roomId;
+//        private int roomId;
 
 
         // 서버에 메시지 보내기
@@ -195,10 +197,10 @@ public class MainService extends Service {
             LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
         }
 
-        private void sendMsgToMain(){
+        private void sendMsgToMain(String message){
             Log.d(TAG, "Broadcasting message");
-            Intent intent = new Intent("main_event");
-            intent.putExtra("message", "This is my first message!");
+            Intent intent = new Intent("roomList_event");
+            intent.putExtra("message", message);
             LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
         }
 
@@ -250,53 +252,181 @@ public class MainService extends Service {
                 isChatForeground = Function.isForegroundActivity(getApplicationContext(), ChatActivity.class);
                 isMainForeground = Function.isForegroundActivity(getApplicationContext(), MainActivity.class);
 
-                //메시지를 sqlite 에 저장한다
+                //db 연결
+                DBHelper dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
+//                        SQLiteDatabase db = dbHelper.getWritableDatabase();
+
                 switch(signal){
 
                     //방이 만들어졌다는 알림
+                    //room_created/roomId/방이름/인원/memberInfo(참여자id;username..)
                     case "room_created":
-                        roomId = Integer.valueOf(line_array[1]);
+                        int roomId = Integer.valueOf(line_array[1]);
+                        String roomName = line_array[2];
+                        int number_of_members = Integer.valueOf(line_array[3]);
+                        String memberInfo_string = line_array[4];
 
-                        //db 연결
-                        DBHelper dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
-//                        SQLiteDatabase db = dbHelper.getWritableDatabase();
+                        sendMsgToChat("room_created/"+roomId);
 
                         //방 정보를 내부 저장소에 저장한다
-                        dbHelper.insert("chat_rooms", "room "+roomId, "me;you", Function.getCurrentTime());
+                        String currentTime = Function.getCurrentTime();
+                        //서버가 정해준 room id를 직접 저장해야 한다. auto increment(x)
+                        dbHelper.insert_chatRooms(roomId, roomName, memberInfo_string, currentTime);
 
                         String result = dbHelper.getResult_table_chatRooms();
                         Log.d(TAG, "saved new room. result="+result);
 
-                        //room_created/roomid -> 모든 사용자가 저장까지는 완료.
+                        //이 클라이언트가 개설한 방이라면, 이 때 사용자의 foreground activity는 무조건 ChatActivity
+                        int room_master_id = Integer.valueOf(memberInfo_string.split(";")[0]);
+                        if(room_master_id == user_id){
+                            Log.d(TAG, "this client created the room");
 
-                        if(isMainForeground){
-                            //리사이클러뷰 업데이트 하라고 전달 - reload?
+                            //방목록에 아이템을 추가한다
+                            Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName, number_of_members,
+                                    "", currentTime, roomId));
+
+                            //ChatActivity에 방 정보를 전달한다
+                            String msg_roomInfo = "roomInfo/"+roomName+" ("+number_of_members+")"+"/"+memberInfo_string;
+                            sendMsgToChat(msg_roomInfo);
+
+                        }else{ //이 클라이언트는 이 방에 초대된 것이다. 이 때 사용자의 foreground activity는 불명. 확인해야 한다
+                            Log.d(TAG, "this client is invited to the room");
+
+                            try{
+                                // 방목록에 아이템을 추가한다
+                                // 앱이 background에 있을 경우: onResume()에서 datasetChanged()가 호출된다
+                                Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName, number_of_members,
+                                        "", currentTime, roomId));
+                            }catch (Exception e){
+                                //앱이 꺼져있는데 서비스만 돌고 있을 경우, 오류가 날 수 있다
+                                StringWriter sw = new StringWriter();
+                                e.printStackTrace(new PrintWriter(sw));
+                                String ex = sw.toString();
+
+                                Log.d(TAG,ex);
+                            }
+
+                            if(isMainForeground){
+                                Log.d(TAG, "MainActivity is at foreground");
+
+                                //방목록 어댑터를 업데이트 하라고 메시지를 보낸다
+                                sendMsgToMain("inserted/");
+                            }
                         }
 
-                        //roomInfo/방정보
-                        //serverMsg/a room is created
-
                         break;
-                    case "serverMsg":
 
+                    //이 사용자가 기존에 있던 방에 다시 들어갔을 때, 서버로부터 방 정보를 수신받는다
+                    //이 사용자한테만 오는 알림이다
+                    case "roomInfo":
+
+                        // 방이름 (참여인원) 참여자1, 참여자2, 참여자3
                         content = line_array[1];
 
-                        //@@@@@그냥 보내면 안됨. activeRoom 확인해야함 - 그래야 '방나누기'임
-                        //my_room_created와 room_created를 나눌것!!!!!
-                        if(isChatForeground){
+                        if(isChatForeground){ //예기치않게 ChatActivity 가 꺼졌을 경우를 대비, 예외처리
+
                             sendMsgToChat(line); //signal이 포함된 전체 메시지를 보낸다
                             //챗화면에 메시지 띄워주기
                         }
 
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageItemList.add(0, new MessageItem("", content));
-//                                adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                            }
-//                        });
+                        break;
+
+                    case "msg": //다른 사람(+ 서버)이 보낸 메시지 알림
+//                        msg/roomId/sender_id/sender_username/message
+
+                        int roomId_msg = Integer.valueOf(line_array[1]);
+                        int sender_id = Integer.valueOf(line_array[2]);
+                        final String sender_username = line_array[3];
+                        String message = line_array[4];
+
+
+                        try{
+                            //공통: 메시지 저장, roomItemList 업데이트(insert 알림x)
+
+                            //1. 메시지를 내부 저장소에 저장한다
+                            String curTime_msg = Function.getCurrentTime();
+                            dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, curTime_msg);
+                            String result_msg = dbHelper.getResult_table_chatLogs();
+                            Log.d(TAG, "chat_logs table="+result_msg);
+
+                            //2. roomList를 업데이트한다 -- 서버메시지 제외
+                            if(sender_id == 0 && sender_username.equals("server")){ }
+                            else{
+                                //2-1. sqlite 에서 방 정보를 불러온다
+                                String roomInfo = dbHelper.get_chatRoomInfo(roomId_msg);
+                                String [] roomInfo_array = roomInfo.split("/");
+                                String roomName_msg = roomInfo_array[1];
+                                String memberInfo = roomInfo_array[3];
+                                String[] memberInfo_array = memberInfo.split(";");
+                                int number_of_members_msg = memberInfo_array.length/2;
+
+                                //2-2. 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
+                                Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
+                                        message, curTime_msg, roomId_msg));
+
+                                for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
+                                    RoomListItem item = Main_Fragment2.roomItemList.get(i);
+                                    if(item.getRoomId() == roomId_msg){
+                                        Main_Fragment2.roomItemList.remove(i);
+                                        Log.d(TAG, i+" item is removed from roomItemList");
+                                    }
+                                }
+
+
+                                //db에 방 정보를 업데이트한다(updateTime)
+                                dbHelper.room_updateTime(roomId_msg, curTime_msg);
+                            }
+
+
+                        }catch (Exception e){
+                            //앱이 꺼져있는데, 서비스가 돌면서 roomItemList를 업데이트 하면 오류가 날 수 있다
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            Log.d(TAG,ex);
+                        }
+
+
+                        //사용자가 현재 채팅화면을 보고 있을 때
+                        if(isChatForeground){
+
+                            //메인화면의 roomItemList를 업데이트한다 - 위에서 완료
+                            //insert 메시지는 보내지 않는다. 이 채팅화면이 종료되면, 방목록화면이 onResume() 되면서 adapter가 refresh된다
+
+                            //지금 보고있는 채팅방 = 메시지가 발신된 채팅방일 때
+                            //(이 메시지 = 이 방에서 보낸 메시지)
+                            if(ChatActivity.roomId == roomId_msg){
+
+                                //채팅 액티비티로 메시지를 전달한다
+                                sendMsgToChat(line);
+
+                            }else{ //채팅방이 일치하지 않을 때
+                                // (이 메시지 = 다른 방에서 보낸 메시지)
+
+                                //채팅 화면으로 메시지를 전달해서는 안 된다
+                            }
+
+                        }else if(isMainForeground){ //사용자가 메인화면을 보고 있다면
+
+                            //방목록 어댑터를 업데이트 하라고 메시지를 보낸다
+                            sendMsgToMain("inserted/");
+
+                            /*
+                            * 1. Fragment2(방목록)을 보고 있을 때
+                            * -> roomItemList에서 roomId가 동일한 것을 찾는다. 최신 메시지와 시각을 업데이트한다. 아이템 순서를 맨위로 끌어올린다
+                            * -> 방목록 어댑터를 업데이트 하라고 메시지를 보낸다. sendMsgToMain("inserted/");
+                            *
+                            * 2. 나머지 1,3을 보고 있을 때
+                            * -> 위와 동일하다. roomItemList업데이트 시켜줘야 하고
+                            * fragment 이동으로는 리사이클러뷰 업데이트가 안 되므로, 동일하게 insert 메시지를 보낸다
+                            * */
+
+                        }
+
 
                         break;
+
                     case "join": //누군가 방에 새로 가입했을 때
 
                         content = line_array[1];
@@ -349,52 +479,7 @@ public class MainService extends Service {
 //                        });
 //
 //                        break;
-                    case "roomInfo":
 
-                        // 방이름 (참여인원) 참여자1, 참여자2, 참여자3
-                        content = line_array[1];
-
-                        if(isChatForeground){
-                            sendMsgToChat(line); //signal이 포함된 전체 메시지를 보낸다
-                            //챗화면에 메시지 띄워주기
-                        }
-
-
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                roomInfo_textView.setText(content);
-//                            }
-//                        });
-
-                        break;
-                    case "msg": //다른 사람이 보낸 메시지 알림
-                        //메시지 보낸사람 정보 + 메시지 내용
-                        String sender_id = line_array[1];
-                        final String sender_username = line_array[2];
-                        content = line_array[3];
-
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageItemList.add(new MessageItem(sender_username, content));
-//                                adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                            }
-//                        });
-
-                        break;
-                    case "myMsg": //내가 보낸 메시지 알림
-                        content = line_array[1];
-
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageItemList.add(new MessageItem("[Me]", content));
-//                                adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                            }
-//                        });
-
-                        break;
 //                    case "inactive"://방 참여자중 누군가 방을 닫고 메시지를 읽지 않는 상태일 때
 //                        content = line_array[1];
 //
