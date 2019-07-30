@@ -293,7 +293,7 @@ public class ChatRoomActivity extends AppCompatActivity {
 
                                 //방 아이템 추가
                                 Main_Fragment2.roomItemList.add(0, new RoomListItem("room"+roomId, 5,
-                                        "hahaha", "12:00", roomId));
+                                        "", Function.getCurrentTime(), roomId, 0));
                                 Log.d(TAG, "Item is added to ChatRoomList");
                             }
 

@@ -11,15 +11,17 @@ public class RoomListItem {
 
     private int roomId;
     private int numberOfMembers;
+    private int unreadMsgCount;
 
 
-    public RoomListItem(String roomName, int numberOfMembers, String recentMessage, String updatedTime, int roomId) {
+    public RoomListItem(String roomName, int numberOfMembers, String recentMessage, String updatedTime, int roomId, int unreadMsgCount) {
 //        this.roomImage = roomImage;
         this.roomName = roomName;
         this.recentMessage = recentMessage;
         this.updatedTime = updatedTime;
         this.numberOfMembers = numberOfMembers;
         this.roomId = roomId;
+        this.unreadMsgCount = unreadMsgCount;
     }
 
 
@@ -31,6 +33,13 @@ public class RoomListItem {
 //        this.roomImage = roomImage;
 //    }
 
+    public int getUnreadMsgCount() {
+        return unreadMsgCount;
+    }
+
+    public void setUnreadMsgCount(int unreadMsgCount) {
+        this.unreadMsgCount = unreadMsgCount;
+    }
 
     public int getRoomId() {
         return roomId;

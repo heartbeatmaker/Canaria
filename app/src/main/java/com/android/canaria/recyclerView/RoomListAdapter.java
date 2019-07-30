@@ -50,6 +50,14 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
         viewHolder.updatedTime_textView.setText(item.getUpdatedTime());
         viewHolder.roomId_textView.setText(Integer.toString(item.getRoomId()));
 
+        if(item.getUnreadMsgCount() > 0){
+            viewHolder.unreadMsg_textView.setVisibility(View.VISIBLE);
+            viewHolder.unreadMsg_textView.setText(Integer.toString(item.getUnreadMsgCount()));
+        }else{
+            viewHolder.unreadMsg_textView.setVisibility(View.INVISIBLE);
+        }
+
+
         //사용자가 채팅방 아이템을 클릭하면, 채팅 화면을 실행한다
         //room name 과 id를 인텐트로 전달한다
         viewHolder.parentLayout.setOnClickListener(new View.OnClickListener() {
@@ -76,7 +84,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
     public class ViewHolder extends RecyclerView.ViewHolder {
 
 //        ImageView roomImage_imageView;
-        TextView roomName_textView, numberOfMembers_textView, recentMessage_textView, updatedTime_textView, roomId_textView;
+        TextView roomName_textView, numberOfMembers_textView, recentMessage_textView, updatedTime_textView, roomId_textView, unreadMsg_textView;
         RelativeLayout parentLayout;
 
         public ViewHolder(@NonNull View itemView) {
@@ -88,6 +96,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
             this.updatedTime_textView = itemView.findViewById(R.id.roomList_messageTime);
             this.roomId_textView = itemView.findViewById(R.id.roomList_roomId);
             this.parentLayout = itemView.findViewById(R.id.roomList_relativeLayout);
+            this.unreadMsg_textView = itemView.findViewById(R.id.roomList_unreadMsgCount);
 
 //            parentLayout.setOnLongClickListener(readMessageActivity);
         }

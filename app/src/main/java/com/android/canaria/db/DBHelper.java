@@ -10,12 +10,17 @@ import android.util.Log;
 public class DBHelper extends SQLiteOpenHelper {
 
     String TAG = "tag "+this.getClass().getSimpleName();
+    public SQLiteDatabase db;
 
     // DBHelper 생성자로 관리할 DB 이름과 버전 정보를 받음
     public DBHelper(Context context, String db_name, SQLiteDatabase.CursorFactory factory, int version) {
         super(context, db_name, factory, version);
 
 
+    }
+
+    public void open(){
+        db = getReadableDatabase();
     }
 
     // DB를 새로 생성할 때 호출되는 함수
@@ -27,8 +32,8 @@ public class DBHelper extends SQLiteOpenHelper {
         //방정보 테이블: id, 방이름, 업데이트 시각, 참여자 -- room_id는 auto increment가 아니다. 서버에서 준 id를 직접 저장한다
         db.execSQL("CREATE TABLE IF NOT EXISTS chat_rooms (room_id INTEGER PRIMARY KEY, room_name TEXT, updateTime TEXT, members TEXT);");
 
-        //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각
-        db.execSQL("CREATE TABLE IF NOT EXISTS chat_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, room_id INTEGER, sender_id INTEGER, sender_username TEXT, message TEXT, time TEXT);");
+        //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각, 읽었는지
+        db.execSQL("CREATE TABLE IF NOT EXISTS chat_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, room_id INTEGER, sender_id INTEGER, sender_username TEXT, message TEXT, time TEXT, isRead INTEGER);");
     }
 
 
@@ -62,7 +67,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
 
     //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각
-    public void insert_chatLogs(int room_id, int sender_id, String sender_username, String message, String time) {
+    public void insert_chatLogs(int room_id, int sender_id, String sender_username, String message, String time, int isRead) {
         // 읽고 쓰기가 가능하게 DB 열기
         long last_inserted_id;
 
@@ -74,6 +79,7 @@ public class DBHelper extends SQLiteOpenHelper {
         contentValues.put("sender_username", sender_username);
         contentValues.put("message", message);
         contentValues.put("time", time);
+        contentValues.put("isRead", isRead);
 
         last_inserted_id = db.insert("chat_logs", null, contentValues);
 
@@ -139,6 +145,8 @@ public class DBHelper extends SQLiteOpenHelper {
                     + cursor.getString(4) //message
                     + " / "
                     + cursor.getString(5) //time
+                    + " / "
+                    + cursor.getString(6) //isRead
                     + "\n";
         }
 
@@ -163,9 +171,73 @@ public class DBHelper extends SQLiteOpenHelper {
                     + cursor.getString(2) //updateTime
                     + " / "
                     + cursor.getString(3); //members
+
         }
         Log.d(TAG, "chatRoomInfo_saved = "+result);
 
         return result;
     }
+
+
+    //특정 방에서 사용자가 안 읽은 메시지 개수를 가져온다
+    public int get_unreadMsgCount(int roomId){
+        SQLiteDatabase db = getReadableDatabase();
+        int count = 0;
+        Log.d(TAG, "get_unreadMsgCount. roomId = "+roomId);
+
+        Cursor cursor = db.rawQuery("SELECT count(*) FROM chat_logs WHERE room_id='" + roomId + "' AND isRead=0;", null);
+        cursor.moveToFirst();
+        count = cursor.getInt(0);
+
+        Log.d(TAG, "unreadMsgCount of room "+roomId+" = "+count);
+
+        return count;
+    }
+
+
+    //각 채팅방 메시지중에 가장 최신 메시지를 가져온다
+    public String get_recentMessage(int roomId){
+        SQLiteDatabase db = getReadableDatabase();
+        String result = "";
+        Log.d(TAG, "get_recentMessage. roomId = "+roomId);
+
+        Cursor cursor = db.rawQuery("SELECT message FROM chat_logs WHERE room_id='" + roomId + "' ORDER BY time DESC LIMIT 1;", null);
+        while (cursor.moveToNext()) {
+            result = cursor.getString(0);
+        }
+        Log.d(TAG, "recent message of room "+roomId+" = "+result);
+
+        return result;
+    }
+
+
+    //방마다 저장된 채팅 메시지를 가져온다
+    public String get_savedMessages(int roomId){
+        SQLiteDatabase db = getReadableDatabase();
+        String result = "";
+        Log.d(TAG, "get_recentMessage. roomId = "+roomId);
+
+        //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각
+        Cursor cursor = db.rawQuery("SELECT * FROM chat_logs WHERE room_id='" + roomId + "' ORDER BY time DESC;", null);
+        while (cursor.moveToNext()) {
+            result += cursor.getInt(0) //id
+                    + " / "
+                    + cursor.getInt(1) //room id
+                    + " / "
+                    + cursor.getInt(2) //sender id
+                    + " / "
+                    + cursor.getString(3) //sender username
+                    + " / "
+                    + cursor.getString(4) //message
+                    + " / "
+                    + cursor.getString(5) //time
+                    + " / "
+                    + cursor.getString(6) //isRead
+                    + "\n";
+        }
+        Log.d(TAG, "chatRoomInfo_saved = "+result);
+
+        return result;
+    }
+
 }

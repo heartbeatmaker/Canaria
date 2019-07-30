@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.IBinder;
@@ -51,7 +52,7 @@ public class MainService extends Service {
     ClientSocket clientSocket;
     Socket socket;
 
-//    DBHelper dbHelper;
+    DBHelper dbHelper;
 //    SQLiteDatabase db;
 
     public MainService(Context applicationContext){
@@ -76,6 +77,9 @@ public class MainService extends Service {
         clientSocket = new ClientSocket();
         clientSocket.start();
 
+        //db 연결
+        dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
+        dbHelper.open();
 
     }
 
@@ -88,11 +92,6 @@ public class MainService extends Service {
         public int onStartCommand (Intent intent,int flags, int startId){
         super.onStartCommand(intent, flags, startId);
             Log.d(TAG, "MainService - onStartCommand()");
-
-//        int id = dbHelper.insert("chat_rooms", "room", "me;you;us", Function.getCurrentTime());
-//        Log.d(TAG, "inserted id="+id);
-//        String result = dbHelper.getResult_table_chatRooms();
-//        Log.d(TAG, "result="+result);
 
         try {
 
@@ -181,7 +180,12 @@ public class MainService extends Service {
                         bufferedWriter.write(msg + "\n");
                         bufferedWriter.flush();
                     }catch (Exception e){
-                        Log.d(TAG, "sendMsg() error: "+e);
+                        Log.d(TAG, "sendMsg() error");
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String ex = sw.toString();
+
+                        Log.d(TAG,ex);
                     }
 
                 }
@@ -224,11 +228,24 @@ public class MainService extends Service {
                 bufferedWriter = new BufferedWriter(osw); //서버에 메시지를 쓰는 객체
 
                 //서버에 연결 메시지 전송
-                sendMsgToServer("connect/"+user_id+"/"+username);
+                //참여중인 방 id를 가져온다
+                String myRoom_id = "";
+                Cursor cursor = dbHelper.db.rawQuery("SELECT room_id FROM chat_rooms", null);
+                while (cursor.moveToNext()) {
+                    myRoom_id += cursor.getString(0) +";";
+                }
+                myRoom_id = myRoom_id.substring(0, myRoom_id.length()-1);
+
+                sendMsgToServer("connect/"+user_id+"/"+username+"/"+myRoom_id);
 
             } catch (Exception e) {
                 Log.d(TAG, "socket connection error");
-                e.printStackTrace();
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d(TAG,ex);
+
             }
 
             try {
@@ -251,10 +268,6 @@ public class MainService extends Service {
 
                 isChatForeground = Function.isForegroundActivity(getApplicationContext(), ChatActivity.class);
                 isMainForeground = Function.isForegroundActivity(getApplicationContext(), MainActivity.class);
-
-                //db 연결
-                DBHelper dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
-//                        SQLiteDatabase db = dbHelper.getWritableDatabase();
 
                 switch(signal){
 
@@ -283,7 +296,7 @@ public class MainService extends Service {
 
                             //방목록에 아이템을 추가한다
                             Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName, number_of_members,
-                                    "", currentTime, roomId));
+                                    "", currentTime, roomId, 0));
 
                             //ChatActivity에 방 정보를 전달한다
                             String msg_roomInfo = "roomInfo/"+roomName+" ("+number_of_members+")"+"/"+memberInfo_string;
@@ -296,7 +309,7 @@ public class MainService extends Service {
                                 // 방목록에 아이템을 추가한다
                                 // 앱이 background에 있을 경우: onResume()에서 datasetChanged()가 호출된다
                                 Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName, number_of_members,
-                                        "", currentTime, roomId));
+                                        "", currentTime, roomId, 0));
                             }catch (Exception e){
                                 //앱이 꺼져있는데 서비스만 돌고 있을 경우, 오류가 날 수 있다
                                 StringWriter sw = new StringWriter();
@@ -331,7 +344,7 @@ public class MainService extends Service {
 
                         break;
 
-                    case "msg": //다른 사람(+ 서버)이 보낸 메시지 알림
+                    case "msg": //메시지 알림(내가 보낸 메시지 + 남이 보낸 메시지 + 서버 메시지)
 //                        msg/roomId/sender_id/sender_username/message
 
                         int roomId_msg = Integer.valueOf(line_array[1]);
@@ -339,13 +352,29 @@ public class MainService extends Service {
                         final String sender_username = line_array[3];
                         String message = line_array[4];
 
+                        String curTime_msg = Function.getCurrentTime();//현재 시각
+
+                        int unreadMsgCount = dbHelper.get_unreadMsgCount(roomId_msg); //사용자가 이 방에서 안 읽은 메시지 개수(원래 개수)
+
+                        int isRead = 0; // 1=true, 0=false 사용자가 이 메시지를 읽었는지 안 읽었는지 표시
 
                         try{
                             //공통: 메시지 저장, roomItemList 업데이트(insert 알림x)
 
                             //1. 메시지를 내부 저장소에 저장한다
-                            String curTime_msg = Function.getCurrentTime();
-                            dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, curTime_msg);
+
+                            //사용자가 지금 채팅방에서 이 메시지를 바로 읽을 수 있는 경우 -> 이 메시지를 읽은 것으로 처리
+                            if(isChatForeground && ChatActivity.roomId == roomId_msg){
+                                isRead = 1;
+
+                            }else{ //그렇지 않은 모든 경우 -> 이 메시지는 읽지 않은 것으로 처리 / 이 방에서 사용자가 안 읽은 메시지 개수++
+                                if(sender_id == 0 && sender_username.equals("server")){ //서버메시지는 읽음처리의 대상이 아님
+                                    isRead = 1;
+                                }
+                                unreadMsgCount += 1;
+                            }
+
+                            dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, curTime_msg, isRead);
                             String result_msg = dbHelper.getResult_table_chatLogs();
                             Log.d(TAG, "chat_logs table="+result_msg);
 
@@ -360,9 +389,10 @@ public class MainService extends Service {
                                 String[] memberInfo_array = memberInfo.split(";");
                                 int number_of_members_msg = memberInfo_array.length/2;
 
+
                                 //2-2. 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
                                 Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
-                                        message, curTime_msg, roomId_msg));
+                                        message, curTime_msg, roomId_msg, unreadMsgCount));
 
                                 for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
                                     RoomListItem item = Main_Fragment2.roomItemList.get(i);
@@ -413,14 +443,14 @@ public class MainService extends Service {
                             sendMsgToMain("inserted/");
 
                             /*
-                            * 1. Fragment2(방목록)을 보고 있을 때
-                            * -> roomItemList에서 roomId가 동일한 것을 찾는다. 최신 메시지와 시각을 업데이트한다. 아이템 순서를 맨위로 끌어올린다
-                            * -> 방목록 어댑터를 업데이트 하라고 메시지를 보낸다. sendMsgToMain("inserted/");
-                            *
-                            * 2. 나머지 1,3을 보고 있을 때
-                            * -> 위와 동일하다. roomItemList업데이트 시켜줘야 하고
-                            * fragment 이동으로는 리사이클러뷰 업데이트가 안 되므로, 동일하게 insert 메시지를 보낸다
-                            * */
+                             * 1. Fragment2(방목록)을 보고 있을 때
+                             * -> roomItemList에서 roomId가 동일한 것을 찾는다. 최신 메시지와 시각을 업데이트한다. 아이템 순서를 맨위로 끌어올린다
+                             * -> 방목록 어댑터를 업데이트 하라고 메시지를 보낸다. sendMsgToMain("inserted/");
+                             *
+                             * 2. 나머지 1,3을 보고 있을 때
+                             * -> 위와 동일하다. roomItemList업데이트 시켜줘야 하고
+                             * fragment 이동으로는 리사이클러뷰 업데이트가 안 되므로, 동일하게 insert 메시지를 보낸다
+                             * */
 
                         }
 

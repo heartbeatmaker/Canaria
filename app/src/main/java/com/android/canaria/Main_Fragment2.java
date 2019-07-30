@@ -79,7 +79,17 @@ public class Main_Fragment2 extends Fragment {
         super.onCreate(savedInstanceState);
 
         handler = new Handler();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        Log.d(TAG, "onResume");
+
         LocalBroadcastManager.getInstance(getContext()).registerReceiver(messageReceiver, new IntentFilter("roomList_event"));
+
+        adapter.notifyDataSetChanged();
     }
 
     @Override
@@ -105,6 +115,7 @@ public class Main_Fragment2 extends Fragment {
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
+                            Log.d(TAG, "adapter.notifyDataSetChanged()");
 
                             adapter.notifyDataSetChanged();
                             rcv.scrollToPosition(0);
@@ -212,10 +223,29 @@ public class Main_Fragment2 extends Fragment {
             String members = cursor.getString(3);
 
             String[] members_array = members.split(";");
+            String recentMessage = "";
+            int unreadMsgCount = 0;
+
+            try{
+
+                unreadMsgCount = dbHelper.get_unreadMsgCount(room_id);
+                recentMessage = dbHelper.get_recentMessage(room_id);
+
+                if(recentMessage == null){
+                    recentMessage = "";
+                }
+            }catch (Exception e){
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d(TAG,ex);
+            }
+
 
             if(room_name != null){
-                roomItemList.add(0, new RoomListItem(room_name, members_array.length,
-                        "hahaha", updateTime, room_id));
+                roomItemList.add(0, new RoomListItem(room_name, members_array.length/2,
+                        recentMessage, updateTime, room_id, unreadMsgCount));
 
             }
         }
@@ -252,9 +282,16 @@ public class Main_Fragment2 extends Fragment {
 
                 String[] members_array = members.split(";");
 
+                String recentMessage = dbHelper.get_recentMessage(room_id);
+
+                if(recentMessage == null){
+                    recentMessage = "";
+                }
+                int unreadMsgCount = dbHelper.get_unreadMsgCount(room_id);
+
                 if(room_name != null){
-                    roomItemList.add(0, new RoomListItem(room_name, members_array.length,
-                            "hahaha", updateTime, room_id));
+                    roomItemList.add(0, new RoomListItem(room_name, members_array.length/2,
+                            recentMessage, updateTime, room_id, unreadMsgCount));
 
                 }else{
                     noMoreItem = true;
@@ -276,13 +313,6 @@ public class Main_Fragment2 extends Fragment {
     }
 
 
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        Log.d(TAG, "onResume");
-        adapter.notifyDataSetChanged();
-    }
 
     @Override
     public void onPause() {

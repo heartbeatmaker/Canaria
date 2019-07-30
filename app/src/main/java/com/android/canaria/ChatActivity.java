@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
@@ -17,6 +19,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import com.android.canaria.connect_to_server.MainService;
+import com.android.canaria.db.DBHelper;
 import com.android.canaria.recyclerView.MessageAdapter;
 import com.android.canaria.recyclerView.MessageItem;
 
@@ -67,6 +70,15 @@ public class ChatActivity extends AppCompatActivity {
         roomInfo_textView = (TextView)findViewById(R.id.chat_roomInfo_textView);
         msgInput_editText = (EditText) findViewById(R.id.chat_message_editText);
         sendMsg_btn = (Button)findViewById(R.id.chat_send_btn);
+
+        //리사이클러뷰 초기화
+        rcv = (RecyclerView)findViewById(R.id.chat_message_rcv);
+        linearLayoutManager = new LinearLayoutManager(this);
+        rcv.setHasFixedSize(true);
+        rcv.setLayoutManager(linearLayoutManager);
+        messageItemList = new ArrayList<>();
+        adapter = new MessageAdapter(messageItemList, this);
+        rcv.setAdapter(adapter);
 
 
         //현재 사용자의 정보를 가져온다
@@ -134,18 +146,60 @@ public class ChatActivity extends AppCompatActivity {
             sendMsg("return/"+roomId+"/"+roomName);
 
             //저장된 메시지를 가져온다
-            
+
+            try{
+
+                //db 연결
+                DBHelper dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
+                dbHelper.open();
+                String result = "";
+                Log.d(TAG, "get_recentMessage. roomId = "+roomId);
+
+                //안 읽은 메시지가 몇 개인지 확인한다
+                Cursor cursor = dbHelper.db.rawQuery("SELECT count(*) FROM chat_logs WHERE room_id='" + roomId + "' AND isRead=0;", null);
+                cursor.moveToFirst();
+                int unreadMsgCount = cursor.getInt(0);
+
+                Log.d(TAG, "unread message count="+unreadMsgCount);
+
+
+                //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각
+                Cursor cursor2 = dbHelper.db.rawQuery("SELECT * FROM chat_logs WHERE room_id='" + roomId + "' ORDER BY time;", null);
+                while (cursor2.moveToNext()) {
+
+                    int message_id = cursor2.getInt(0);
+                    int sender_id = cursor2.getInt(2);
+                    String sender_username = cursor2.getString(3);
+                    String message = cursor2.getString(4);
+                    String time = cursor2.getString(5);
+                    int isRead = cursor2.getInt(6);
+
+                    Log.d(TAG,"id: "+message_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
+                            +" / message: "+message+" / time: "+time+" / isRead: "+isRead);
+
+                    if(sender_id == 0 && sender_username.equals("server")){
+                        sender_username = "";
+                    }
+
+                    messageItemList.add(new MessageItem(sender_username, message));
+
+                    /*
+                     * 페이징 해야함(최근 메시지 nn개씩 가져오기. 어디까지 가져왔는지 메시지 id를 변수에 넣어놓기)
+                     * */
+                }
+
+                rcv.scrollToPosition(messageItemList.size()-1);
+
+            }catch (Exception e){
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d(TAG,ex);
+            }
+
         }
 
-
-        //리사이클러뷰 초기화
-        rcv = (RecyclerView)findViewById(R.id.chat_message_rcv);
-        linearLayoutManager = new LinearLayoutManager(this);
-        rcv.setHasFixedSize(true);
-        rcv.setLayoutManager(linearLayoutManager);
-        messageItemList = new ArrayList<>();
-        adapter = new MessageAdapter(messageItemList, this);
-        rcv.setAdapter(adapter);
 
 
         //메시지 보내기 버튼을 클릭하면 -> 서비스로 메시지를 보낸다
@@ -234,6 +288,7 @@ public class ChatActivity extends AppCompatActivity {
                                     messageItemList.add(new MessageItem(msg_sender_username, msg_text));
                                 }
                                 adapter.notifyItemInserted(adapter.getItemCount()-1);
+                                rcv.scrollToPosition(messageItemList.size()-1);
                             }
                         });
                     }
