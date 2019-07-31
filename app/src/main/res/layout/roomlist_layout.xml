@@ -64,6 +64,8 @@
                 android:layout_weight="1"
                 android:gravity="center_vertical|top"
                 android:text="recent message"
+                android:ellipsize="end"
+                android:maxLines="1"
                 android:textSize="14sp" />
         </LinearLayout>
 

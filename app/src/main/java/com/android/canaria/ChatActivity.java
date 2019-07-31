@@ -22,6 +22,7 @@ import com.android.canaria.connect_to_server.MainService;
 import com.android.canaria.db.DBHelper;
 import com.android.canaria.recyclerView.MessageAdapter;
 import com.android.canaria.recyclerView.MessageItem;
+import com.android.canaria.recyclerView.RoomListItem;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -138,65 +139,10 @@ public class ChatActivity extends AppCompatActivity {
 
         }else{ //기존에 참여하던 방에 다시 들어온 것이라면
 
-            // 방 정보를 가져온다
-            roomName = getIntent().getStringExtra("roomName");
-            roomId = getIntent().getIntExtra("roomId", 10000);
+            roomId = getIntent().getIntExtra("roomId", 10000); // 이전 화면에서 전달한 방 id
 
-            //서비스에 메시지 전달
-            sendMsg("return/"+roomId+"/"+roomName);
-
-            //저장된 메시지를 가져온다
-
-            try{
-
-                //db 연결
-                DBHelper dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
-                dbHelper.open();
-                String result = "";
-                Log.d(TAG, "get_recentMessage. roomId = "+roomId);
-
-                //안 읽은 메시지가 몇 개인지 확인한다
-                Cursor cursor = dbHelper.db.rawQuery("SELECT count(*) FROM chat_logs WHERE room_id='" + roomId + "' AND isRead=0;", null);
-                cursor.moveToFirst();
-                int unreadMsgCount = cursor.getInt(0);
-
-                Log.d(TAG, "unread message count="+unreadMsgCount);
-
-
-                //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각
-                Cursor cursor2 = dbHelper.db.rawQuery("SELECT * FROM chat_logs WHERE room_id='" + roomId + "' ORDER BY time;", null);
-                while (cursor2.moveToNext()) {
-
-                    int message_id = cursor2.getInt(0);
-                    int sender_id = cursor2.getInt(2);
-                    String sender_username = cursor2.getString(3);
-                    String message = cursor2.getString(4);
-                    String time = cursor2.getString(5);
-                    int isRead = cursor2.getInt(6);
-
-                    Log.d(TAG,"id: "+message_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
-                            +" / message: "+message+" / time: "+time+" / isRead: "+isRead);
-
-                    if(sender_id == 0 && sender_username.equals("server")){
-                        sender_username = "";
-                    }
-
-                    messageItemList.add(new MessageItem(sender_username, message));
-
-                    /*
-                     * 페이징 해야함(최근 메시지 nn개씩 가져오기. 어디까지 가져왔는지 메시지 id를 변수에 넣어놓기)
-                     * */
-                }
-
-                rcv.scrollToPosition(messageItemList.size()-1);
-
-            }catch (Exception e){
-                StringWriter sw = new StringWriter();
-                e.printStackTrace(new PrintWriter(sw));
-                String ex = sw.toString();
-
-                Log.d(TAG,ex);
-            }
+            //저장된 메시지를 가져와서 화면에 띄워준다
+            getSavedMsg(roomId);
 
         }
 
@@ -214,7 +160,159 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
+    }
 
+
+
+    private void getSavedMsg(int roomId){
+
+        /*-------------방 정보를 가져온다--------------*/
+        //db 연결
+        DBHelper dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
+        dbHelper.open();
+
+        Cursor _cursor = dbHelper.db.rawQuery("SELECT room_name FROM chat_rooms WHERE room_id='" + roomId + "';", null);
+        _cursor.moveToFirst();
+        String roomName = _cursor.getString(0);
+        /*-------------------------------------------*/
+
+
+        //서비스에 메시지 전달
+        sendMsg("return/"+roomId+"/"+roomName);
+
+
+        try{
+
+            Cursor cursor0 = dbHelper.db.rawQuery("SELECT count(*) FROM chat_logs WHERE room_id='" + roomId + "' AND isRead=1;", null);
+            cursor0.moveToFirst();
+            int readMsgCount = cursor0.getInt(0);
+            //안 읽은 메시지가 몇 개인지 확인한다
+            Cursor cursor = dbHelper.db.rawQuery("SELECT count(*) FROM chat_logs WHERE room_id='" + roomId + "' AND isRead=0;", null);
+            cursor.moveToFirst();
+            int unreadMsgCount = cursor.getInt(0);
+
+            Log.d(TAG, "unread message count="+unreadMsgCount);
+
+
+            boolean isFirstUnreadMsg = true;
+            int focus_index = 0;
+            //저장된 메시지를 오래된 순서대로 화면에 띄워준다
+            //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각
+            Cursor cursor2 = dbHelper.db.rawQuery("SELECT * FROM chat_logs WHERE room_id='" + roomId + "' ORDER BY time;", null);
+            while (cursor2.moveToNext()) {
+
+                int message_id = cursor2.getInt(0);
+                int sender_id = cursor2.getInt(2);
+                String sender_username = cursor2.getString(3);
+                String message = cursor2.getString(4);
+                String time = cursor2.getString(5);
+                int isRead = cursor2.getInt(6);
+
+//                    Log.d(TAG,"id: "+message_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
+//                            +" / message: "+message+" / time: "+time+" / isRead: "+isRead);
+
+                if(sender_id == 0 && sender_username.equals("server")){
+                    sender_username = "";
+                }
+
+
+                if(unreadMsgCount > 0){ //안읽은 메시지가 있을 때
+                    if(isRead == 0){ //안읽은 메시지 중에서
+                        if(isFirstUnreadMsg){ //가장 오래된 메시지일 때
+
+                            Log.d(TAG, "가장 오래된 안읽은 메시지임");
+
+                            isFirstUnreadMsg = false;
+
+
+                            if(unreadMsgCount>10){ //안읽은 메시지가 10개 초과: 안읽은 메시지가 한 화면을 넘길 때
+                                focus_index = messageItemList.size(); //안읽은 메시지 중 가장 오래된 메시지에 스크롤 focus를 맞춘다
+
+                                if(readMsgCount > 10){//읽은 메시지가 10개 초과일때
+                                    //"여기서부터 안 읽었다"라고 메시지 위에 표시해준다
+                                    messageItemList.add(new MessageItem("", "You haven't read messages from here."));
+                                    messageItemList.add(new MessageItem(sender_username, message));
+
+                                }else{ //읽은 메시지가 10개 이하일 때(주고받은 메시지 자체가 적을 때)
+                                    //안읽음 표시를 하지 않는다
+                                    messageItemList.add(new MessageItem(sender_username, message));
+                                }
+                            }else{ //안읽은 메시지 개수가 10개 이하일때
+                                messageItemList.add(new MessageItem(sender_username, message));
+                            }
+
+                        }else{ //나머지 안읽은 메시지 -> 메시지를 화면에 표시한다
+                            messageItemList.add(new MessageItem(sender_username, message));
+                        }
+
+                    }else{ //이미 읽은 메시지일 때 -> 메시지를 화면에 표시한다
+                        messageItemList.add(new MessageItem(sender_username, message));
+                    }
+                }else{ //안읽은 메시지가 없을 때 -> 메시지를 화면에 표시한다
+
+                    messageItemList.add(new MessageItem(sender_username, message));
+                }
+
+
+                /*
+                 * 페이징 해야함(최근 메시지 nn개씩 가져오기. 어디까지 가져왔는지 메시지 id를 변수에 넣어놓기)
+                 * */
+            }
+
+            if(focus_index == 0){
+                focus_index = messageItemList.size()-1;
+            }
+
+            rcv.scrollToPosition(focus_index);
+
+
+
+            if(unreadMsgCount > 0){
+                //안 읽은 메시지가 있다면 -> 이것을 읽은 메시지로 db를 업데이트한다
+                Cursor cursor3 = dbHelper.db.rawQuery("SELECT id FROM chat_logs WHERE room_id='" + roomId + "' AND isRead=0;", null);
+                while (cursor3.moveToNext()) {
+
+                    int message_id = cursor3.getInt(0);
+                    dbHelper.db.execSQL("UPDATE chat_logs SET isRead=1 WHERE id='" + message_id + "';");
+                }
+
+
+                //방목록 아이템을 업데이트한다(안읽은 메시지 개수를 0으로 바꾼다)
+                for(RoomListItem room : Main_Fragment2.roomItemList){
+                    if(room.getRoomId() == roomId){
+                        room.setUnreadMsgCount(0);
+                    }
+                }
+
+            }
+
+
+        }catch (Exception e){
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String ex = sw.toString();
+
+            Log.d(TAG,ex);
+        }
+
+    }
+
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        Log.d("intent", "@@@@@@@@@@@onNewIntent");
+        messageItemList.clear();
+        adapter.notifyDataSetChanged();
+        roomInfo_textView.setText("");
+        isNewRoom = false;
+
+        roomId = intent.getIntExtra("roomId", 10000); // 이전 화면에서 전달한 방 id
+        Log.d("intent", "roomid="+roomId);
+
+        getSavedMsg(roomId);
+        adapter.notifyDataSetChanged();
     }
 
 

@@ -199,13 +199,13 @@ public class DBHelper extends SQLiteOpenHelper {
     public String get_recentMessage(int roomId){
         SQLiteDatabase db = getReadableDatabase();
         String result = "";
-        Log.d(TAG, "get_recentMessage. roomId = "+roomId);
+        Log.d("msg", "get_recentMessage. roomId = "+roomId);
 
         Cursor cursor = db.rawQuery("SELECT message FROM chat_logs WHERE room_id='" + roomId + "' ORDER BY time DESC LIMIT 1;", null);
         while (cursor.moveToNext()) {
             result = cursor.getString(0);
         }
-        Log.d(TAG, "recent message of room "+roomId+" = "+result);
+        Log.d("msg", "recent message of room "+roomId+" = "+result);
 
         return result;
     }

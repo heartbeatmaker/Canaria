@@ -54,7 +54,9 @@ public class Function {
     //현재 날짜, 시간을 구하기
     public static String getCurrentTime(){
 
-        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd aaa hh:mm");
+        //초 단위로 표시해야함. 그래야 db에서 데이터 가져올 때 가장 최신 데이터를 가져올 수 있다
+        //분 단위로 표시했을 때 문제: 8시 31분에 해당하는 4개의 데이터가 있다면, 거기서 가장 오래된 데이터를 가져옴(최신x)
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd aaa hh:mm:ss");
         String time = format.format(System.currentTimeMillis());
         return time;
     }
@@ -64,6 +66,29 @@ public class Function {
     public static String getString(Context context, String key){
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
         return pref.getString(key, "null");
+    }
+
+
+    public static boolean getBoolean(Context context, String key){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+        return pref.getBoolean(key, true);
+    }
+
+
+    public static void setBoolean(Context context, boolean value){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = pref.edit();
+        editor.putBoolean("alarm", value);
+        editor.commit();
+    }
+
+
+    public static void getAllPrefData(Context context){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+        Map<String, ?> allEntries = pref.getAll();
+        for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
+            Log.d("", "Shared Pref 에 있는 데이터 전부출력: "+entry.getKey() + ": " + entry.getValue().toString());
+        }
     }
 
 

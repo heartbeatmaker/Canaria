@@ -39,7 +39,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
     }
 
     @Override
-    public void onBindViewHolder(@NonNull RoomListAdapter.ViewHolder viewHolder, int position) {
+    public void onBindViewHolder(@NonNull final RoomListAdapter.ViewHolder viewHolder, int position) {
 
         final RoomListItem item = mItemArrayList.get(position);
 
@@ -67,7 +67,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
                 Intent intent = new Intent(mContext, ChatActivity.class);
                 intent.putExtra("isNewRoom", "N"); //기존 방에 입장한다는 표시
                 intent.putExtra("roomId", item.getRoomId());
-                intent.putExtra("roomName", item.getRoomName());
+
                 mContext.startActivity(intent);
             }
         });
@@ -104,10 +104,10 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
 
     }
 
-    public void updateAdapter(ArrayList<RoomListItem> list){ //리스트에 담긴 항목을 삭제한다
+    public void updateAdapter(ArrayList<RoomListItem> roomList){ //리스트에 담긴 항목을 삭제한다
 
-        for(RoomListItem message : list){
-            mItemArrayList.remove(message);
+        for(RoomListItem room : roomList){
+            mItemArrayList.remove(room);
         }
         notifyDataSetChanged();
     }

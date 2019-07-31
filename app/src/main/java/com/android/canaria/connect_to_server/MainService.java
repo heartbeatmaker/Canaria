@@ -12,6 +12,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.IBinder;
+import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
@@ -19,6 +20,7 @@ import com.android.canaria.ChatActivity;
 import com.android.canaria.Function;
 import com.android.canaria.MainActivity;
 import com.android.canaria.Main_Fragment2;
+import com.android.canaria.R;
 import com.android.canaria.db.DBHelper;
 import com.android.canaria.recyclerView.RoomListItem;
 
@@ -279,20 +281,22 @@ public class MainService extends Service {
                         int number_of_members = Integer.valueOf(line_array[3]);
                         String memberInfo_string = line_array[4];
 
-                        sendMsgToChat("room_created/"+roomId);
 
                         //방 정보를 내부 저장소에 저장한다
                         String currentTime = Function.getCurrentTime();
                         //서버가 정해준 room id를 직접 저장해야 한다. auto increment(x)
                         dbHelper.insert_chatRooms(roomId, roomName, memberInfo_string, currentTime);
 
-                        String result = dbHelper.getResult_table_chatRooms();
-                        Log.d(TAG, "saved new room. result="+result);
+//                        String result = dbHelper.getResult_table_chatRooms();
+//                        Log.d(TAG, "saved new room. result="+result);
 
-                        //이 클라이언트가 개설한 방이라면, 이 때 사용자의 foreground activity는 무조건 ChatActivity
+                        //현재 클라이언트 = 방 개설자일때. 이 때 사용자의 foreground activity는 무조건 ChatActivity
                         int room_master_id = Integer.valueOf(memberInfo_string.split(";")[0]);
                         if(room_master_id == user_id){
                             Log.d(TAG, "this client created the room");
+
+                            //채팅화면으로 방 id를 보낸다
+                            sendMsgToChat("room_created/"+roomId);
 
                             //방목록에 아이템을 추가한다
                             Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName, number_of_members,
@@ -302,7 +306,7 @@ public class MainService extends Service {
                             String msg_roomInfo = "roomInfo/"+roomName+" ("+number_of_members+")"+"/"+memberInfo_string;
                             sendMsgToChat(msg_roomInfo);
 
-                        }else{ //이 클라이언트는 이 방에 초대된 것이다. 이 때 사용자의 foreground activity는 불명. 확인해야 한다
+                        }else{ //현재 클라이언트 = 초대된 사람일 때. 이 때 사용자의 foreground activity는 불명. 확인해야 한다
                             Log.d(TAG, "this client is invited to the room");
 
                             try{
@@ -368,15 +372,27 @@ public class MainService extends Service {
                                 isRead = 1;
 
                             }else{ //그렇지 않은 모든 경우 -> 이 메시지는 읽지 않은 것으로 처리 / 이 방에서 사용자가 안 읽은 메시지 개수++
-                                if(sender_id == 0 && sender_username.equals("server")){ //서버메시지는 읽음처리의 대상이 아님
+
+                                //서버메시지는 읽음처리의 대상이 아님. 이미 읽은 것으로 저장한다
+                                if(sender_id == 0 && sender_username.equals("server")){
                                     isRead = 1;
+
+                                }else if(sender_id != user_id){ //내가 보낸 메시지가 아닐 경우
+                                    //푸쉬 알람을 띄워준다
+                                    //푸쉬알람 띄우는 조건
+                                    // 1. 지금 해당 채팅방을 보고 있지 않으면서
+                                    // 2. 서버메시지도, 내가 보낸 메시지도 아닐 경우 (남이 보낸 메시지일 경우)
+                                    showNotification(sender_username, message, roomId_msg);
                                 }
+
                                 unreadMsgCount += 1;
                             }
 
+
+                            //메시지 저장
                             dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, curTime_msg, isRead);
-                            String result_msg = dbHelper.getResult_table_chatLogs();
-                            Log.d(TAG, "chat_logs table="+result_msg);
+//                            String result_msg = dbHelper.getResult_table_chatLogs();
+//                            Log.d(TAG, "chat_logs table="+result_msg);
 
                             //2. roomList를 업데이트한다 -- 서버메시지 제외
                             if(sender_id == 0 && sender_username.equals("server")){ }
@@ -431,16 +447,20 @@ public class MainService extends Service {
                                 //채팅 액티비티로 메시지를 전달한다
                                 sendMsgToChat(line);
 
+                                //푸쉬 알람을 띄우면 안 된다
+
                             }else{ //채팅방이 일치하지 않을 때
                                 // (이 메시지 = 다른 방에서 보낸 메시지)
 
                                 //채팅 화면으로 메시지를 전달해서는 안 된다
+
                             }
 
                         }else if(isMainForeground){ //사용자가 메인화면을 보고 있다면
 
                             //방목록 어댑터를 업데이트 하라고 메시지를 보낸다
                             sendMsgToMain("inserted/");
+
 
                             /*
                              * 1. Fragment2(방목록)을 보고 있을 때
@@ -454,90 +474,7 @@ public class MainService extends Service {
 
                         }
 
-
                         break;
-
-                    case "join": //누군가 방에 새로 가입했을 때
-
-                        content = line_array[1];
-
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageItemList.add(new MessageItem("", content));
-//                                adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                            }
-//                        });
-
-                        break;
-//                    case "myJoin": //내가 방에 새로 가입했을 때
-//
-//                        content = line_array[1];
-//
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageItemList.add(new MessageItem("", content));
-//                                adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                            }
-//                        });
-//
-//                        break;
-//                    case "return"://누군가 방으로 돌아왔을 때
-//
-//                        content = line_array[1];
-//
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageItemList.add(new MessageItem("", content));
-//                                adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                            }
-//                        });
-//
-//                        break;
-//                    case "myReturn"://내가 방으로 돌아왔을 때
-//
-//                        content = line_array[1];
-//
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageItemList.add(new MessageItem("", content));
-//                                adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                            }
-//                        });
-//
-//                        break;
-
-//                    case "inactive"://방 참여자중 누군가 방을 닫고 메시지를 읽지 않는 상태일 때
-//                        content = line_array[1];
-//
-//                        handler.post(new Runnable() {
-//                            @Override
-//                            public void run() {
-//                                messageItemList.add(new MessageItem("", content));
-//                                adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                            }
-//                        });
-//
-//                        break;
-//
-//
-//
-//                        case "out"://방 참여자중 누군가 방을 나갔을 때
-//                            String friend_id = line_array[1];
-//                            final String friend_username = line_array[2];
-//
-//                            handler.post(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    messageItemList.add(new MessageItem("", friend_username+" has left the room."));
-//                                    adapter.notifyItemInserted(adapter.getItemCount()-1);
-//                                }
-//                            });
-//
-//                            break;
                 }
 
 
@@ -602,28 +539,29 @@ public class MainService extends Service {
     }
 
 
-//    public void showNotification(String heading, String description){
-//
-//        createChannel(this);
-//
-//        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this,"channelID")
-//                .setContentTitle(heading)
-//                .setContentText(description)
-//                .setAutoCancel(true);
-//
-//        Intent openThePageIntent = new Intent(this, CheckGoals.class);
-//        openThePageIntent.putExtra("preferenceName", preferenceName);
-//        openThePageIntent.putExtra("isClicked", true);//해당 메시지를 클릭해서 읽었는지 확인하기 위한 용도. true/false 값은 상관없음
-//        openThePageIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-//
-//        PendingIntent pendingIntent = PendingIntent.getActivity(this, (int)(System.currentTimeMillis()/1000), openThePageIntent, PendingIntent.FLAG_ONE_SHOT);
-//
-//        notificationBuilder.setContentIntent(pendingIntent);
-//
-//        int notificationId = (int)(System.currentTimeMillis()/1000);
-//        NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
-//        notificationManager.notify(notificationId, notificationBuilder.build());
-//    }
+    public void showNotification(String sender_username, String message, int roomId){
+
+        createChannel(this);
+
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this,"channelID")
+                .setContentTitle("Canaria")
+                .setContentText(sender_username +" : "+message)
+                .setSmallIcon(R.drawable.bird_icon)
+                .setAutoCancel(true);
+
+        Intent openThePageIntent = new Intent(this, ChatActivity.class);
+        openThePageIntent.putExtra("isNewRoom", "N"); //기존 방에 입장한다는 표시
+        openThePageIntent.putExtra("roomId", roomId);
+        openThePageIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, (int)(System.currentTimeMillis()/1000), openThePageIntent, PendingIntent.FLAG_ONE_SHOT);
+
+        notificationBuilder.setContentIntent(pendingIntent);
+
+        int notificationId = (int)(System.currentTimeMillis()/1000);
+        NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(notificationId, notificationBuilder.build());
+    }
 
     public void createChannel(Context context){
         if (Build.VERSION.SDK_INT < 26) {
