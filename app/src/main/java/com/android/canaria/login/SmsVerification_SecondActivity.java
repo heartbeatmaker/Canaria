@@ -11,6 +11,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.canaria.Function;
 import com.android.canaria.MainActivity;
 import com.android.canaria.R;
 import com.google.android.gms.auth.api.credentials.CredentialsClient;
@@ -321,7 +322,8 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
 //                        });
 
 
-
+                //알람 설정을 true로 초기화한다
+                Function.setBoolean(getApplicationContext(), "alarm", true);
 
 
                 //메인 화면으로 넘어간다

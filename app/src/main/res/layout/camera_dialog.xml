@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/cardview_dark_background"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Set Profile Image"
+        android:textColor="@color/grey"
+        android:textSize="18sp"
+        android:gravity="center"
+        android:layout_marginTop="20dp"/>
+
+    <ImageView
+        android:id="@+id/profile_imageView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/dialog_title"
+        android:layout_above="@id/dialog_linearLayout"/>
+
+    <LinearLayout
+        android:layout_alignParentBottom="true"
+        android:id="@+id/dialog_linearLayout"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1.5">
+
+            <Button
+                android:id="@+id/camera_btn"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="CAMERA" />
+
+            <Button
+                android:id="@+id/gallery_btn"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="GALLERY" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/dialog_cancel_btn"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:text="CANCEL" />
+
+    </LinearLayout>
+
+
+
+</RelativeLayout>

@@ -62,6 +62,13 @@ public class Function {
     }
 
 
+    public static void setString(Context context, String key, String value){
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
+        SharedPreferences.Editor editor = pref.edit();
+        editor.putString(key, value);
+        editor.commit();
+    }
+
 
     public static String getString(Context context, String key){
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
@@ -75,10 +82,10 @@ public class Function {
     }
 
 
-    public static void setBoolean(Context context, boolean value){
+    public static void setBoolean(Context context, String key, boolean value){
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
         SharedPreferences.Editor editor = pref.edit();
-        editor.putBoolean("alarm", value);
+        editor.putBoolean(key, value);
         editor.commit();
     }
 
@@ -87,7 +94,7 @@ public class Function {
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(context);
         Map<String, ?> allEntries = pref.getAll();
         for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
-            Log.d("", "Shared Pref 에 있는 데이터 전부출력: "+entry.getKey() + ": " + entry.getValue().toString());
+            Log.d("noti", "Shared Pref 에 있는 데이터 전부출력: "+entry.getKey() + ": " + entry.getValue().toString());
         }
     }
 

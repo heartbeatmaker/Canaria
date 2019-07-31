@@ -57,9 +57,9 @@ public class MainService extends Service {
     DBHelper dbHelper;
 //    SQLiteDatabase db;
 
-    public MainService(Context applicationContext){
+    public MainService(Context context){
         super();
-        context = applicationContext;
+        this.context = context;
         Log.d(TAG, "MainService.class 생성자");
 
     }
@@ -382,7 +382,11 @@ public class MainService extends Service {
                                     //푸쉬알람 띄우는 조건
                                     // 1. 지금 해당 채팅방을 보고 있지 않으면서
                                     // 2. 서버메시지도, 내가 보낸 메시지도 아닐 경우 (남이 보낸 메시지일 경우)
+
+
                                     showNotification(sender_username, message, roomId_msg);
+
+
                                 }
 
                                 unreadMsgCount += 1;
@@ -541,26 +545,41 @@ public class MainService extends Service {
 
     public void showNotification(String sender_username, String message, int roomId){
 
-        createChannel(this);
+        Function.getAllPrefData(getApplicationContext());
+        try{
 
-        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this,"channelID")
-                .setContentTitle("Canaria")
-                .setContentText(sender_username +" : "+message)
-                .setSmallIcon(R.drawable.bird_icon)
-                .setAutoCancel(true);
+            if(Function.getBoolean(getApplicationContext(), "alarm")){
 
-        Intent openThePageIntent = new Intent(this, ChatActivity.class);
-        openThePageIntent.putExtra("isNewRoom", "N"); //기존 방에 입장한다는 표시
-        openThePageIntent.putExtra("roomId", roomId);
-        openThePageIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                createChannel(this);
 
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, (int)(System.currentTimeMillis()/1000), openThePageIntent, PendingIntent.FLAG_ONE_SHOT);
+                NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this,"channelID")
+                        .setContentTitle("Canaria")
+                        .setContentText(sender_username +" : "+message)
+                        .setSmallIcon(R.drawable.bird_icon)
+                        .setAutoCancel(true);
 
-        notificationBuilder.setContentIntent(pendingIntent);
+                Intent openThePageIntent = new Intent(this, ChatActivity.class);
+                openThePageIntent.putExtra("isNewRoom", "N"); //기존 방에 입장한다는 표시
+                openThePageIntent.putExtra("roomId", roomId);
+                openThePageIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-        int notificationId = (int)(System.currentTimeMillis()/1000);
-        NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(notificationId, notificationBuilder.build());
+                PendingIntent pendingIntent = PendingIntent.getActivity(this, (int)(System.currentTimeMillis()/1000), openThePageIntent, PendingIntent.FLAG_ONE_SHOT);
+
+                notificationBuilder.setContentIntent(pendingIntent);
+
+                int notificationId = (int)(System.currentTimeMillis()/1000);
+                NotificationManager notificationManager = (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
+                notificationManager.notify(notificationId, notificationBuilder.build());
+            }
+        }catch (Exception e){
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String ex = sw.toString();
+
+            Log.d(TAG, ex);
+        }
+
+
     }
 
     public void createChannel(Context context){

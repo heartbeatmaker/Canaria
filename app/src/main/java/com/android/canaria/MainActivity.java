@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         context = getApplicationContext();
 
         mainService = new MainService(getApplicationContext());
-        serviceIntent = new Intent(context, MainService.class);
+        serviceIntent = new Intent(MainActivity.this, MainService.class);
 
         //지금 서비스가 실행되고 있지 않다면 -> 서비스를 실행한다
         if(!isMyServiceRunning(mainService.getClass())){

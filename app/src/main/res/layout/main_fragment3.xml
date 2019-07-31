@@ -17,7 +17,7 @@
         android:layout_marginTop="10dp">
 
         <ImageView
-            android:id="@+id/myPage_profile_imageView"
+            android:id="@+id/main_fragment3_profile_imageView"
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:layout_gravity="center"

@@ -24,6 +24,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.canaria.Function;
 import com.android.canaria.MainActivity;
 import com.android.canaria.R;
 import com.google.android.gms.auth.api.credentials.Credential;
@@ -99,6 +100,10 @@ public class SignUpActivity extends AppCompatActivity {
         setContentView(R.layout.activity_sign_up);
 
         Log.d(TAG,"oncreate");
+
+        //알람 설정을 true로 초기화한다
+        // -- 임시 설정임!! 원래 회원가입 완료했을 때 SmsVerification_SecondActivity에서 한 번만 실행하는 코드임
+        Function.setBoolean(getApplicationContext(), "alarm", true);
 
         automaticLogin();//이미 로그인 상태면, 메인화면으로 전환한다
 
