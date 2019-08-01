@@ -1,13 +1,14 @@
 package com.android.canaria.recyclerView;
 
 import android.graphics.Bitmap;
+import android.widget.Switch;
 
 public class RoomListItem {
 
 //    private Bitmap roomImage;
     private String roomName;
     private String recentMessage;
-    private String updatedTime;
+    String updatedTime;
 
     private int roomId;
     private int numberOfMembers;

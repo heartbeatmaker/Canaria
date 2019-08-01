@@ -28,15 +28,15 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 
 public class HttpRequest extends AsyncTask<Void, Void, String> {
 
-    Context context;
+//    Context context;
     String path;
     ContentValues _params;
     String TAG = "tag "+this.getClass().getSimpleName();
 //    ProgressDialog dialog = new ProgressDialog(context);
 
 
-    public HttpRequest(Context context, String path, ContentValues _params){
-        this.context = context;
+    public HttpRequest(String path, ContentValues _params){
+//        this.context = context;
         this.path = path;
         this._params = _params;
     }

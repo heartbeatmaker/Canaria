@@ -394,7 +394,7 @@ public class MainService extends Service {
 
 
                             //메시지 저장
-                            dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, curTime_msg, isRead);
+                            dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, System.currentTimeMillis(), isRead);
 //                            String result_msg = dbHelper.getResult_table_chatLogs();
 //                            Log.d(TAG, "chat_logs table="+result_msg);
 

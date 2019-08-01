@@ -138,7 +138,7 @@ public class FriendFinder_Fragment2 extends Fragment {
             String response = "";
 
             try {
-                response = new HttpRequest(getContext(), "management.php", data).execute().get();
+                response = new HttpRequest("management.php", data).execute().get();
             } catch (Exception e) {
                 Log.d("tag", "Error: "+e);
             }
@@ -247,7 +247,7 @@ public class FriendFinder_Fragment2 extends Fragment {
         String response = "";
 
         try {
-            response = new HttpRequest(getContext(), "management.php", data).execute().get();
+            response = new HttpRequest("management.php", data).execute().get();
         } catch (Exception e) {
             Log.d("tag", "Error: "+e);
         }

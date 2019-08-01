@@ -8,7 +8,9 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.PorterDuff;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
@@ -27,16 +29,25 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.target.Target;
 
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -50,7 +61,7 @@ import static android.app.Activity.RESULT_OK;
 public class Main_Fragment3 extends Fragment {
 
     ImageView profileImage_imageView;
-    String mCurrentPhotoPath;
+    String mCurrentPhotoPath; //사진파일을 저장할 경로. 재사용을 위해 전역변수로 선언한다
     Bitmap rotatedBitmap;
     private static final int PICK_IMAGE_REQUEST = 2;
     static final int REQUEST_TAKE_PHOTO = 3;
@@ -62,6 +73,7 @@ public class Main_Fragment3 extends Fragment {
     String user_id, username, user_email;
     Switch alarm_switch;
 
+    String previous_fileName;
 
     int serverResponseCode = 0;
     ProgressDialog dialog = null;
@@ -75,11 +87,21 @@ public class Main_Fragment3 extends Fragment {
         user_id = Function.getString(getContext(), "user_id");
         username = Function.getString(getContext(), "username");
         user_email = Function.getString(getContext(), "email");
-
-        String profileImage_path = "http://54.180.107.44/uploads/"+Function.getString(getActivity(), "profileImage");
-        Log.d("image", profileImage_path);
         profileImage_imageView = (ImageView)view.findViewById(R.id.main_fragment3_profile_imageView);
-        Glide.with(getActivity()).asBitmap().load(profileImage_path).into(profileImage_imageView); //asBitmap은 왜 넣는거지?
+
+
+        String profileImage_name = Function.getString(getActivity(), "profileImage");
+        if(!profileImage_name.equals("null")){
+            String profileImage_path = "http://54.180.107.44/uploads/"+profileImage_name;
+            Log.d("image", profileImage_path);
+
+//            RequestOptions options = new RequestOptions()
+//                    .diskCacheStrategy(DiskCacheStrategy.NONE);
+
+            Glide.with(getActivity()).asBitmap().load(profileImage_path)
+                    .into(profileImage_imageView); //asBitmap은 왜 넣는거지?
+        }
+
 
         username_textView = (TextView)view.findViewById(R.id.main_fragment3_username_textView);
         email_textView = (TextView)view.findViewById(R.id.main_fragment3_email_textView);
@@ -138,14 +160,35 @@ public class Main_Fragment3 extends Fragment {
                 @Override
                 public void onClick(View v) {
 
+
                     //카메라로 사진찍기 or 갤러리에서 사진 가져오기 선택
                     AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
                     View view = LayoutInflater.from(getActivity()).inflate(R.layout.camera_dialog, null, false);
                     builder.setView(view);
 
+                    final ProgressBar progressBar = (ProgressBar)view.findViewById(R.id.dialog_progressBar);
+                    progressBar.setIndeterminate(true);
+                    progressBar.getIndeterminateDrawable().setColorFilter(Color.WHITE, PorterDuff.Mode.MULTIPLY); //색 변경
+
                     ImageView profile_imageView = (ImageView)view.findViewById(R.id.profile_imageView);
                     String profileImage_path = "http://54.180.107.44/uploads/"+Function.getString(getActivity(), "profileImage");
-                    Glide.with(view).asBitmap().load(profileImage_path).into(profile_imageView);
+
+
+                    Glide.with(view).asBitmap().load(profileImage_path)
+                            .listener(new RequestListener<Bitmap>() {
+                                @Override
+                                public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Bitmap> target, boolean isFirstResource) {
+                                    progressBar.setVisibility(View.GONE);
+                                    return false;
+                                }
+
+                                @Override
+                                public boolean onResourceReady(Bitmap resource, Object model, Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
+                                    progressBar.setVisibility(View.GONE);
+                                    return false;
+                                }
+                            })
+                            .into(profile_imageView);
 
                     final Button camera = (Button) view.findViewById(R.id.camera_btn);
                     final Button gallery = (Button) view.findViewById(R.id.gallery_btn);
@@ -161,7 +204,7 @@ public class Main_Fragment3 extends Fragment {
                         }
                     });
 
-                    
+
                     camera.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
@@ -208,37 +251,23 @@ public class Main_Fragment3 extends Fragment {
         //직접 찍은 사진의 경로를 받아옴
         if(requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK){
             try { //getBitmap 오류 방지
-                File file = new File(mCurrentPhotoPath);
-                Bitmap bitmap = MediaStore.Images.Media.getBitmap(getActivity().getContentResolver(), Uri.fromFile(file));
-                if (bitmap != null) {
-                    ExifInterface ei = new ExifInterface(mCurrentPhotoPath);
-                    int orientation = ei.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_UNDEFINED);
 
-                    rotatedBitmap = null;
-                    switch(orientation){
-                        case ExifInterface.ORIENTATION_ROTATE_90:
-                            rotatedBitmap = rotateImage(bitmap,90);
-                            break;
+                //사용자가 방금 찍은 사진은 photoUri 에 저장되어 있다
 
-                        case ExifInterface.ORIENTATION_ROTATE_180:
-                            rotatedBitmap = rotateImage(bitmap,180);
-                            break;
+                try{
 
-                        case ExifInterface.ORIENTATION_ROTATE_270:
-                            rotatedBitmap = rotateImage(bitmap,270);
-                            break;
+                    File albumFile = null;
+                    albumFile = createImageFile();
+                    albumUri = Uri.fromFile(albumFile);
+                    Log.d("image", "photoUri: "+photoUri); // content uri= 사용자가 방금 찍은 사진이 저장된 곳
+                    Log.d("image","albumUri: "+albumUri); // file uri = 사진을 crop 해서 저장할 곳
+                    cropImage();
 
-                        case ExifInterface.ORIENTATION_NORMAL:
-                        default:
-                            rotatedBitmap = bitmap;
-                    }
-
-                    profileImage_imageView.setImageBitmap(rotatedBitmap);
-
-                    //사진 경로 저장
-//                    setData("profileImagePath", mCurrentPhotoPath);
+                }catch(Exception e){
+                    e.printStackTrace();
                 }
-            }catch (IOException ex){
+
+            }catch (Exception ex){
 
             }
         }
@@ -250,8 +279,8 @@ public class Main_Fragment3 extends Fragment {
 
                 File albumFile = null;
                 albumFile = createImageFile();
-                photoUri = data.getData();
-                albumUri = Uri.fromFile(albumFile); // 해당 경로에 저장
+                photoUri = data.getData(); //content URI
+                albumUri = Uri.fromFile(albumFile); // file URI
                 Log.d("image", "photoUri: "+photoUri);
                 Log.d("image","albumUri: "+albumUri);
                 cropImage();
@@ -272,7 +301,10 @@ public class Main_Fragment3 extends Fragment {
             String fileName = imagePath_split[imagePath_split.length-1];
             Log.d("image", "fileName="+fileName);
 
-            //사진 파일 이름을 shared preference 에 저장
+
+            //기존 사진 파일의 이름을 가져온다
+            previous_fileName = Function.getString(getActivity(), "profileImage");
+            //새로운 사진 파일 이름을 shared preference 에 저장
             Function.setString(getActivity(), "profileImage", fileName);
 
             //사진을 서버에 업로드
@@ -335,12 +367,19 @@ public class Main_Fragment3 extends Fragment {
 
                 dos = new DataOutputStream(conn.getOutputStream());
 
+                //id를 보낸다
+                dos.writeBytes(twoHyphens + boundary + lineEnd);
+
+                dos.writeBytes("Content-Disposition: form-data; name=\"previous_fileName\"\r\n\r\n" + previous_fileName +lineEnd);
+
+                //이미지 파일을 보낸다
                 dos.writeBytes(twoHyphens + boundary + lineEnd);
 
                 dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\""
                         + fileName + "\"" + lineEnd);
 
                 dos.writeBytes(lineEnd);
+
 
                 // create a buffer of  maximum size
                 bytesAvailable = fileInputStream.available();
@@ -406,7 +445,16 @@ public class Main_Fragment3 extends Fragment {
 
 
 
-
+/*
+* * <안드로이드에서 파일을 저장할 수 있는 경로>
+* 1. 내부저장소(Internal Storage) : 앱 데이터가 저장되는 영역
+* 2. 외부저장소(External Storage) : 사진, 비디오, 데이터를 저장하는 영역 = SD카드
+	* 외부저장소 = 공용 영역 + 각 앱의 고유 영역
+	* 각 앱의 고유 영역은 앱이 삭제될 때 같이 삭제된다
+	* 공용 영역에는 사진, 비디오, 기타 파일등이 저장된다. 앱의 삭제와 무관하다
+	* 고유 영역이라 할지라도 다른 앱에서 데이터에 접근하는 것이 가능하다
+	* 데이터가 저장되는 주요 경로를, 메서드를 이용하여 간편하게 얻을 수 있다
+ */
 
     //이미지파일 만들기
     private File createImageFile() throws IOException{
@@ -441,10 +489,10 @@ public class Main_Fragment3 extends Fragment {
 
         cropIntent.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         cropIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        cropIntent.setDataAndType(photoUri, "image/*");
+        cropIntent.setDataAndType(photoUri, "image/*"); //원본 사진 경로
         cropIntent.putExtra("aspectX",0);
         cropIntent.putExtra("aspectY",0);
-        cropIntent.putExtra("output", albumUri);
+        cropIntent.putExtra("output", albumUri); //crop 한 사진을 저장할 곳
         startActivityForResult(cropIntent, REQUEST_IMAGE_CROP);
     }
 
@@ -459,14 +507,28 @@ public class Main_Fragment3 extends Fragment {
 
             try{
                 photoFile = createImageFile(); //이미지 파일을 생성
-            }catch (IOException ex){
+                Log.d("image", "camera) photoFile="+photoFile);
+
+            }catch (IOException e){
+
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d("image",ex);
 
             }
 
             if(photoFile!=null){
 
-                Uri photoURI = FileProvider.getUriForFile(getActivity(), "com.android.canaria.fileprovider", photoFile);
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,photoURI);
+                //파일을 다른 앱과 공유하기 위해서는, content URI를 생성해야 한다.
+                //contentURI 생성하는 법: 새 파일을 만든다 -> 그 파일을 getUriForFile() 로 넘긴다 -> 이 uri를 인텐트로 다른 앱에 넘길 수 있다
+                photoUri = FileProvider.getUriForFile(getActivity(), "com.android.canaria.fileprovider", photoFile);
+                Log.d("image", "camera) photoUri="+photoUri);
+
+                //사진을 찍어서 이 파일에 저장하라고, 안드로이드에게 말한다
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+                //되돌아오는 사진 데이터를 onActivityResult 에서 받으면 된다
                 startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
             }
         }
@@ -484,16 +546,6 @@ public class Main_Fragment3 extends Fragment {
         mediaScanIntent.setData(contentUri);
         getActivity().sendBroadcast(mediaScanIntent);
     }
-
-
-    private Bitmap rotateImage(Bitmap source, float angle){
-        Matrix matrix = new Matrix();
-        matrix.postRotate(angle);
-        return Bitmap.createBitmap(source,0,0,source.getWidth(), source.getHeight(),matrix,true);
-    }
-
-
-
 
 
 

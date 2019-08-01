@@ -205,15 +205,11 @@ public class ChatActivity extends AppCompatActivity {
                 int sender_id = cursor2.getInt(2);
                 String sender_username = cursor2.getString(3);
                 String message = cursor2.getString(4);
-                String time = cursor2.getString(5);
+                long time = Long.valueOf(cursor2.getString(5));
                 int isRead = cursor2.getInt(6);
 
-//                    Log.d(TAG,"id: "+message_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
-//                            +" / message: "+message+" / time: "+time+" / isRead: "+isRead);
-
-                if(sender_id == 0 && sender_username.equals("server")){
-                    sender_username = "";
-                }
+                    Log.d(TAG,"id: "+message_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
+                            +" / message: "+message+" / time: "+time+" / isRead: "+isRead);
 
 
                 if(unreadMsgCount > 0){ //안읽은 메시지가 있을 때
@@ -230,27 +226,27 @@ public class ChatActivity extends AppCompatActivity {
 
                                 if(readMsgCount > 10){//읽은 메시지가 10개 초과일때
                                     //"여기서부터 안 읽었다"라고 메시지 위에 표시해준다
-                                    messageItemList.add(new MessageItem("", "You haven't read messages from here."));
-                                    messageItemList.add(new MessageItem(sender_username, message));
+                                    messageItemList.add(new MessageItem(0, "server", "You haven't read messages from here.", time));
+                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
 
                                 }else{ //읽은 메시지가 10개 이하일 때(주고받은 메시지 자체가 적을 때)
                                     //안읽음 표시를 하지 않는다
-                                    messageItemList.add(new MessageItem(sender_username, message));
+                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
                                 }
                             }else{ //안읽은 메시지 개수가 10개 이하일때
-                                messageItemList.add(new MessageItem(sender_username, message));
+                                messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
                             }
 
                         }else{ //나머지 안읽은 메시지 -> 메시지를 화면에 표시한다
-                            messageItemList.add(new MessageItem(sender_username, message));
+                            messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
                         }
 
                     }else{ //이미 읽은 메시지일 때 -> 메시지를 화면에 표시한다
-                        messageItemList.add(new MessageItem(sender_username, message));
+                        messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
                     }
                 }else{ //안읽은 메시지가 없을 때 -> 메시지를 화면에 표시한다
 
-                    messageItemList.add(new MessageItem(sender_username, message));
+                    messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
                 }
 
 
@@ -375,16 +371,17 @@ public class ChatActivity extends AppCompatActivity {
                             public void run() {
 
                                 //서버에서 보낸 알림 메시지와 일반 사용자가 보낸 메시지를 구분한다
-                                if(msg_sender_id == 0 && msg_sender_username.equals("server")){ //서버 메시지
-                                    Log.d(TAG, "adding server message..");
-                                    messageItemList.add(new MessageItem("", msg_text));
-
-                                }else if(msg_sender_id == userId){//내가 보낸 메시지일때
-                                    messageItemList.add(new MessageItem("[Me]", msg_text));
-
-                                }else{//다른 사람이 보낸 메시지
-                                    messageItemList.add(new MessageItem(msg_sender_username, msg_text));
-                                }
+//                                if(msg_sender_id == 0 && msg_sender_username.equals("server")){ //서버 메시지
+//                                    Log.d(TAG, "adding server message..");
+//                                    messageItemList.add(new MessageItem("", msg_text));
+//
+//                                }else if(msg_sender_id == userId){//내가 보낸 메시지일때
+//                                    messageItemList.add(new MessageItem("[Me]", msg_text));
+//
+//                                }else{//다른 사람이 보낸 메시지
+//                                    messageItemList.add(new MessageItem(msg_sender_username, msg_text));
+//                                }
+                                messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text, System.currentTimeMillis()));
                                 adapter.notifyItemInserted(adapter.getItemCount()-1);
                                 rcv.scrollToPosition(messageItemList.size()-1);
                             }

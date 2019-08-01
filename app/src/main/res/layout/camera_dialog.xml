@@ -7,6 +7,7 @@
     android:background="@color/cardview_dark_background"
     android:orientation="vertical">
 
+
     <TextView
         android:id="@+id/dialog_title"
         android:layout_width="match_parent"
@@ -15,14 +16,29 @@
         android:textColor="@color/grey"
         android:textSize="18sp"
         android:gravity="center"
-        android:layout_marginTop="20dp"/>
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="20dp"/>
 
-    <ImageView
-        android:id="@+id/profile_imageView"
+    <FrameLayout
+        android:id="@+id/dialog_frameLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/dialog_title"
-        android:layout_above="@id/dialog_linearLayout"/>
+        android:layout_above="@id/dialog_linearLayout">
+
+        <ImageView
+            android:id="@+id/profile_imageView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <ProgressBar
+            android:id="@+id/dialog_progressBar"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:visibility="visible"
+            android:layout_gravity="center"/>
+    </FrameLayout>
+
 
     <LinearLayout
         android:layout_alignParentBottom="true"

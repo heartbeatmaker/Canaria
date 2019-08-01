@@ -8,16 +8,25 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.preference.PreferenceManager;
+import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
+import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.target.BitmapImageViewTarget;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -25,8 +34,10 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import cz.msebera.android.httpclient.HttpEntity;
@@ -49,6 +60,49 @@ public class Function {
     public static String dbName = "canaria.db";
     public static int dbVersion = 1;
     public static int activeRoomId = 0;
+
+
+
+    /**
+     * Gets timestamp in millis and converts it to HH:mm (e.g. 16:44).
+     */
+    public static String formatTime(long timeInMillis){
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        return dateFormat.format(timeInMillis);
+    }
+
+
+    /**
+     * Crops image into a circle that fits within the ImageView.
+     */
+    public static void displayRoundImageFromUrl(final Context context, final String fileName, final ImageView imageView) {
+
+        if(!fileName.equals("null")){ //서버에서 프로필 사진을 찾을 때, 파일이 없으면 "null"이라고 반환하도록 설정해놓음
+
+            String url = "http://54.180.107.44/uploads/"+fileName;
+
+            RequestOptions options = new RequestOptions()
+                    .centerCrop()
+                    .dontAnimate();
+
+            Glide.with(context)
+                    .asBitmap()
+                    .load(url)
+                    .apply(options)
+                    .into(new BitmapImageViewTarget(imageView) {
+                        @Override
+                        protected void setResource(Bitmap resource) {
+                            RoundedBitmapDrawable circularBitmapDrawable =
+                                    RoundedBitmapDrawableFactory.create(context.getResources(), resource);
+                            circularBitmapDrawable.setCircular(true);
+                            imageView.setImageDrawable(circularBitmapDrawable);
+                        }
+                    });
+        }
+
+    }
+
 
 
     //현재 날짜, 시간을 구하기
