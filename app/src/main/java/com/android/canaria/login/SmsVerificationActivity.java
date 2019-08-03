@@ -214,7 +214,7 @@ public class SmsVerificationActivity extends AppCompatActivity {
             Log.d("tag","sms: doInBackground. param0="+strings[0]+"/param1="+strings[1]+"/param2="+strings[2]);
 
             HttpClient client = new DefaultHttpClient();
-            HttpPost post = new HttpPost("http://54.180.107.44/sms.php");
+            HttpPost post = new HttpPost("http://15.164.193.65/sms.php");
 
             //POST 방식에서 사용된다
             ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();

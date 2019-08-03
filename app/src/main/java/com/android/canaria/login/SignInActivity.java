@@ -365,7 +365,7 @@ public class SignInActivity extends AppCompatActivity {
             Log.d("tag","signin) doInBackground. param1="+strings[0]+"/param2="+strings[1]);
 
             HttpClient client = new DefaultHttpClient();
-            HttpPost post = new HttpPost("http://54.180.107.44/register.php");
+            HttpPost post = new HttpPost("http://15.164.193.65/register.php");
 
 
 

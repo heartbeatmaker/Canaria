@@ -207,7 +207,7 @@ public class SmsVerification_SecondActivity extends AppCompatActivity {
             Log.d("tag","sms2: doInBackground. param="+strings[0]);
 
             HttpClient client = new DefaultHttpClient();
-            HttpPost post = new HttpPost("http://54.180.107.44/activate.php");
+            HttpPost post = new HttpPost("http://15.164.193.65/activate.php");
 
             //POST 방식에서 사용된다
             ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();

@@ -530,7 +530,7 @@ public class SignUpActivity extends AppCompatActivity {
             Log.d("tag","doInBackground. param1="+strings[0]+"/param2="+strings[1]+"/param3="+strings[2]);
 
             HttpClient client = new DefaultHttpClient();
-            HttpPost post = new HttpPost("http://54.180.107.44/register.php");
+            HttpPost post = new HttpPost("http://15.164.193.65/register.php");
 
             //POST 방식에서 사용된다
             ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();

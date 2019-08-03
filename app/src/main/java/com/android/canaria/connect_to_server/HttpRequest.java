@@ -58,7 +58,7 @@ public class HttpRequest extends AsyncTask<Void, Void, String> {
         Log.d(TAG,"doInBackground");
 
         HttpClient client = new DefaultHttpClient();
-        HttpPost post = new HttpPost("http://54.180.107.44/"+path);
+        HttpPost post = new HttpPost("http://15.164.193.65/"+path);
 
         //POST 방식에서 사용된다
         ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();

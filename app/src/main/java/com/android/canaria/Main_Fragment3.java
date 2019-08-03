@@ -77,7 +77,7 @@ public class Main_Fragment3 extends Fragment {
 
     int serverResponseCode = 0;
     ProgressDialog dialog = null;
-    String upLoadServerUri = "http://54.180.107.44/fileUpload.php";//서버컴퓨터의 ip주소
+    String upLoadServerUri = "http://15.164.193.65/fileUpload.php";//서버컴퓨터의 ip주소
 
     @Nullable
     @Override
@@ -92,7 +92,7 @@ public class Main_Fragment3 extends Fragment {
 
         String profileImage_name = Function.getString(getActivity(), "profileImage");
         if(!profileImage_name.equals("null")){
-            String profileImage_path = "http://54.180.107.44/uploads/"+profileImage_name;
+            String profileImage_path = "http://15.164.193.65/uploads/"+profileImage_name;
             Log.d("image", profileImage_path);
 
 //            RequestOptions options = new RequestOptions()
@@ -171,7 +171,7 @@ public class Main_Fragment3 extends Fragment {
                     progressBar.getIndeterminateDrawable().setColorFilter(Color.WHITE, PorterDuff.Mode.MULTIPLY); //색 변경
 
                     ImageView profile_imageView = (ImageView)view.findViewById(R.id.profile_imageView);
-                    String profileImage_path = "http://54.180.107.44/uploads/"+Function.getString(getActivity(), "profileImage");
+                    String profileImage_path = "http://15.164.193.65/uploads/"+Function.getString(getActivity(), "profileImage");
 
 
                     Glide.with(view).asBitmap().load(profileImage_path)

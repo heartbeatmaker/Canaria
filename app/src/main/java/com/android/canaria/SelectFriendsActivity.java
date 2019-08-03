@@ -322,7 +322,7 @@ public class SelectFriendsActivity extends AppCompatActivity {
             String response_line = "";
 
             HttpClient client = new DefaultHttpClient();
-            HttpPost post = new HttpPost("http://54.180.107.44/management.php");
+            HttpPost post = new HttpPost("http://15.164.193.65/management.php");
 
             //POST 방식에서 사용된다
             ArrayList<NameValuePair> nameValues = new ArrayList<NameValuePair>();

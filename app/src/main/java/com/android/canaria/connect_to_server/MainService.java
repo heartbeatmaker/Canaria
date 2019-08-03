@@ -218,7 +218,7 @@ public class MainService extends Service {
         public void run() {
             try {
 
-                socket = new Socket("54.180.107.44", 8000);
+                socket = new Socket("15.164.193.65", 8000);
                 Log.d(TAG, "connected to chat server");
 
                 InputStream is = socket.getInputStream();

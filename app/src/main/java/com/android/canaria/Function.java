@@ -56,7 +56,7 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 
 public class Function {
 
-    public static String domain = "http://54.180.107.44";
+    public static String domain = "http://15.164.193.65";
     public static String dbName = "canaria.db";
     public static int dbVersion = 1;
     public static int activeRoomId = 0;
@@ -80,7 +80,7 @@ public class Function {
 
         if(!fileName.equals("null")){ //서버에서 프로필 사진을 찾을 때, 파일이 없으면 "null"이라고 반환하도록 설정해놓음
 
-            String url = "http://54.180.107.44/uploads/"+fileName;
+            String url = "http://15.164.193.65/uploads/"+fileName;
 
             RequestOptions options = new RequestOptions()
                     .centerCrop()
