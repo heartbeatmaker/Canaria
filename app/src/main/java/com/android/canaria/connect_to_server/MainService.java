@@ -303,7 +303,12 @@ public class MainService extends Service {
                                     "", currentTime, roomId, 0));
 
                             //ChatActivity에 방 정보를 전달한다
-                            String msg_roomInfo = "roomInfo/"+roomName+" ("+number_of_members+")"+"/"+memberInfo_string;
+                            String msg_roomInfo = "";
+                            if(number_of_members == 2){ //1대1 채팅의 경우: 방 인원을 발송하지 않는다
+                                msg_roomInfo = "roomInfo/"+roomName+"/"+memberInfo_string;
+                            }else{
+                                msg_roomInfo = "roomInfo/"+roomName+" ("+number_of_members+")"+"/"+memberInfo_string;
+                            }
                             sendMsgToChat(msg_roomInfo);
 
                         }else{ //현재 클라이언트 = 초대된 사람일 때. 이 때 사용자의 foreground activity는 불명. 확인해야 한다
@@ -477,6 +482,117 @@ public class MainService extends Service {
                              * */
 
                         }
+
+                        break;
+
+                    case "new_member": //참여하던 방에 누가 초대되었다는 메시지
+
+                        int roomId_newMember = Integer.valueOf(line_array[1]);
+                        String invited_memberInfo = line_array[2];
+                        String[] invited_memberInfo_array = invited_memberInfo.split(";");
+                        int numberOfInvitedMembers = invited_memberInfo_array.length/2;
+
+
+                        /*-------1. db 업데이트(방 정보)--------*/
+                        String members_string = "";
+                        String roomName_origin = "";
+                        Cursor cursor = dbHelper.db.rawQuery("SELECT room_name, members FROM chat_rooms WHERE room_id='" + roomId_newMember + "';", null);
+                        while (cursor.moveToNext()) {
+                            roomName_origin = cursor.getString(0);
+                            members_string = cursor.getString(1);
+                        }
+
+                        String[] memberInfo_array = members_string.split(";");
+                        int numberOfMembers_origin = memberInfo_array.length/2; //기존 채팅 참여자 수
+
+                        String members_updated = members_string+";"+invited_memberInfo;
+
+
+                        String roomName_updated = roomName_origin; //원래 단체채팅인 경우: 기존이름(group chat이나 사용자 지정 이름)에서 변하지 않는다
+
+                        if(numberOfMembers_origin == 2){ //원래 1대1 채팅인데 거기에 사람을 초대했다면
+                            roomName_updated = "Group chat"; //방 이름 = 그룹챗
+
+                        }else if(numberOfMembers_origin == 1 && numberOfInvitedMembers == 1){ //혼자 있는 방에 1명을 추가했다면
+                            roomName_updated = invited_memberInfo_array[1]; //방 이름 = 상대방 이름
+
+                        }else if(numberOfMembers_origin == 1 && numberOfInvitedMembers > 1){ //혼자 있는 방에 여러 명을 추가했다면
+                            roomName_updated = "Group chat"; //방 이름 = 그룹챗
+                        }
+
+                        //db 업데이트(방이름, 멤버정보)
+                        dbHelper.db.execSQL("UPDATE chat_rooms SET room_name = '"+roomName_updated+"' AND members='" + members_updated + "' WHERE room_id='" + roomId_newMember + "';");
+
+
+
+
+                        /*-------2. 방 목록 화면 업데이트--------*/
+                        //방목록 아이템을 업데이트한다(roomName, 인원)
+
+                        int total_numberOfMembers = numberOfMembers_origin+numberOfInvitedMembers;
+                        try{
+                            for(RoomListItem room : Main_Fragment2.roomItemList){
+                                if(room.getRoomId() == roomId_newMember){
+
+                                    room.setRoomName(roomName_updated);
+                                    room.setNumberOfMembers(total_numberOfMembers);
+                                }
+                            }
+                        }catch (Exception e){
+                            //앱이 꺼져있는데, 서비스가 돌면서 roomItemList를 업데이트 하면 오류가 날 수 있다
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            Log.d(TAG,ex);
+                        }
+
+
+
+
+                        //사용자가 현재 채팅화면을 보고 있을 때
+                        if(isChatForeground){
+
+                            //메인화면의 roomItemList를 업데이트한다 - 위에서 완료
+                            //insert 메시지는 보내지 않는다. 이 채팅화면이 종료되면, 방목록화면이 onResume() 되면서 adapter가 refresh된다
+
+
+                            //지금 보고있는 채팅방 = 메시지가 발신된 채팅방일 때
+                            //(이 메시지 = 이 방에서 보낸 메시지)
+                            if(ChatActivity.roomId == roomId_newMember){
+                                /*-------3. 채팅화면 제목 업데이트--------*/
+                                /*-------4. 채팅화면의 멤버목록 업데이트--------*/
+
+
+                                //ChatActivity에 방 정보를 전달한다
+                                String msg_roomInfo = "";
+                                if(total_numberOfMembers == 2){ //1대1 채팅의 경우: 방 인원을 발송하지 않는다
+                                    msg_roomInfo = "roomInfo_plus/"+roomName_updated+"/"+invited_memberInfo;
+                                }else{
+                                    msg_roomInfo = "roomInfo_plus/"+roomName_updated+" ("+total_numberOfMembers+")"+"/"+invited_memberInfo;
+                                }
+                                sendMsgToChat(msg_roomInfo);
+
+
+                            }else{ //채팅방이 일치하지 않을 때
+                                // (이 메시지 = 다른 방과 관련된 메시지)
+
+                                //채팅 화면으로 메시지를 전달해서는 안 된다
+                            }
+
+                        }else if(isMainForeground){ //사용자가 메인화면을 보고 있다면
+
+                            //방목록 어댑터를 업데이트 하라고 메시지를 보낸다
+                            sendMsgToMain("inserted/");
+
+                        }
+
+
+
+                        break;
+
+                    case "invited": //이 사용자가 어떤 방에 초대되었다는 메시지
+
 
                         break;
                 }

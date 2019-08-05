@@ -95,6 +95,15 @@ public class DBHelper extends SQLiteOpenHelper {
     }
 
 
+    public void room_updateName(int roomId, String room_name) {
+        SQLiteDatabase db = getWritableDatabase();
+        // 입력한 항목과 일치하는 행의 가격 정보 수정
+        db.execSQL("UPDATE chat_rooms SET room_name='" + room_name + "' WHERE room_id='" + roomId + "';");
+//        db.close();
+    }
+
+
+
     public void delete(String tableName, int room_id) {
         SQLiteDatabase db = getWritableDatabase();
         // 입력한 항목과 일치하는 행 삭제

@@ -45,7 +45,8 @@ public class FriendFinder_Fragment2 extends Fragment {
     ImageButton searchBtn;
     JSONArray friendList_arr;
 
-    String user_id, email, friend_id;
+    String user_id, email;
+    int friend_id;
 
 
     @Nullable
@@ -146,7 +147,7 @@ public class FriendFinder_Fragment2 extends Fragment {
             Log.d("tag", "result="+response);
 
             String result = "";
-            friend_id = "";
+//            friend_id;
             String friend_username = "";
             String friend_profileImage = "";
             try{
@@ -154,7 +155,7 @@ public class FriendFinder_Fragment2 extends Fragment {
                 JSONObject result_object = new JSONObject(response);
 
                 result = result_object.getString("result");
-                friend_id = result_object.getString("friend_id");
+                friend_id = result_object.getInt("friend_id");
                 friend_username = result_object.getString("friend_username");
 //                friend_profileImage = result_object.getString("friend_profileImage");
 
@@ -237,7 +238,7 @@ public class FriendFinder_Fragment2 extends Fragment {
 
 
     //친구 목록에 id를 추가하는 메소드
-    public void addFriend(String friend_id){
+    public void addFriend(int friend_id){
 
         ContentValues data = new ContentValues();
         data.put("add_friend", "Y");

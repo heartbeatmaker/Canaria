@@ -7,10 +7,12 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.canaria.Function;
 import com.android.canaria.R;
 import com.android.canaria.UserProfileActivity;
 
@@ -43,24 +45,19 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
     @Override
     public void onBindViewHolder(@NonNull FriendListAdapter.ViewHolder viewHolder, int position) {
 
-        final FriendListItem item = mItemArrayList.get(position);
+        final FriendListItem friendItem = mItemArrayList.get(position);
 
-        final String friend_username = item.getFriendName();
-        final String friend_userId = item.getFriendId();
-
-//        viewHolder.profileImage_imageView.setImageBitmap(item.getProfileImage());
-        viewHolder.friendName_textView.setText(friend_username);
-        viewHolder.friendId_textView.setText(friend_userId);
+        ((FriendListAdapter.ViewHolder) viewHolder).bind(friendItem);
 
 
-        //친구목록에서 아이템을 선택하면 채팅방이 열린다
+        //친구목록에서 아이템을 선택하면 친구의 프로필 화면이 나타난다
         viewHolder.parentLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
             Intent intent = new Intent(mContext, UserProfileActivity.class);
-            intent.putExtra("friend_id", friend_userId);
-            intent.putExtra("friend_username", friend_username);
+            intent.putExtra("friend_id", friendItem.getFriendId());
+            intent.putExtra("friend_username", friendItem.getFriendName());
             mContext.startActivity(intent);
 
             }
@@ -70,6 +67,9 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
         viewHolder.parentLayout.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
+
+                //친구 해제 기능 넣기
+
                 Toast.makeText(mContext, "item long clicked", Toast.LENGTH_SHORT).show();
 
                 return false;
@@ -89,19 +89,28 @@ public class FriendListAdapter extends RecyclerView.Adapter<FriendListAdapter.Vi
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
-//        ImageView profileImage_imageView;
+        ImageView profileImage_imageView;
         TextView friendName_textView, friendId_textView;
         RelativeLayout parentLayout;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-//            this.roomImage_imageView = itemView.findViewById(R.id.friendList_profileImage);
+            this.profileImage_imageView = itemView.findViewById(R.id.friendList_profileImage);
             this.friendName_textView = itemView.findViewById(R.id.friendList_name);
             this.friendId_textView = itemView.findViewById(R.id.friendList_friendId_textView);
             this.parentLayout = itemView.findViewById(R.id.friendList_relativeLayout);
 //            parentLayout.setOnLongClickListener(readMessageActivity);
         }
 
+
+        void bind(FriendListItem friend) {
+            friendName_textView.setText(friend.getFriendName());
+
+            friendName_textView.setText(friend.getFriendName());
+
+            // Insert the profile image from the URL into the ImageView.
+            Function.displayRoundImageFromUrl(mContext, friend.getUserImage_url(), profileImage_imageView);
+        }
 
     }
 

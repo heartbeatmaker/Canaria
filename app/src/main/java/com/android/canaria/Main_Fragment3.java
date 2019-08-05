@@ -4,9 +4,12 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.ContentUris;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Matrix;
@@ -15,6 +18,7 @@ import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -238,7 +242,7 @@ public class Main_Fragment3 extends Fragment {
     //갤러리 열고 사진 가져오기
     public void callGallery(){
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("image/*");
+        intent.setType("image/*"); //타입을 바꿔서 video 나 audio 를 가져올 수 있다
         startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE_REQUEST);
     }
 
@@ -247,6 +251,9 @@ public class Main_Fragment3 extends Fragment {
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        Log.d("image", "onActivityResult");
+        Log.d("image", "requestCode="+requestCode+" / resultCode="+resultCode+" / data="+data);
 
         //직접 찍은 사진의 경로를 받아옴
         if(requestCode == REQUEST_TAKE_PHOTO && resultCode == RESULT_OK){
@@ -281,8 +288,22 @@ public class Main_Fragment3 extends Fragment {
                 albumFile = createImageFile();
                 photoUri = data.getData(); //content URI
                 albumUri = Uri.fromFile(albumFile); // file URI
-                Log.d("image", "photoUri: "+photoUri);
-                Log.d("image","albumUri: "+albumUri);
+                Log.d("image", "photoUri(=방금 가져온 data의 contentUri) : "+photoUri);
+                Log.d("image","albumUri(=새로 만든 file의 fileUri) : "+albumUri);
+
+//                getRealPath(photoUri);
+                if (isDownloadsDocument(photoUri)) {
+
+                    final String id = DocumentsContract.getDocumentId(photoUri);
+                    final Uri contentUri = ContentUris.withAppendedId(
+                            Uri.parse("content://downloads/all_downloads"), Long.valueOf(id));
+
+                    String realPath = getDataColumn(contentUri, null, null);
+                    Log.d("image", "realPath="+realPath);
+                }
+
+
+
                 cropImage();
 
             }catch(Exception e){
@@ -320,6 +341,74 @@ public class Main_Fragment3 extends Fragment {
 
             }).start();
         }
+    }
+
+
+
+
+    public String getRealPath(Uri uri){
+        if (isDownloadsDocument(uri)) {
+            Log.d("image", "isDownloadsDocument = true");
+
+            final String id = DocumentsContract.getDocumentId(uri);
+            Log.d("image", "id = "+id);
+
+
+            String[] contentUriPrefixesToTry = new String[]{
+//                            "content://downloads/public_downloads",
+                    "content://downloads/my_downloads",
+                    "content://downloads/all_downloads"
+            };
+
+            for (String contentUriPrefix : contentUriPrefixesToTry) {
+                Uri contentUri = ContentUris.withAppendedId(Uri.parse(contentUriPrefix), Long.valueOf(id));
+                try {
+                    String realPath = getDataColumn(contentUri, null, null);
+                    if (realPath != null) {
+
+                        Log.d("image", "realPath="+realPath);
+                        return realPath;
+                    }
+                } catch (Exception e) {
+                    StringWriter sw = new StringWriter();
+                    e.printStackTrace(new PrintWriter(sw));
+                    String ex = sw.toString();
+
+                    Log.d("image",ex);
+                }
+            }
+
+
+        }
+        return null;
+    }
+
+
+    public String getDataColumn(Uri uri, String selection, String[] selectionArgs) {
+
+        Cursor cursor = null;
+        final String column = "_data";
+        final String[] projection = { column };
+
+        try {
+            cursor = getContext().getContentResolver().query(uri, projection,
+                    selection, selectionArgs, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                final int index = cursor.getColumnIndexOrThrow(column);
+                return cursor.getString(index);
+            }
+        } finally {
+            if (cursor != null)
+                cursor.close();
+        }
+        return null;
+    }
+
+
+
+    public static boolean isDownloadsDocument(Uri uri) {
+        return "com.android.providers.downloads.documents".equals(uri
+                .getAuthority());
     }
 
 
@@ -484,16 +573,32 @@ public class Main_Fragment3 extends Fragment {
 
 
     public void cropImage(){
+        Log.d("image", "cropImage()");
 
         Intent cropIntent = new Intent("com.android.camera.action.CROP");
+        Log.d("image", "new Intent(\"com.android.camera.action.CROP\");");
 
         cropIntent.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        Log.d("image", "setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);");
+
         cropIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        Log.d("image", "setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);");
+
         cropIntent.setDataAndType(photoUri, "image/*"); //원본 사진 경로
+        Log.d("image", "setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);");
+
         cropIntent.putExtra("aspectX",0);
+        Log.d("image", "cropIntent.putExtra(\"aspectX\",0);");
+
         cropIntent.putExtra("aspectY",0);
+        Log.d("image", "cropIntent.putExtra(\"aspectY\",0);");
+
         cropIntent.putExtra("output", albumUri); //crop 한 사진을 저장할 곳
+        Log.d("image", "cropIntent.putExtra(\"output\", albumUri);");
+
         startActivityForResult(cropIntent, REQUEST_IMAGE_CROP);
+        Log.d("image", "startActivityForResult(cropIntent, REQUEST_IMAGE_CROP);");
+
     }
 
 

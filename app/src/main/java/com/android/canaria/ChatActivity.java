@@ -1,18 +1,23 @@
 package com.android.canaria;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -20,6 +25,8 @@ import android.widget.TextView;
 
 import com.android.canaria.connect_to_server.MainService;
 import com.android.canaria.db.DBHelper;
+import com.android.canaria.recyclerView.FriendListAdapter;
+import com.android.canaria.recyclerView.FriendListItem;
 import com.android.canaria.recyclerView.MessageAdapter;
 import com.android.canaria.recyclerView.MessageItem;
 import com.android.canaria.recyclerView.RoomListItem;
@@ -40,13 +47,25 @@ public class ChatActivity extends AppCompatActivity {
     String username, roomName;
     public static int roomId;
 
+    ActionBar actionBar;
+    MenuItem menuItem;
+
     String TAG = "tag "+this.getClass().getSimpleName();
 
-    //리사이클러뷰 변수
+    //메시지 리사이클러뷰 변수
     RecyclerView rcv;
     ArrayList<MessageItem> messageItemList;
     MessageAdapter adapter;
     LinearLayoutManager linearLayoutManager;
+
+
+    //참여자 목록 리사이클러뷰
+    RecyclerView members_rcv;
+    ArrayList<FriendListItem> memberList;
+    FriendListAdapter members_adapter;
+    LinearLayoutManager members_linearLayoutManager;
+
+    DrawerLayout drawer;
 
     Handler handler;
     boolean isNewRoom = false;
@@ -58,6 +77,7 @@ public class ChatActivity extends AppCompatActivity {
     String[] message_array;
 
     String myMsg;
+    private static final int INVITATION_REQUEST = 1000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,11 +88,10 @@ public class ChatActivity extends AppCompatActivity {
 
         Log.d(TAG, "onCreate");
 
-        roomInfo_textView = (TextView)findViewById(R.id.chat_roomInfo_textView);
         msgInput_editText = (EditText) findViewById(R.id.chat_message_editText);
         sendMsg_btn = (Button)findViewById(R.id.chat_send_btn);
 
-        //리사이클러뷰 초기화
+        //메시지 리사이클러뷰 초기화
         rcv = (RecyclerView)findViewById(R.id.chat_message_rcv);
         linearLayoutManager = new LinearLayoutManager(this);
         rcv.setHasFixedSize(true);
@@ -80,6 +99,20 @@ public class ChatActivity extends AppCompatActivity {
         messageItemList = new ArrayList<>();
         adapter = new MessageAdapter(messageItemList, this);
         rcv.setAdapter(adapter);
+
+
+        //(drawerLayout에 띄워주는) 참여자 리사이클러뷰 초기화
+        members_rcv = (RecyclerView)findViewById(R.id.chatRoom_members_rcv);
+        members_linearLayoutManager = new LinearLayoutManager(this);
+        members_rcv.setHasFixedSize(true);
+        members_rcv.setLayoutManager(members_linearLayoutManager);
+        memberList = new ArrayList<>();
+        members_adapter = new FriendListAdapter(memberList, this);
+        members_rcv.setAdapter(members_adapter);
+
+
+        actionBar = getSupportActionBar();
+        actionBar.show();
 
 
         //현재 사용자의 정보를 가져온다
@@ -160,7 +193,83 @@ public class ChatActivity extends AppCompatActivity {
             }
         });
 
+
+        //친구 초대 버튼
+        Button invite_btn = (Button)findViewById(R.id.chatRoom_invite_btn);
+        invite_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                String existing_members_string = "";
+
+                for(int i=0; i<memberList.size(); i++){
+                    existing_members_string += memberList.get(i).getFriendId() + ";";
+                }
+
+                existing_members_string = existing_members_string.substring(0, existing_members_string.length()-1);
+
+                //초대할 친구를 고르는 화면으로 넘어간다
+                //현재 참여자는 목록에 보여주면 안되기 때문에, 현재 참여자들의 id를 인텐트로 보낸다
+                Intent intent_select_friends = new Intent(getApplicationContext(), SelectFriendsActivity.class);
+                intent_select_friends.putExtra("invitation", "Y");
+                intent_select_friends.putExtra("existing_members", existing_members_string);
+                Log.d("invitation", "invite 버튼 누름. existing_members="+existing_members_string);
+                startActivityForResult(intent_select_friends, INVITATION_REQUEST);
+
+                drawer.closeDrawer(GravityCompat.END);
+
+
+            }
+        });
+
+
     }
+
+
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(requestCode == INVITATION_REQUEST && resultCode == RESULT_OK){
+
+            Log.d("invitation", "onActivityForResult");
+
+            String friendInfo = data.getStringExtra("friendInfo_jsonArray");
+
+            //java 서버에서 json을 못 읽는다. 참여자들 정보를 한 문장으로 구성한다
+            //친구1id;친구1username;친구2id;친구2username..
+            String friendInfo_string = "";
+            try{
+                JSONArray jsonArray = new JSONArray(friendInfo);
+                for(int i=0; i<jsonArray.length(); i++){
+                    JSONObject friendObject = new JSONObject();
+                    friendObject = (JSONObject)jsonArray.get(i);
+
+                    String friend_id = friendObject.getString("id");
+                    String friend_username = friendObject.getString("username");
+
+                    if(i == 0){
+                        friendInfo_string = friend_id + ";" +friend_username;
+                    }else{
+                        friendInfo_string += ";"+friend_id + ";" +friend_username;
+                    }
+                }
+
+                Log.d("invitation", "초대할 친구 info = "+friendInfo_string);
+
+                //서비스에 메시지 전달
+                sendMsg("invite/"+roomId+"/"+friendInfo_string);
+
+            }catch (Exception e){
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d(TAG,ex);
+            }
+
+        }
+    }
+
 
 
 
@@ -299,6 +408,7 @@ public class ChatActivity extends AppCompatActivity {
         super.onNewIntent(intent);
 
         Log.d("intent", "@@@@@@@@@@@onNewIntent");
+
         messageItemList.clear();
         adapter.notifyDataSetChanged();
         roomInfo_textView.setText("");
@@ -347,13 +457,88 @@ public class ChatActivity extends AppCompatActivity {
                     final String roomInfo_atTitleBar = message_array[1];
                     String memberInfo_string = message_array[2]; //참여자 정보(id;username;id;username..형식). 나중에 drawerLayout에 띄워줄 것
 
+                    String[] memberInfo_array = memberInfo_string.split(";");
+
+
+                    //피초대인들의 id와 username을 따로 모아서 arrayList에 저장한다
+                    final ArrayList<Integer> memberId_list = new ArrayList<>();
+                    final ArrayList<String > memberUsername_list = new ArrayList<>();
+
+                    int member_id = 10000;
+                    String member_username = "";
+
+                    for(int i=0; i<memberInfo_array.length; i++){
+                        if(i%2==0){
+                            member_id = Integer.valueOf(memberInfo_array[i]);
+                            memberId_list.add(member_id);
+                        }else{
+                                member_username = memberInfo_array[i];
+                                memberUsername_list.add(member_username);
+                        }
+                    }
+
+
                     handler.post(new Runnable() {
                         @Override
                         public void run() {
 
-                            roomInfo_textView.setText(roomInfo_atTitleBar);
+                            for(int k=0; k<memberId_list.size(); k++){
+                                String member_username = memberUsername_list.get(k);
+                                int member_id = memberId_list.get(k);
+
+                                memberList.add(0, new FriendListItem(member_username, member_id));
+                            }
+                            members_adapter.notifyDataSetChanged();
+
+
+                            actionBar.setTitle(roomInfo_atTitleBar);
+//                            roomInfo_textView.setText(roomInfo_atTitleBar);
                         }
                     });
+                    break;
+
+                case "roomInfo_plus": //채팅 참여자가 추가되었을 때
+
+                    final String roomInfoPlus_atTitleBar = message_array[1];
+                    String invited_memberInfo_string = message_array[2]; //참여자 정보(id;username;id;username..형식). 나중에 drawerLayout에 띄워줄 것
+
+                    String[] invited_memberInfo_array = invited_memberInfo_string.split(";");
+
+
+                    //피초대인들의 id와 username을 따로 모아서 arrayList에 저장한다
+                    final ArrayList<Integer> invited_memberId_list = new ArrayList<>();
+                    final ArrayList<String > invited_memberUsername_list = new ArrayList<>();
+
+                    int invited_member_id = 10000;
+                    String invited_member_username = "";
+
+                    for(int i=0; i<invited_memberInfo_array.length; i++){
+                        if(i%2==0){
+                            invited_member_id = Integer.valueOf(invited_memberInfo_array[i]);
+                            invited_memberId_list.add(invited_member_id);
+                        }else{
+                            invited_member_username = invited_memberInfo_array[i];
+                            invited_memberUsername_list.add(invited_member_username);
+                        }
+                    }
+
+
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            for(int k=0; k<invited_memberId_list.size(); k++){
+                                String member_username = invited_memberUsername_list.get(k);
+                                int member_id = invited_memberId_list.get(k);
+
+                                memberList.add(new FriendListItem(member_username, member_id));
+                            }
+                            members_adapter.notifyDataSetChanged();
+
+                            actionBar.setTitle(roomInfoPlus_atTitleBar);
+                        }
+                    });
+
                     break;
 
                 case "msg":
@@ -405,5 +590,41 @@ public class ChatActivity extends AppCompatActivity {
 
         startService(intent);
     }
+
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.actionbar_chatroom_actions, menu);
+
+        menuItem = menu.findItem(R.id.chatRoom_action_menu);
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+
+
+    @SuppressLint("NewApi")
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        switch (item.getItemId()){
+            case R.id.chatRoom_action_menu: //'메뉴보기' 옵션을 눌렀을 때 -> drawer layout 을 열고 닫음
+
+                View drawerView = (View)findViewById(R.id.chatRoom_drawer_relativeLayout);
+                drawer = (DrawerLayout)findViewById(R.id.chatRoom_drawerLayout);
+
+                if(drawer.isDrawerOpen(GravityCompat.END)){ //닫기
+                    drawer.closeDrawer(GravityCompat.END);
+                }else{
+                    drawer.openDrawer(drawerView); //열기
+                }
+
+                break;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
 
 }

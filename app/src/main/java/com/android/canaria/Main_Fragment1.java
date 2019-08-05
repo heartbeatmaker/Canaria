@@ -255,7 +255,7 @@ public class Main_Fragment1 extends Fragment{
                         JSONObject individual_friendInfo_object = (JSONObject)friendInfo_array.get(i);
 //                        Log.d(TAG,i+"번째 friendInfo_object = "+individual_friendInfo_object);
 
-                        String friend_id = (String)individual_friendInfo_object.get("friend_id");
+                        int friend_id = Integer.valueOf((String)individual_friendInfo_object.get("friend_id"));
                         String friend_username = (String)individual_friendInfo_object.get("friend_username");
 //            String friend_profileImage = (String)individual_friendInfo_object.get("friend_profileImage");
 

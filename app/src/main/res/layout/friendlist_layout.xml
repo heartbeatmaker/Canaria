@@ -21,8 +21,7 @@
             android:layout_height="61dp"
             android:layout_weight="0"
             android:padding="5dp"
-            android:layout_marginLeft="10dp"
-            android:background="@drawable/ic_person_black_24dp" />
+            android:layout_marginLeft="10dp" />
 
 
         <TextView

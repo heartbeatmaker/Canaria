@@ -73,6 +73,10 @@ public class SelectFriendsActivity extends AppCompatActivity {
 
     Context context = SelectFriendsActivity.this;
 
+    boolean isForInvitation = false;
+    String existing_members;
+
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu){
         getMenuInflater().inflate(R.menu.menu_select,menu);
@@ -164,7 +168,7 @@ public class SelectFriendsActivity extends AppCompatActivity {
             JSONArray friendInfo_array = new JSONArray();
             //선택한 친구의 id와 username을 가져온다 -> 채팅 액티비티로 넘긴다
             for(int i=0; i<selection_list.size(); i++){
-                String friend_id = selection_list.get(i).getFriendId();
+                int friend_id = selection_list.get(i).getFriendId();
                 String friend_username = selection_list.get(i).getFriendName();
 
                 try{
@@ -186,11 +190,23 @@ public class SelectFriendsActivity extends AppCompatActivity {
             clearActionMode(); //액션바, 각종 변수를 초기화
             selected_position.clear();
 
-            Intent intent = new Intent(this, ChatActivity.class);
-            intent.putExtra("isNewRoom", "Y");
-            intent.putExtra("friendInfo_jsonArray", friendInfo_array.toString());
-            startActivity(intent);
-            finish();
+
+            if(isForInvitation){ //초대 시
+
+                Log.d("invitation", "SelectFriendsActivity) 초대할 사람을 고르고, ok 버튼 누름. friendInfo_array="+friendInfo_array);
+                Intent resultIntent = new Intent();
+                resultIntent.putExtra("friendInfo_jsonArray", friendInfo_array.toString());
+                setResult(RESULT_OK,resultIntent);
+                finish();
+
+            }else{ //방을 새로 만들 때
+                Intent intent = new Intent(this, ChatActivity.class);
+                intent.putExtra("isNewRoom", "Y");
+                intent.putExtra("friendInfo_jsonArray", friendInfo_array.toString());
+                startActivity(intent);
+                finish();
+            }
+
         }
         return super.onOptionsItemSelected(item);
     }
@@ -229,6 +245,26 @@ public class SelectFriendsActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_select_friends);
+
+
+        try{
+            Log.d("invitation", "SelectFriendsActivity) onCreate()");
+
+            String invitation_signal = getIntent().getStringExtra("invitation");
+            if(invitation_signal != null){
+                isForInvitation = true;
+                existing_members = getIntent().getStringExtra("existing_members"); //기존 참여자들의 id를 받아온다
+            }else{
+                isForInvitation = false;
+            }
+        }catch (Exception e){
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String ex = sw.toString();
+
+            Log.d("invitation",ex);
+        }
+
 
         //다중선택을 위한 리소스 초기화: 툴바를 숨겨놓는다
         toolbar =(Toolbar)findViewById(R.id.toolbar);
@@ -410,16 +446,34 @@ public class SelectFriendsActivity extends AppCompatActivity {
                         JSONObject individual_friendInfo_object = (JSONObject)friendInfo_array.get(i);
 //                        Log.d(TAG,i+"번째 friendInfo_object = "+individual_friendInfo_object);
 
-                        String friend_id = (String)individual_friendInfo_object.get("friend_id");
+                        int friend_id = Integer.valueOf((String)individual_friendInfo_object.get("friend_id"));
                         String friend_username = (String)individual_friendInfo_object.get("friend_username");
 //            String friend_profileImage = (String)individual_friendInfo_object.get("friend_profileImage");
 
 //                        Log.d(TAG,i+"번째 친구의 id = "+friend_id+" / name = "+friend_username);
 
-                        friendItemList.add(new FriendListItem(friend_username, friend_id));
-                        adapter.notifyDataSetChanged();
 
+                        if(isForInvitation){ //기존 방에 새로운 사용자를 초대하는 상황일 때
+                            String[] existing_members_array = existing_members.split(";");
+                            boolean isAlreadyMember = false;
+                            for(int j=0; j<existing_members_array.length; j++){
+                                int existing_member_id = Integer.valueOf(existing_members_array[j]);
+
+                                if(existing_member_id == friend_id){
+                                    isAlreadyMember = true;
+                                }
+                            }
+
+                            //기존 참여자가 아닌 친구만 목록에 추가한다
+                            if(!isAlreadyMember){
+                                friendItemList.add(new FriendListItem(friend_username, friend_id));
+                            }
+
+                        }else{ //새로운 방을 만드는 상황일 때 - 모든 친구를 목록에 추가한다
+                            friendItemList.add(new FriendListItem(friend_username, friend_id));
+                        }
                     }
+                    adapter.notifyDataSetChanged();
 
                 }else if(s.equals("zero")){ //친구 목록이 비어있을 때
 

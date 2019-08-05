@@ -7,7 +7,8 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
 
-
+    <uses-permission android:name="android.permission.ACCESS_ALL_DOWNLOADS"/>
+    <uses-permission android:name = "android.permission.ACCESS_DOWNLOAD_MANAGER"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.SET_ALARM" />
@@ -106,6 +107,28 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+
+        <!--<provider android:name=".DownloadProvider"-->
+            <!--android:authorities="downloads" android:exported="true">-->
+            <!--&lt;!&ndash; Anyone can access /my_downloads, the provider internally restricts access by UID for-->
+                 <!--these URIs &ndash;&gt;-->
+            <!--<path-permission android:pathPrefix="/my_downloads"-->
+                <!--android:permission="android.permission.INTERNET"/>-->
+            <!--&lt;!&ndash; to access /all_downloads, ACCESS_ALL_DOWNLOADS permission is required &ndash;&gt;-->
+            <!--<path-permission android:pathPrefix="/all_downloads"-->
+                <!--android:permission="android.permission.ACCESS_ALL_DOWNLOADS"/>-->
+            <!--&lt;!&ndash; Temporary, for backwards compatibility &ndash;&gt;-->
+            <!--<path-permission android:pathPrefix="/download"-->
+                <!--android:permission="android.permission.INTERNET"/>-->
+            <!--&lt;!&ndash; Apps with access to /all_downloads/... can grant permissions, allowing them to share-->
+                 <!--downloaded files with other viewers &ndash;&gt;-->
+            <!--<grant-uri-permission android:pathPrefix="/all_downloads/"/>-->
+            <!--&lt;!&ndash; Apps with access to /my_downloads/... can grant permissions, allowing them to share-->
+                 <!--downloaded files with other viewers &ndash;&gt;-->
+            <!--<grant-uri-permission android:pathPrefix="/my_downloads/"/>-->
+        <!--</provider>-->
+
 
     </application>
 

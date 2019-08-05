@@ -1,13 +1,18 @@
 package com.android.canaria;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -17,16 +22,29 @@ import android.support.v4.app.Fragment;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.canaria.db.DBHelper;
 import com.android.canaria.recyclerView.MessageItem;
 import com.android.canaria.recyclerView.RoomListAdapter;
 import com.android.canaria.recyclerView.RoomListItem;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
+import com.bumptech.glide.request.target.Target;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -55,7 +73,7 @@ import cz.msebera.android.httpclient.util.EntityUtils;
 
 /*채팅방 목록 fragment*/
 
-public class Main_Fragment2 extends Fragment {
+public class Main_Fragment2 extends Fragment implements View.OnCreateContextMenuListener {
 
     String TAG = "tag "+this.getClass().getSimpleName();
 
@@ -98,6 +116,79 @@ public class Main_Fragment2 extends Fragment {
 
         LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(messageReceiver);
     }
+
+
+
+    @Override
+    public boolean onContextItemSelected(final MenuItem item) {
+
+        switch (item.getItemId()){
+
+            case 121: //방이름 수정
+
+                //item.getGroupId()= 아이템의 position. 어댑터 클래스에서 메뉴아이템 만들 때 그렇게 설정해놓음
+                final int position = item.getGroupId();
+                String roomName = roomItemList.get(position).getRoomName();
+                final int roomId = roomItemList.get(position).getRoomId();
+
+
+                //방 이름 수정하는 다이얼로그가 나타남
+                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                View view = LayoutInflater.from(getActivity()).inflate(R.layout.editroom_dialog, null, false);
+                builder.setView(view);
+
+                final EditText roomName_editText = (EditText)view.findViewById(R.id.editRoom_dialog_editText);
+                roomName_editText.setHint(roomItemList.get(position).getRoomName());
+                Button confirm_btn = (Button)view.findViewById(R.id.editRoom_dialog_confirm_btn);
+                Button cancel_btn = (Button)view.findViewById(R.id.editRoom_dialog_cancel_btn);
+
+                final AlertDialog dialog = builder.create();
+
+                confirm_btn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        //확인 버튼을 누르면
+
+                        String new_roomName = roomName_editText.getText().toString();
+
+                        //roomInfo 업데이트
+                        DBHelper dbHelper = new DBHelper(getContext(), Function.dbName, null, Function.dbVersion);
+                        dbHelper.open();
+                        dbHelper.room_updateName(roomId, new_roomName);
+
+                        //방 목록 업데이트
+                        roomItemList.get(position).setRoomName(new_roomName);
+                        adapter.notifyItemChanged(position);
+
+                        dialog.dismiss();
+                    }
+                });
+
+                cancel_btn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        //취소 버튼을 누르면
+
+                        dialog.dismiss();
+                    }
+                });
+
+                dialog.show();
+
+
+                return true;
+            case 122: //방 나가기
+                int item_position = item.getGroupId();
+                int item_roomId = roomItemList.get(item_position).getRoomId();
+
+                return true;
+
+            default:
+                return super.onContextItemSelected(item);
+        }
+    }
+
+
 
 
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {

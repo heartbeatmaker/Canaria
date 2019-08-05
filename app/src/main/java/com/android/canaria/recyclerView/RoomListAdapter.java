@@ -4,7 +4,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
+import android.view.ContextMenu;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.RelativeLayout;
@@ -81,11 +84,12 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
 
 
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnCreateContextMenuListener{
 
 //        ImageView roomImage_imageView;
         TextView roomName_textView, numberOfMembers_textView, recentMessage_textView, updatedTime_textView, roomId_textView, unreadMsg_textView;
         RelativeLayout parentLayout;
+
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -98,7 +102,16 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
             this.parentLayout = itemView.findViewById(R.id.roomList_relativeLayout);
             this.unreadMsg_textView = itemView.findViewById(R.id.roomList_unreadMsgCount);
 
+            itemView.setOnCreateContextMenuListener(this);
 //            parentLayout.setOnLongClickListener(readMessageActivity);
+        }
+
+
+        @Override
+        public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+//            menu.setHeaderTitle();
+            menu.add(this.getAdapterPosition(), 121,0, "Edit Chatroom Name");
+            menu.add(this.getAdapterPosition(), 122,1, "Leave");
         }
 
 

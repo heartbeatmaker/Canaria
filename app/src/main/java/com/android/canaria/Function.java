@@ -17,6 +17,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 
+import com.android.canaria.connect_to_server.HttpRequest;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.BitmapImageViewTarget;
@@ -78,11 +79,12 @@ public class Function {
      */
     public static void displayRoundImageFromUrl(final Context context, final String fileName, final ImageView imageView) {
 
-        if(!fileName.equals("null")){ //서버에서 프로필 사진을 찾을 때, 파일이 없으면 "null"이라고 반환하도록 설정해놓음
+//        if(!fileName.equals("null")){ //서버에서 프로필 사진을 찾을 때, 파일이 없으면 "null"이라고 반환하도록 설정해놓음
 
             String url = "http://15.164.193.65/uploads/"+fileName;
 
             RequestOptions options = new RequestOptions()
+                    .placeholder(R.drawable.user)
                     .centerCrop()
                     .dontAnimate();
 
@@ -101,8 +103,26 @@ public class Function {
                     });
         }
 
-    }
+//    }
 
+
+
+    public static String getUserImage_url(int userId) {
+
+        String userImage_url = "null";
+        ContentValues data = new ContentValues();
+        data.put("sender_id", userId);
+
+        try {
+            //sender_id를 이용하여 서버에서 해당 사용자의 프로필 사진 이름을 가져온다
+            userImage_url = new HttpRequest("image.php", data).execute().get();
+        } catch (Exception e) {
+            Log.d("tag", "Error: "+e);
+        }
+
+
+        return userImage_url;
+    }
 
 
     //현재 날짜, 시간을 구하기
