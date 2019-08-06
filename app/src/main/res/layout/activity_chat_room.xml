@@ -19,34 +19,107 @@
             android:id="@+id/chat_message_rcv"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_above="@id/chat_input_linearLayout">
+            android:layout_above="@id/chat_frameLayout">
 
         </android.support.v7.widget.RecyclerView>
 
-        <LinearLayout
-            android:background="@color/grey"
-            android:layout_alignParentBottom="true"
-            android:id="@+id/chat_input_linearLayout"
+
+        <FrameLayout
+            android:id="@+id/chat_frameLayout"
             android:layout_width="match_parent"
-            android:layout_height="80dp">
+            android:layout_height="80dp"
+            android:layout_alignParentBottom="true">
 
-            <EditText
-                android:id="@+id/chat_message_editText"
-                android:layout_width="0dp"
-                android:layout_weight="4"
-                android:hint="Type Your Message"
-                android:layout_height="match_parent" />
+            <RelativeLayout
+                android:id="@+id/chat_pickAction_relativeLayout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/colorPrimaryDark"
+                android:padding="10dp"
+                android:visibility="invisible">
 
-            <Button
-                android:id="@+id/chat_send_btn"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:adjustViewBounds="true"
-                android:scaleType="fitCenter"
-                android:padding="20dp"
-                android:background="@drawable/ic_send_black_24dp"/>
+                <ImageButton
+                    android:id="@+id/chat_cancelBtn"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:background="@drawable/ic_cancel_black_24dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:layout_alignParentLeft="true"/>
 
-        </LinearLayout>
+                <ImageButton
+                    android:id="@+id/chat_cameraBtn"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:layout_marginLeft="30dp"
+                    android:background="@drawable/ic_add_a_photo_black_24dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:layout_toRightOf="@id/chat_cancelBtn"/>
+
+
+                <ImageButton
+                    android:id="@+id/chat_galleryBtn"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:layout_marginLeft="30dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:background="@drawable/ic_photo_library_black_24dp"
+                    android:layout_toRightOf="@id/chat_cameraBtn"/>
+
+
+                <ImageButton
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:layout_marginLeft="30dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:background="@drawable/ic_video_call_black_24dp"
+                    android:layout_toRightOf="@id/chat_galleryBtn"/>
+
+            </RelativeLayout>
+
+
+            <LinearLayout
+                android:background="@color/grey"
+                android:id="@+id/chat_input_linearLayout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="visible">
+
+                <ImageButton
+                    android:id="@+id/chat_plus_btn"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:paddingLeft="5dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:background="@drawable/ic_add_circle_black_24dp"
+                    android:layout_gravity="center"/>
+
+                <EditText
+                    android:id="@+id/chat_message_editText"
+                    android:layout_width="0dp"
+                    android:layout_weight="4"
+                    android:hint="Type Your Message"
+                    android:layout_marginLeft="5dp"
+                    android:layout_marginRight="5dp"
+                    android:layout_height="match_parent" />
+
+                <Button
+                    android:id="@+id/chat_send_btn"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:padding="20dp"
+                    android:background="@drawable/ic_send_black_24dp"/>
+
+            </LinearLayout>
+
+        </FrameLayout>
+
 
     </RelativeLayout>
 

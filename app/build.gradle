@@ -33,5 +33,7 @@ dependencies {
     compile group: 'cz.msebera.android', name: 'httpclient', version: '4.4.1.2'
     implementation 'com.google.android.gms:play-services-auth:16.0.1'
     implementation 'com.journeyapps:zxing-android-embedded:3.6.0' //qr코드
+    implementation 'com.squareup.okhttp3:okhttp:4.0.1'
+    implementation 'com.squareup.retrofit2:retrofit:2.6.1'
 
 }

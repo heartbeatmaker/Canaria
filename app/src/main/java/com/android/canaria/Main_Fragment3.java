@@ -292,17 +292,15 @@ public class Main_Fragment3 extends Fragment {
                 Log.d("image","albumUri(=새로 만든 file의 fileUri) : "+albumUri);
 
 //                getRealPath(photoUri);
-                if (isDownloadsDocument(photoUri)) {
-
-                    final String id = DocumentsContract.getDocumentId(photoUri);
-                    final Uri contentUri = ContentUris.withAppendedId(
-                            Uri.parse("content://downloads/all_downloads"), Long.valueOf(id));
-
-                    String realPath = getDataColumn(contentUri, null, null);
-                    Log.d("image", "realPath="+realPath);
-                }
-
-
+//                if (isDownloadsDocument(photoUri)) {
+//
+//                    final String id = DocumentsContract.getDocumentId(photoUri);
+//                    final Uri contentUri = ContentUris.withAppendedId(
+//                            Uri.parse("content://downloads/all_downloads"), Long.valueOf(id));
+//
+//                    String realPath = getDataColumn(contentUri, null, null);
+//                    Log.d("image", "realPath="+realPath);
+//                }
 
                 cropImage();
 
@@ -576,28 +574,13 @@ public class Main_Fragment3 extends Fragment {
         Log.d("image", "cropImage()");
 
         Intent cropIntent = new Intent("com.android.camera.action.CROP");
-        Log.d("image", "new Intent(\"com.android.camera.action.CROP\");");
-
         cropIntent.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        Log.d("image", "setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);");
-
         cropIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        Log.d("image", "setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);");
-
         cropIntent.setDataAndType(photoUri, "image/*"); //원본 사진 경로
-        Log.d("image", "setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);");
-
         cropIntent.putExtra("aspectX",0);
-        Log.d("image", "cropIntent.putExtra(\"aspectX\",0);");
-
         cropIntent.putExtra("aspectY",0);
-        Log.d("image", "cropIntent.putExtra(\"aspectY\",0);");
-
         cropIntent.putExtra("output", albumUri); //crop 한 사진을 저장할 곳
-        Log.d("image", "cropIntent.putExtra(\"output\", albumUri);");
-
         startActivityForResult(cropIntent, REQUEST_IMAGE_CROP);
-        Log.d("image", "startActivityForResult(cropIntent, REQUEST_IMAGE_CROP);");
 
     }
 

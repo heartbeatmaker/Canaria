@@ -1,13 +1,20 @@
 package com.android.canaria;
 
 import android.annotation.SuppressLint;
+import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
+import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
@@ -21,6 +28,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.android.canaria.connect_to_server.MainService;
@@ -34,14 +44,39 @@ import com.android.canaria.recyclerView.RoomListItem;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
-public class ChatActivity extends AppCompatActivity {
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+import retrofit2.Retrofit;
+
+import static javax.xml.transform.OutputKeys.MEDIA_TYPE;
+
+public class ChatActivity extends AppCompatActivity{
 
     EditText msgInput_editText;
     Button sendMsg_btn;
+    LinearLayout input_linearLayout;
+    RelativeLayout pickAction_relativeLayout;
+    ImageButton plus_btn, gallery_imageBtn, takePic_imageBtn, cancel_btn;
 
     int userId;
     String username, roomName;
@@ -78,6 +113,16 @@ public class ChatActivity extends AppCompatActivity {
 
     String myMsg;
     private static final int INVITATION_REQUEST = 1000;
+    private static final int PICK_IMAGE_REQUEST = 2;
+    static final int REQUEST_TAKE_PHOTO = 3;
+    private static final int REQUEST_IMAGE_CROP = 4;
+
+    boolean isPlusBtnActive = false;
+
+    int serverResponseCode = 0;
+    ProgressDialog dialog = null;
+    String upLoadServerUri = "http://15.164.193.65/multi_fileUpload.php";//서버컴퓨터의 ip주소
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +135,13 @@ public class ChatActivity extends AppCompatActivity {
 
         msgInput_editText = (EditText) findViewById(R.id.chat_message_editText);
         sendMsg_btn = (Button)findViewById(R.id.chat_send_btn);
+        plus_btn = (ImageButton)findViewById(R.id.chat_plus_btn);
+        input_linearLayout = (LinearLayout)findViewById(R.id.chat_input_linearLayout);
+        pickAction_relativeLayout = (RelativeLayout) findViewById(R.id.chat_pickAction_relativeLayout);
+        gallery_imageBtn = (ImageButton)findViewById(R.id.chat_galleryBtn);
+        takePic_imageBtn = (ImageButton)findViewById(R.id.chat_cameraBtn);
+        cancel_btn = (ImageButton)findViewById(R.id.chat_cancelBtn);
+
 
         //메시지 리사이클러뷰 초기화
         rcv = (RecyclerView)findViewById(R.id.chat_message_rcv);
@@ -223,12 +275,64 @@ public class ChatActivity extends AppCompatActivity {
         });
 
 
+
+
+        plus_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                isPlusBtnActive = true;
+                input_linearLayout.setVisibility(View.INVISIBLE);
+                pickAction_relativeLayout.setVisibility(View.VISIBLE);
+            }
+        });
+
+
+        gallery_imageBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("image/*"); //타입을 바꿔서 video 나 audio 를 가져올 수 있다
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE_REQUEST);
+
+            }
+        });
+
+        cancel_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(isPlusBtnActive){
+                    pickAction_relativeLayout.setVisibility(View.INVISIBLE);
+                    input_linearLayout.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
     }
 
 
 
     @Override
+    public void onBackPressed() {
+
+        if(isPlusBtnActive){
+            pickAction_relativeLayout.setVisibility(View.INVISIBLE);
+            input_linearLayout.setVisibility(View.VISIBLE);
+
+        }else{
+            super.onBackPressed();
+            finish();
+        }
+    }
+
+
+
+
+
+    @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
         if(requestCode == INVITATION_REQUEST && resultCode == RESULT_OK){
 
             Log.d("invitation", "onActivityForResult");
@@ -267,8 +371,235 @@ public class ChatActivity extends AppCompatActivity {
                 Log.d(TAG,ex);
             }
 
+        }else if(requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK){
+
+
+            final OkHttpClient mOkHttpClient = new OkHttpClient.Builder()
+                    .connectTimeout(20, TimeUnit.SECONDS)
+                    .writeTimeout(60, TimeUnit.SECONDS)
+                    .readTimeout(40, TimeUnit.SECONDS)
+                    .build();
+
+            MultipartBody.Builder mRequestBody = new MultipartBody.Builder()
+                    .setType(MultipartBody.FORM);
+
+            try{
+
+                int count = data.getClipData().getItemCount(); //evaluate the count before the for loop --- otherwise, the count is evaluated every loop.
+
+                //방 id, 파일이 몇 개인지 전달한다
+                mRequestBody.addFormDataPart("room_id", String.valueOf(roomId));
+                mRequestBody.addFormDataPart("count", String.valueOf(count));
+
+                for(int i = 0; i < count; i++){
+                    Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                    Log.d("이미지", "imageUri="+imageUri);
+                    String path = Function.getPath(this, imageUri);
+                    Log.d("이미지", "path="+path);
+
+                    File file = new File(path);
+
+//                    MediaType MEDIA_TYPE = path.get(0).endsWith("png") ?
+//                            MediaType.parse("image/png") : MediaType.parse("image/jpeg");
+
+                    String[] path_split = path.split("/");
+                    String file_name = path_split[path_split.length-1];
+                    Log.d("이미지", "file_name="+file_name);
+
+                    RequestBody imageBody = RequestBody.create(MultipartBody.FORM, file);
+                    //key, 서버가 저장할 file 이름, 이미지파일
+                    mRequestBody.addFormDataPart("image"+i, file_name, imageBody);
+                }
+
+                RequestBody rb = mRequestBody.build();
+
+                final Request request = new Request.Builder()
+                        .url(upLoadServerUri)
+                        .post(rb)
+                        .build();
+
+
+
+                new Thread(new Runnable() {
+
+                    public void run() {
+
+                        String responseMsg;
+                        try {
+
+
+                            Response mResponse = mOkHttpClient.newCall(request).execute();
+                            if (!mResponse.isSuccessful()) throw new IOException();
+
+                            responseMsg = mResponse.body().string();
+
+
+//                    mOkHttpClient.newCall(request).enqueue(new Callback() {
+//                        @Override
+//                        public void onFailure(Call call, IOException e) {
+//
+//                        }
+//
+//                        @Override
+//                        public void onResponse(Call call, Response response) throws IOException {
+//                            Log.d("이미지", "onResponse: " + response.body().string());
+//                        }
+//                    });
+
+
+                        } catch (IOException e) {
+                            responseMsg = "time out";
+
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            Log.d("이미지",ex);
+                        }
+
+                        Log.d("이미지", "response msg = "+responseMsg);
+
+                        try{
+                            JSONObject result_object = new JSONObject(responseMsg);
+                            JSONArray success_array = (JSONArray) result_object.get("success_data");
+                            JSONArray fail_array = (JSONArray)result_object.get("fail_data");
+
+                            Log.d("이미지", "success_array = "+success_array);
+                            Log.d("이미지", "fail_array = "+fail_array);
+
+                        }catch (Exception e){
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            Log.d(TAG,ex);
+                        }
+
+
+                    }
+
+                }).start();
+
+
+            }catch (Exception e){
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d("이미지",ex);
+            }
+
+
+
+            //사진을 서버에 업로드
+//                dialog = ProgressDialog.show(this, "", "Uploading file...", true);
+//
+//                new Thread(new Runnable() {
+//
+//                    public void run() {
+//
+//                        Log.d("image", "Uploading file...");
+//                        uploadFile(mCurrentPhotoPath);
+//                    }
+//
+//                }).start();
+
         }
     }
+
+
+
+
+
+
+
+//    private void mulipleFileUploadFile(Uri[] fileUri) {
+//        OkHttpClient okHttpClient = new OkHttpClient();
+//        OkHttpClient clientWith30sTimeout = okHttpClient.newBuilder()
+//                .readTimeout(30, TimeUnit.SECONDS)
+//                .build();
+//
+//        Retrofit retrofit = new Retrofit.Builder()
+//                .baseUrl(API_URL_BASE)
+//                .addConverterFactory(new MultiPartConverter())
+//                .client(clientWith30sTimeout)
+//                .build();
+//
+//        WebAPIService service = retrofit.create(WebAPIService.class); //here is the interface which you have created for the call service
+//        Map<String, RequestBody> maps = new HashMap<>();
+//
+//        if (fileUri!=null && fileUri.length>0) {
+//            for (int i = 0; i < fileUri.length; i++) {
+//                String filePath = Function.getPath(this, fileUri[i]);
+//                File file1 = new File(filePath);
+//
+//                if (filePath != null && filePath.length() > 0) {
+//                    if (file1.exists()) {
+//                        okhttp3.RequestBody requestFile = okhttp3.RequestBody.create(okhttp3.MediaType.parse("multipart/form-data"), file1);
+//                        String filename = "imagePath" + i; //key for upload file like : imagePath0
+//                        maps.put(filename + "\"; filename=\"" + file1.getName(), requestFile);
+//                    }
+//                }
+//            }
+//        }
+//
+//        String descriptionString = " string request";//
+//        //hear is the your json request
+//        Call<String> call = service.postFile(maps, descriptionString);
+//        call.enqueue(new Callback<String>() {
+//            @Override
+//            public void onResponse(Call<String> call,
+//                                   Response<String> response) {
+//                Log.i(LOG_TAG, "success");
+//                Log.d("body==>", response.body().toString() + "");
+//                Log.d("isSuccessful==>", response.isSuccessful() + "");
+//                Log.d("message==>", response.message() + "");
+//                Log.d("raw==>", response.raw().toString() + "");
+//                Log.d("raw().networkResponse()", response.raw().networkResponse().toString() + "");
+//            }
+//
+//            @Override
+//            public void onFailure(Call<String> call, Throwable t) {
+//                Log.e(LOG_TAG, t.getMessage());
+//            }
+//        });
+//    }
+
+
+
+
+
+
+
+
+
+
+
+    private String getRealPathFromURI(Uri contentUri) {
+        if (contentUri.getPath().startsWith("/storage")) {
+            return contentUri.getPath();
+        }
+
+        String id = DocumentsContract.getDocumentId(contentUri).split(":")[1];
+        String[] columns = { MediaStore.Files.FileColumns.DATA };
+        String selection = MediaStore.Files.FileColumns._ID + " = " + id;
+        Cursor cursor = getContentResolver().query(MediaStore.Files.getContentUri("external"), columns, selection, null, null);
+
+        try {
+            int columnIndex = cursor.getColumnIndex(columns[0]);
+            if (cursor.moveToFirst()) {
+                return cursor.getString(columnIndex);
+            }
+        } finally {
+            cursor.close();
+        } return null;
+    }
+
+
+
+
+
+
 
 
 
@@ -667,6 +998,12 @@ public class ChatActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+
+
+
+
+
 
 
 }
