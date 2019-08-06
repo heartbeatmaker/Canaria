@@ -39,7 +39,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 
 public class ChatActivity extends AppCompatActivity {
-    TextView roomInfo_textView;
+
     EditText msgInput_editText;
     Button sendMsg_btn;
 
@@ -272,7 +272,42 @@ public class ChatActivity extends AppCompatActivity {
 
 
 
+    //이 방의 참여자 정보를 가져와서 화면에 띄워주는 메소드
+    private void getMemberInfo(int roomId){
 
+        Log.d("초대", "getMemberInfo");
+
+        /*-------------방 정보를 가져온다--------------*/
+        //db 연결
+        DBHelper dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
+        dbHelper.open();
+
+        Cursor _cursor = dbHelper.db.rawQuery("SELECT members FROM chat_rooms WHERE room_id='" + roomId + "';", null);
+        _cursor.moveToFirst();
+        String memberInfo_string = _cursor.getString(0);
+        /*-------------------------------------------*/
+        Log.d("초대", "memberInfo_string="+memberInfo_string);
+
+        String[] memberInfo_array = memberInfo_string.split(";");
+
+        int member_id = 0;
+        String member_username = "";
+        for(int i=0; i<memberInfo_array.length; i++){
+
+            if(i%2 == 0){ //i가 짝수일 때: id
+                member_id = Integer.valueOf(memberInfo_array[i]);
+            }else{ //i가 홀수일 때: username
+                member_username = memberInfo_array[i];
+                Log.d("초대", "리스트에 추가 직전. id:"+member_id+", username:"+member_username);
+                memberList.add(new FriendListItem(member_username, member_id));
+            }
+        }
+        members_rcv.scrollToPosition(0);
+    }
+
+
+
+    //저장된 메시지를 가져와서 화면에 띄워주는 메소드
     private void getSavedMsg(int roomId){
 
         /*-------------방 정보를 가져온다--------------*/
@@ -403,22 +438,29 @@ public class ChatActivity extends AppCompatActivity {
     }
 
 
+
+    //사용자가 a 채팅방에서 채팅을 하고 있는데, b 채팅방에서 메시지가 온다(푸쉬 알람으로 뜸) 이것을 클릭할 경우, b 채팅방으로 넘어가야 한다
+    //= 채팅 화면이 켜 있는 상태로, 기존 채팅방 정보를 지우고 다른 채팅방 데이터를 띄워줘야 하는 상황
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
 
         Log.d("intent", "@@@@@@@@@@@onNewIntent");
 
+        //변수 초기화(메시지 목록, 참여자 목록)
         messageItemList.clear();
         adapter.notifyDataSetChanged();
-        roomInfo_textView.setText("");
         isNewRoom = false;
+        memberList.clear();
+        members_adapter.notifyDataSetChanged();
 
         roomId = intent.getIntExtra("roomId", 10000); // 이전 화면에서 전달한 방 id
         Log.d("intent", "roomid="+roomId);
 
+        //바뀐 채팅방의 메시지 데이터를 띄워준다
         getSavedMsg(roomId);
         adapter.notifyDataSetChanged();
+
     }
 
 

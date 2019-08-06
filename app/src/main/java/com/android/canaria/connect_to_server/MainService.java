@@ -520,10 +520,12 @@ public class MainService extends Service {
                             roomName_updated = "Group chat"; //방 이름 = 그룹챗
                         }
 
+                        Log.d("초대", "MainService) db에 저장하기 직전. roomName_updated="+roomName_updated);
                         //db 업데이트(방이름, 멤버정보)
-                        dbHelper.db.execSQL("UPDATE chat_rooms SET room_name = '"+roomName_updated+"' AND members='" + members_updated + "' WHERE room_id='" + roomId_newMember + "';");
+                        dbHelper.db.execSQL("UPDATE chat_rooms SET room_name = '"+roomName_updated+"', members='" + members_updated + "' WHERE room_id='" + roomId_newMember + "';");
 
-
+                        //방 정보가 잘 업데이트 되었는지 확인
+                        dbHelper.get_chatRoomInfo(roomId_newMember);
 
 
                         /*-------2. 방 목록 화면 업데이트--------*/
@@ -571,6 +573,7 @@ public class MainService extends Service {
                                 }else{
                                     msg_roomInfo = "roomInfo_plus/"+roomName_updated+" ("+total_numberOfMembers+")"+"/"+invited_memberInfo;
                                 }
+                                Log.d("초대", "MainService) 채팅화면으로 roomInfo 보내기 직전. roomInfo_plus:"+msg_roomInfo);
                                 sendMsgToChat(msg_roomInfo);
 
 
@@ -592,7 +595,46 @@ public class MainService extends Service {
                         break;
 
                     case "invited": //이 사용자가 어떤 방에 초대되었다는 메시지
+                        //invited/방id/방이름/memberInfo
 
+                        int roomId_invited = Integer.valueOf(line_array[1]);
+                        String roomName_invited = line_array[2];
+                        String allMemberInfo_string = line_array[3];
+
+                        String[] allMemberInfo_array = allMemberInfo_string.split(";");
+                        int numberOfAllMembers = allMemberInfo_array.length/2;
+
+                        Log.d(TAG, "the client is invited to "+roomName_invited);
+
+                        //방 정보를 내부 저장소에 저장한다
+                        String currentTime_invited = Function.getCurrentTime();
+                        //서버가 정해준 room id를 직접 저장해야 한다. auto increment(x)
+                        dbHelper.insert_chatRooms(roomId_invited, roomName_invited, allMemberInfo_string, currentTime_invited);
+
+
+                        //사용자의 foreground activity는 불명. 확인해야 한다
+                        try{
+                            // 방목록에 아이템을 추가한다
+                            // Fragment2의 onResume()에서 datasetChanged()가 호출된다
+                            Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_invited, numberOfAllMembers,
+                                    "", currentTime_invited, roomId_invited, 0));
+                        }catch (Exception e){
+                            //앱이 꺼져있는데 서비스만 돌고 있을 경우, 오류가 날 수 있다
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            Log.d(TAG,ex);
+                        }
+
+                        if(isMainForeground){
+                            Log.d(TAG, "MainActivity is at foreground");
+
+                            //방목록 어댑터를 업데이트 하라고 메시지를 보낸다
+                            sendMsgToMain("inserted/");
+                        }
+
+                        //채팅 화면이 foreground에 있다면, 다른 방을 보고 있는 것이다
 
                         break;
                 }

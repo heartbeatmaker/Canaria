@@ -104,6 +104,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
 
 
+
     public void delete(String tableName, int room_id) {
         SQLiteDatabase db = getWritableDatabase();
         // 입력한 항목과 일치하는 행 삭제
@@ -168,9 +169,8 @@ public class DBHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = getReadableDatabase();
         String result = "";
 
-        Log.d(TAG, "get_chatRoomInfo. roomId = "+roomId);
+        Log.d("초대", "get_chatRoomInfo. roomId = "+roomId);
 
-        // DB에 있는 데이터를 쉽게 처리하기 위해 Cursor를 사용하여 테이블에 있는 모든 데이터 출력
         Cursor cursor = db.rawQuery("SELECT * FROM chat_rooms WHERE room_id='" + roomId + "';", null);
         while (cursor.moveToNext()) {
             result += cursor.getInt(0) //id
@@ -182,7 +182,7 @@ public class DBHelper extends SQLiteOpenHelper {
                     + cursor.getString(3); //members
 
         }
-        Log.d(TAG, "chatRoomInfo_saved = "+result);
+        Log.d("초대", "chatRoomInfo_saved = "+result);
 
         return result;
     }
