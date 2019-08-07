@@ -3,6 +3,8 @@ package com.android.canaria;
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
@@ -60,6 +62,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import cz.msebera.android.httpclient.entity.mime.content.ContentBody;
+import cz.msebera.android.httpclient.entity.mime.content.FileBody;
+import id.zelory.compressor.Compressor;
+import io.reactivex.schedulers.Schedulers;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.MediaType;
@@ -303,6 +309,9 @@ public class ChatActivity extends AppCompatActivity{
                 intent.setType("image/*"); //타입을 바꿔서 video 나 audio 를 가져올 수 있다
                 intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                 startActivityForResult(Intent.createChooser(intent, "Select Picture"), PICK_IMAGE_REQUEST);
+                pickAction_relativeLayout.setVisibility(View.INVISIBLE);
+                input_linearLayout.setVisibility(View.VISIBLE);
+                isPlusBtnActive = false;
 
             }
         });
@@ -395,22 +404,27 @@ public class ChatActivity extends AppCompatActivity{
 
             try{
 
-                int count = data.getClipData().getItemCount(); //evaluate the count before the for loop --- otherwise, the count is evaluated every loop.
+                ClipData clipData = data.getClipData();
+                int count = 1;
 
-                //방 id, 파일이 몇 개인지 전달한다
-                mRequestBody.addFormDataPart("room_id", String.valueOf(roomId));
-                mRequestBody.addFormDataPart("count", String.valueOf(count));
+                if(clipData == null){ //이미지를 1개만 업로드 할 때
 
-                for(int i = 0; i < count; i++){
-                    Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                    //방 id, 파일이 몇 개인지 전달한다
+                    mRequestBody.addFormDataPart("room_id", String.valueOf(roomId));
+                    mRequestBody.addFormDataPart("count", String.valueOf(count));
+
+                    Uri imageUri = data.getData();
                     Log.d("이미지", "imageUri="+imageUri);
                     String path = Function.getPath(this, imageUri);
                     Log.d("이미지", "path="+path);
 
                     File file = new File(path);
 
-//                    MediaType MEDIA_TYPE = path.get(0).endsWith("png") ?
-//                            MediaType.parse("image/png") : MediaType.parse("image/jpeg");
+                    //파일 압축
+                    file = new Compressor(this)
+                            .setQuality(10)
+                            .compressToFile(file);
+
 
                     String[] path_split = path.split("/");
                     String file_name = path_split[path_split.length-1];
@@ -418,8 +432,46 @@ public class ChatActivity extends AppCompatActivity{
 
                     RequestBody imageBody = RequestBody.create(MultipartBody.FORM, file);
                     //key, 서버가 저장할 file 이름, 이미지파일
-                    mRequestBody.addFormDataPart("image"+i, file_name, imageBody);
+                    mRequestBody.addFormDataPart("image0", file_name, imageBody);
+
+
+                }else{ //다중이미지를 업로드 할 때
+
+                    count = clipData.getItemCount(); //evaluate the count before the for loop --- otherwise, the count is evaluated every loop.
+
+                    //방 id, 파일이 몇 개인지 전달한다
+                    mRequestBody.addFormDataPart("room_id", String.valueOf(roomId));
+                    mRequestBody.addFormDataPart("count", String.valueOf(count));
+
+                    for(int i = 0; i < count; i++){
+                        Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                        Log.d("이미지", "imageUri="+imageUri);
+                        String path = Function.getPath(this, imageUri);
+                        Log.d("이미지", "path="+path);
+
+                        File file = new File(path);
+
+                        //파일 압축
+                        file = new Compressor(this)
+                                .setQuality(10)
+                                .compressToFile(file);
+
+
+//                    MediaType MEDIA_TYPE = path.get(0).endsWith("png") ?
+//                            MediaType.parse("image/png") : MediaType.parse("image/jpeg");
+
+                        String[] path_split = path.split("/");
+                        String file_name = path_split[path_split.length-1];
+                        Log.d("이미지", "file_name="+file_name);
+
+                        RequestBody imageBody = RequestBody.create(MultipartBody.FORM, file);
+                        //key, 서버가 저장할 file 이름, 이미지파일
+                        mRequestBody.addFormDataPart("image"+i, file_name, imageBody);
+                    }
+
                 }
+
+
 
                 RequestBody rb = mRequestBody.build();
 
@@ -506,7 +558,7 @@ public class ChatActivity extends AppCompatActivity{
 
                                         String filename_string = "";
                                         try{
-
+                                            String message = "";
                                             for(int k=0; k<success_array.length(); k++){
 
                                                 String image_name = success_array.getString(k);
@@ -515,7 +567,15 @@ public class ChatActivity extends AppCompatActivity{
 
                                                 //이미지 파일의 이름을, db에 메시지 형태로 저장한다
                                                 //메시지 내용: 'Photo'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
-                                                dbHelper.insert_chatLogs(roomId, userId, username, "Photo", image_name, curTime, 1);
+
+                                                int number_of_files = success_array.length();
+                                                if(number_of_files == 1){
+                                                    message = number_of_files + " Photo";
+                                                }else if(number_of_files >1){
+                                                    message = number_of_files + " Photos";
+                                                }
+
+                                                dbHelper.insert_chatLogs(roomId, userId, username, message, image_name, curTime, 1);
 
                                                 filename_string += image_name + ";";
                                             }
@@ -525,11 +585,33 @@ public class ChatActivity extends AppCompatActivity{
                                             rcv.scrollToPosition(messageItemList.size()-1);
 
 
-                                            //마지막 ; 제거
-                                            filename_string = filename_string.substring(0, filename_string.length()-1);
-
                                             //채팅 서버에 메시지를 보낸다
+                                            filename_string = filename_string.substring(0, filename_string.length()-1);//마지막 ; 제거
                                             sendMsg("msg_image/"+roomId+"/"+filename_string);
+
+
+                                            //채팅 방목록 업데이트
+                                            //1. sqlite 에서 방 정보를 불러온다
+                                            String roomInfo = dbHelper.get_chatRoomInfo(roomId);
+                                            String [] roomInfo_array = roomInfo.split("/");
+                                            String roomName_msg = roomInfo_array[1];
+                                            String memberInfo = roomInfo_array[3];
+                                            String[] memberInfo_array = memberInfo.split(";");
+                                            int number_of_members_msg = memberInfo_array.length/2;
+
+
+                                            //2. 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
+                                            Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
+                                                    message, Function.getCurrentTime(), roomId, 0));
+
+                                            for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
+                                                RoomListItem item = Main_Fragment2.roomItemList.get(i);
+                                                if(item.getRoomId() == roomId){
+                                                    Main_Fragment2.roomItemList.remove(i);
+                                                    Log.d(TAG, i+" item is removed from roomItemList");
+                                                }
+                                            }
+
 
 
                                         }catch (Exception e){

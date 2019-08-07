@@ -11,6 +11,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -18,16 +21,25 @@ import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
+import android.support.annotation.Nullable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 
 import com.android.canaria.connect_to_server.HttpRequest;
+import com.android.canaria.recyclerView.FriendListAdapter;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.BitmapImageViewTarget;
+import com.bumptech.glide.request.target.Target;
+import com.bumptech.glide.request.target.ViewTarget;
+import com.bumptech.glide.request.transition.Transition;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -253,13 +265,31 @@ public class Function {
 
     public static void displayResizedImage(Context context, String url, ImageView imageView){
 
-//        RequestOptions options = new RequestOptions()
+        RequestOptions options = new RequestOptions()
+                .fitCenter();
 //                .override(width, height);
+
+        final ProgressBar progressBar = new ProgressBar(context, null, android.R.attr.progressBarStyleLarge);
+        progressBar.setIndeterminate(true);
+        progressBar.getIndeterminateDrawable().setColorFilter(Color.WHITE, PorterDuff.Mode.MULTIPLY); //색 변경
 
         Glide.with(context)
                 .asBitmap()
                 .load(url)
-//                .apply(options)
+                .apply(options)
+                .listener(new RequestListener<Bitmap>() {
+                    @Override
+                    public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Bitmap> target, boolean isFirstResource) {
+                        progressBar.setVisibility(View.GONE);
+                        return false;
+                    }
+
+                    @Override
+                    public boolean onResourceReady(Bitmap resource, Object model, Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
+                        progressBar.setVisibility(View.GONE);
+                        return false;
+                    }
+                })
                 .into(imageView);
 
     }

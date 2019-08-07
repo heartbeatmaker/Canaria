@@ -423,7 +423,12 @@ public class MainService extends Service {
 
                                 }
 
-                                unreadMsgCount += 1;
+
+                                if(isImage){
+                                    unreadMsgCount += number_of_files;
+                                }else{
+                                    unreadMsgCount += 1;
+                                }
                             }
 
 

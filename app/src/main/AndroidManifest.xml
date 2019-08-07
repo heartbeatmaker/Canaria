@@ -36,7 +36,8 @@
         <activity
             android:name=".UserProfileActivity"
             android:theme="@style/AppTheme.NoActionBar" />
-        <activity android:name=".ChatActivity" /> <!-- <activity android:name=".FriendFinder_Fragment1_MyCodeFragment" /> -->
+        <activity android:name=".ChatActivity"
+            android:configChanges="orientation|screenSize" />/> <!-- <activity android:name=".FriendFinder_Fragment1_MyCodeFragment" /> -->
         <!-- <activity android:name=".FriendFinder_Fragment1_ScanFragment" /> -->
         <!-- <activity android:name=".FriendFinder_Fragment2" /> -->
         <!-- <activity android:name=".FriendFinder_Fragment1" /> -->

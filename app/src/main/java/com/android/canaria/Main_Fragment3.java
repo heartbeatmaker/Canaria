@@ -58,6 +58,8 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import id.zelory.compressor.Compressor;
+
 import static android.app.Activity.RESULT_OK;
 
 /*더보기 fragment*/
@@ -158,7 +160,7 @@ public class Main_Fragment3 extends Fragment {
 
         if(isCameraPermissionChecked()) { //권한 허용 되어 있어야, 사진 어떻게 가져올 것인지 선택하는 다이얼로그 띄워줌
 
-            //화면 하단의 카메라 사진버튼을 누르면
+            //프로필 사진을 누르면
             profileImage_imageView.setOnClickListener(new View.OnClickListener() {
 
                 @Override
@@ -425,6 +427,20 @@ public class Main_Fragment3 extends Fragment {
         byte[] buffer;
         int maxBufferSize = 1 * 1024 * 1024;
         File sourceFile = new File(sourceFileUri);
+
+
+        //파일 압축
+        try{
+            sourceFile = new Compressor(getContext())
+                    .setQuality(10)
+                    .compressToFile(sourceFile);
+        }catch (Exception e){
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String ex = sw.toString();
+
+            Log.d("image",ex);
+        }
 
 
         if (!sourceFile.isFile()) {

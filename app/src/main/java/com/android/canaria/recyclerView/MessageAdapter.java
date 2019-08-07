@@ -148,6 +148,8 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 //텍스트뷰를 숨기고, 이미지뷰에 이미지를 넣는다
                 sent_message_textView.setVisibility(View.GONE);
                 sent_image_imageView.setVisibility(View.VISIBLE);
+                sent_image_imageView.layout(0,0,0,0);//이미지뷰의 레이아웃을 초기화
+//              layout(left, top, right, bottom) :  Assign a size and position to a view
 
 //                Context context, String url, ImageView imageView,int width, int height
                 Function.displayResizedImage(mContext, message.getImage_url(), sent_image_imageView);
@@ -193,9 +195,21 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 //텍스트뷰를 숨기고, 이미지뷰에 이미지를 넣는다
                 received_message_textView.setVisibility(View.GONE);
                 received_image_imageView.setVisibility(View.VISIBLE);
+                received_image_imageView.layout(0,0,0,0); //이미지뷰의 레이아웃을 초기화
+//              layout(left, top, right, bottom) :  Assign a size and position to a view
 
 //                Context context, String url, ImageView imageView,int width, int height
                 Function.displayResizedImage(mContext, message.getImage_url(), received_image_imageView);
+
+
+                /*
+                <received_image_imageView.layout(0,0,0,0); 쓴 이유>
+                * The list items are being reused, and when you scroll down you bind a larger image which makes the ImageView layout taller (wrap_content).
+                * When you scroll back up Glide sees that taller size and tries to load an image that has that size.
+                * wrap_content only works if the didn't have a layout before, otherwise Glide reads the laid-out width/height and uses that as the target size.
+                * I usually recommend a holder.iv.layout(0,0,0,0) to reset the size of the view/target and behave as if the list item was just inflated.
+                *
+                * */
             }
 
         }
