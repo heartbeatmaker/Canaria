@@ -361,6 +361,37 @@ public class MainService extends Service {
                         final String sender_username = line_array[3];
                         String message = line_array[4];
 
+
+                        //이미지를 담은 메시지인지 확인한다
+                        //image!-!파일이름1;파일이름2;파일이름3
+                        boolean isImage = false;
+                        String filename_string = "";
+                        int number_of_files = 0;
+                        try{
+                            String[] text_array = message.split("!-!");
+                            if(text_array.length>0 && text_array[0].equals("image")){
+
+                                isImage = true;
+
+                                filename_string = text_array[1]; //파일이름을 가져온다
+
+                                //푸쉬알람에 띄워줄 내용 지정
+                                number_of_files = filename_string.split(";").length;
+                                if(number_of_files == 1){
+                                    message = number_of_files +" Photo";
+                                }else{
+                                    message = number_of_files +" Photos";
+                                }
+
+                            }
+                        }catch (Exception e){
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            Log.d(TAG,ex);
+                        }
+
                         String curTime_msg = Function.getCurrentTime();//현재 시각
 
                         int unreadMsgCount = dbHelper.get_unreadMsgCount(roomId_msg); //사용자가 이 방에서 안 읽은 메시지 개수(원래 개수)
@@ -388,9 +419,7 @@ public class MainService extends Service {
                                     // 1. 지금 해당 채팅방을 보고 있지 않으면서
                                     // 2. 서버메시지도, 내가 보낸 메시지도 아닐 경우 (남이 보낸 메시지일 경우)
 
-
                                     showNotification(sender_username, message, roomId_msg);
-
 
                                 }
 
@@ -399,9 +428,24 @@ public class MainService extends Service {
 
 
                             //메시지 저장
-                            dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, System.currentTimeMillis(), isRead);
+                            long curTime_long = System.currentTimeMillis();
+                            if(isImage){ //이미지일 경우
+
+                                //string 형태로 이어져있는 파일 이름을 분리한다
+                                // -> 이미지 1개 = 메시지 1개 원칙으로 저장한다
+
+                                String[] filename_array = filename_string.split(";");
+
+                                for(int i=0; i<filename_array.length; i++){
+                                    dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, filename_array[i], curTime_long, isRead);
+                                }
+
+                            }else{ //텍스트 메시지일 경우
+                                dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, "N", curTime_long, isRead);
+                            }
 //                            String result_msg = dbHelper.getResult_table_chatLogs();
 //                            Log.d(TAG, "chat_logs table="+result_msg);
+
 
                             //2. roomList를 업데이트한다 -- 서버메시지 제외
                             if(sender_id == 0 && sender_username.equals("server")){ }

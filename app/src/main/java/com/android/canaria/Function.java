@@ -251,6 +251,20 @@ public class Function {
 
 
 
+    public static void displayResizedImage(Context context, String url, ImageView imageView){
+
+//        RequestOptions options = new RequestOptions()
+//                .override(width, height);
+
+        Glide.with(context)
+                .asBitmap()
+                .load(url)
+//                .apply(options)
+                .into(imageView);
+
+    }
+
+
     public static String getUserImage_url(int userId) {
 
         String userImage_url = "null";

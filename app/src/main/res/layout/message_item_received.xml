@@ -42,14 +42,30 @@
         app:layout_constraintLeft_toRightOf="@+id/received_profileImage_imageView"
         android:layout_marginLeft="8dp" />
 
+
+    <ImageView
+        android:id="@+id/received_image_imageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/ic_launcher_background"
+        android:maxWidth="240dp"
+        android:adjustViewBounds="true"
+        android:layout_marginTop="4dp"
+        app:layout_constraintRight_toLeftOf="@+id/received_message_textView"
+        app:layout_constraintStart_toEndOf="@+id/received_message_textView"
+        app:layout_constraintTop_toBottomOf="@+id/received_username_textView" />
+
+
+
     <TextView
         android:id="@+id/received_time_textView"
         android:text="11:40"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="10sp"
-        app:layout_constraintLeft_toRightOf="@+id/received_message_textView"
+        app:layout_constraintLeft_toRightOf="@+id/received_image_imageView"
         android:layout_marginLeft="4dp"
-        app:layout_constraintBottom_toBottomOf="@+id/received_message_textView" />
+        app:layout_constraintBottom_toBottomOf="@+id/received_image_imageView" />
 
 </android.support.constraint.ConstraintLayout>

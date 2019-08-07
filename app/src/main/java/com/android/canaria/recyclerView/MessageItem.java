@@ -15,13 +15,32 @@ public class MessageItem {
     private int sender_id;
     private String senderUsername;
     private String message;
+    private int room_id;
+    private String image_url;
     private long timeMillis;
 
-    public MessageItem(int sender_id, String senderUsername, String message, long timeMillis) {
+    private String image_name;
+
+    public MessageItem(int sender_id, String senderUsername, String message, int room_id, String image_name, long timeMillis) {
+        this.room_id = room_id;
         this.sender_id = sender_id;
         this.senderUsername = senderUsername;
         this.message = message;
         this.timeMillis = timeMillis;
+        this.image_name = image_name;
+    }
+
+
+
+    public String getImage_name() {
+        return image_name;
+    }
+
+    public String getImage_url() {
+
+        image_url = Function.domain+"/images/"+room_id+"/"+image_name;
+
+        return image_url;
     }
 
 

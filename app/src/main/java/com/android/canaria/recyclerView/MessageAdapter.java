@@ -13,6 +13,9 @@ import android.widget.TextView;
 
 import com.android.canaria.Function;
 import com.android.canaria.R;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.request.target.BitmapImageViewTarget;
 
 import java.util.ArrayList;
 
@@ -116,20 +119,39 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
     private class SentMessageHolder extends RecyclerView.ViewHolder {
         TextView sent_message_textView, sent_time_textView;
+        ImageView sent_image_imageView;
 
         SentMessageHolder(View itemView) {
             super(itemView);
 
             sent_message_textView = (TextView) itemView.findViewById(R.id.sent_message_textView);
             sent_time_textView = (TextView) itemView.findViewById(R.id.sent_time_textView);
+            sent_image_imageView = (ImageView) itemView.findViewById(R.id.sent_image_imageView);
         }
 
         void bind(MessageItem message) {
-            sent_message_textView.setText(message.getMessage());
 
-            // Format the stored timestamp into a readable String using method.
+            //메시징 시각을 표시한다 - 공통
             sent_time_textView.setText(Function.formatTime(message.getTimeMillis()));
 
+            //메시지 내용이 텍스트인지 이미지인지 확인한다
+            String image_name = message.getImage_name();
+            if(image_name.equals("N") || image_name.equals("")){//텍스트를 보냈을 경우
+
+                //이미지뷰를 숨기고, 텍스트뷰에 텍스트를 넣는다
+                sent_message_textView.setVisibility(View.VISIBLE);
+                sent_image_imageView.setVisibility(View.GONE);
+                sent_message_textView.setText(message.getMessage());
+
+            }else{//이미지를 보냈을 경우
+
+                //텍스트뷰를 숨기고, 이미지뷰에 이미지를 넣는다
+                sent_message_textView.setVisibility(View.GONE);
+                sent_image_imageView.setVisibility(View.VISIBLE);
+
+//                Context context, String url, ImageView imageView,int width, int height
+                Function.displayResizedImage(mContext, message.getImage_url(), sent_image_imageView);
+            }
         }
 
     }
@@ -137,7 +159,8 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
     private class ReceivedMessageHolder extends RecyclerView.ViewHolder {
         TextView received_message_textView, received_time_textView, received_username_textView;
-        ImageView received_profileImage_imageView;
+        ImageView received_profileImage_imageView, received_image_imageView;
+
 
         ReceivedMessageHolder(View itemView) {
             super(itemView);
@@ -145,18 +168,36 @@ public class MessageAdapter extends RecyclerView.Adapter {
             received_time_textView = (TextView) itemView.findViewById(R.id.received_time_textView);
             received_username_textView = (TextView) itemView.findViewById(R.id.received_username_textView);
             received_profileImage_imageView = (ImageView) itemView.findViewById(R.id.received_profileImage_imageView);
+            received_image_imageView = (ImageView) itemView.findViewById(R.id.received_image_imageView);
         }
 
 
         void bind(MessageItem message) {
-            received_message_textView.setText(message.getMessage());
 
-            // Format the stored timestamp into a readable String using method.
+            //메시징 시각, 수신자 이름, 수신자 프로필사진을 각각의 뷰에 넣는다 - 공통
             received_time_textView.setText(Function.formatTime(message.getTimeMillis()));
             received_username_textView.setText(message.getSenderUsername());
-
-            // Insert the profile image from the URL into the ImageView.
             Function.displayRoundImageFromUrl(mContext, message.getUserImage_url(), received_profileImage_imageView);
+
+            //메시지 내용이 텍스트인지 이미지인지 확인한다
+            String image_name = message.getImage_name();
+            if(image_name.equals("N") || image_name.equals("")){//텍스트 메시지를 받았을 경우
+
+                //이미지뷰를 숨기고, 텍스트뷰에 텍스트를 넣는다
+                received_message_textView.setVisibility(View.VISIBLE);
+                received_image_imageView.setVisibility(View.GONE);
+                received_message_textView.setText(message.getMessage());
+
+            }else{//이미지를 받았을 경우
+
+                //텍스트뷰를 숨기고, 이미지뷰에 이미지를 넣는다
+                received_message_textView.setVisibility(View.GONE);
+                received_image_imageView.setVisibility(View.VISIBLE);
+
+//                Context context, String url, ImageView imageView,int width, int height
+                Function.displayResizedImage(mContext, message.getImage_url(), received_image_imageView);
+            }
+
         }
 
     }

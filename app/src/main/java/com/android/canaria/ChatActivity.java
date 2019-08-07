@@ -32,6 +32,7 @@ import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.MainService;
 import com.android.canaria.db.DBHelper;
@@ -40,6 +41,7 @@ import com.android.canaria.recyclerView.FriendListItem;
 import com.android.canaria.recyclerView.MessageAdapter;
 import com.android.canaria.recyclerView.MessageItem;
 import com.android.canaria.recyclerView.RoomListItem;
+
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -105,9 +107,9 @@ public class ChatActivity extends AppCompatActivity{
     Handler handler;
     boolean isNewRoom = false;
 
-    int msg_sender_id;
+    int msg_sender_id, msg_roomId;
     String msg_sender_username;
-    String msg_text;
+    String msg_text, msg_filename_string;
 
     String[] message_array;
 
@@ -123,6 +125,8 @@ public class ChatActivity extends AppCompatActivity{
     ProgressDialog dialog = null;
     String upLoadServerUri = "http://15.164.193.65/multi_fileUpload.php";//서버컴퓨터의 ip주소
 
+    DBHelper dbHelper;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,7 +135,11 @@ public class ChatActivity extends AppCompatActivity{
 
         handler = new Handler();
 
+        dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
+        dbHelper.open();
+
         Log.d(TAG, "onCreate");
+
 
         msgInput_editText = (EditText) findViewById(R.id.chat_message_editText);
         sendMsg_btn = (Button)findViewById(R.id.chat_send_btn);
@@ -305,6 +313,7 @@ public class ChatActivity extends AppCompatActivity{
                 if(isPlusBtnActive){
                     pickAction_relativeLayout.setVisibility(View.INVISIBLE);
                     input_linearLayout.setVisibility(View.VISIBLE);
+                    isPlusBtnActive = false;
                 }
             }
         });
@@ -319,6 +328,7 @@ public class ChatActivity extends AppCompatActivity{
         if(isPlusBtnActive){
             pickAction_relativeLayout.setVisibility(View.INVISIBLE);
             input_linearLayout.setVisibility(View.VISIBLE);
+            isPlusBtnActive = false;
 
         }else{
             super.onBackPressed();
@@ -427,11 +437,13 @@ public class ChatActivity extends AppCompatActivity{
                         String responseMsg;
                         try {
 
-
+                            //서버에 요청을 보낸다
                             Response mResponse = mOkHttpClient.newCall(request).execute();
                             if (!mResponse.isSuccessful()) throw new IOException();
 
+                            //서버로부터의 응답
                             responseMsg = mResponse.body().string();
+                            Log.d("이미지", "response msg = "+responseMsg);
 
 
 //                    mOkHttpClient.newCall(request).enqueue(new Callback() {
@@ -457,15 +469,82 @@ public class ChatActivity extends AppCompatActivity{
                             Log.d("이미지",ex);
                         }
 
-                        Log.d("이미지", "response msg = "+responseMsg);
-
                         try{
+
+                            //json 형태로 받은 응답을 파싱한다
                             JSONObject result_object = new JSONObject(responseMsg);
-                            JSONArray success_array = (JSONArray) result_object.get("success_data");
+                            final JSONArray success_array = (JSONArray) result_object.get("success_data");
                             JSONArray fail_array = (JSONArray)result_object.get("fail_data");
 
                             Log.d("이미지", "success_array = "+success_array);
                             Log.d("이미지", "fail_array = "+fail_array);
+
+
+                            //업로드 실패한 파일이 있다면, 사용자에게 그 사실을 알려준다
+                            String imageName_failed = "";
+                            if(fail_array.length()>0){
+                                for(int k=0; k<success_array.length(); k++){
+                                    imageName_failed += success_array.get(k) + ",";
+                                }
+                                //마지막 , 제거
+                                imageName_failed = imageName_failed.substring(0, imageName_failed.length()-1);
+
+                                //토스트메시지로 파일이름을 보여준다
+                                Toast.makeText(ChatActivity.this, "Failed to upload "+imageName_failed, Toast.LENGTH_SHORT).show();
+                            }
+
+
+                            final long curTime = System.currentTimeMillis();
+                            if(success_array.length() == 0){ //업로드 성공한 이미지가 없을 경우
+
+                            }else{//업로드 성공한 이미지가 있을 경우 -> 업로드 성공한 파일 이름을 db에 저장한다
+
+
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+
+                                        String filename_string = "";
+                                        try{
+
+                                            for(int k=0; k<success_array.length(); k++){
+
+                                                String image_name = success_array.getString(k);
+                                                //화면에 사진을 보여준다
+                                                messageItemList.add(new MessageItem(userId, username, "", roomId, image_name, curTime));
+
+                                                //이미지 파일의 이름을, db에 메시지 형태로 저장한다
+                                                //메시지 내용: 'Photo'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
+                                                dbHelper.insert_chatLogs(roomId, userId, username, "Photo", image_name, curTime, 1);
+
+                                                filename_string += image_name + ";";
+                                            }
+
+                                            //메시지 리사이클러뷰 업데이트
+                                            adapter.notifyDataSetChanged();
+                                            rcv.scrollToPosition(messageItemList.size()-1);
+
+
+                                            //마지막 ; 제거
+                                            filename_string = filename_string.substring(0, filename_string.length()-1);
+
+                                            //채팅 서버에 메시지를 보낸다
+                                            sendMsg("msg_image/"+roomId+"/"+filename_string);
+
+
+                                        }catch (Exception e){
+                                            StringWriter sw = new StringWriter();
+                                            e.printStackTrace(new PrintWriter(sw));
+                                            String ex = sw.toString();
+
+                                            Log.d(TAG,ex);
+                                        }
+
+                                    }
+                                });
+
+                            }
+
 
                         }catch (Exception e){
                             StringWriter sw = new StringWriter();
@@ -491,83 +570,8 @@ public class ChatActivity extends AppCompatActivity{
 
 
 
-            //사진을 서버에 업로드
-//                dialog = ProgressDialog.show(this, "", "Uploading file...", true);
-//
-//                new Thread(new Runnable() {
-//
-//                    public void run() {
-//
-//                        Log.d("image", "Uploading file...");
-//                        uploadFile(mCurrentPhotoPath);
-//                    }
-//
-//                }).start();
-
         }
     }
-
-
-
-
-
-
-
-//    private void mulipleFileUploadFile(Uri[] fileUri) {
-//        OkHttpClient okHttpClient = new OkHttpClient();
-//        OkHttpClient clientWith30sTimeout = okHttpClient.newBuilder()
-//                .readTimeout(30, TimeUnit.SECONDS)
-//                .build();
-//
-//        Retrofit retrofit = new Retrofit.Builder()
-//                .baseUrl(API_URL_BASE)
-//                .addConverterFactory(new MultiPartConverter())
-//                .client(clientWith30sTimeout)
-//                .build();
-//
-//        WebAPIService service = retrofit.create(WebAPIService.class); //here is the interface which you have created for the call service
-//        Map<String, RequestBody> maps = new HashMap<>();
-//
-//        if (fileUri!=null && fileUri.length>0) {
-//            for (int i = 0; i < fileUri.length; i++) {
-//                String filePath = Function.getPath(this, fileUri[i]);
-//                File file1 = new File(filePath);
-//
-//                if (filePath != null && filePath.length() > 0) {
-//                    if (file1.exists()) {
-//                        okhttp3.RequestBody requestFile = okhttp3.RequestBody.create(okhttp3.MediaType.parse("multipart/form-data"), file1);
-//                        String filename = "imagePath" + i; //key for upload file like : imagePath0
-//                        maps.put(filename + "\"; filename=\"" + file1.getName(), requestFile);
-//                    }
-//                }
-//            }
-//        }
-//
-//        String descriptionString = " string request";//
-//        //hear is the your json request
-//        Call<String> call = service.postFile(maps, descriptionString);
-//        call.enqueue(new Callback<String>() {
-//            @Override
-//            public void onResponse(Call<String> call,
-//                                   Response<String> response) {
-//                Log.i(LOG_TAG, "success");
-//                Log.d("body==>", response.body().toString() + "");
-//                Log.d("isSuccessful==>", response.isSuccessful() + "");
-//                Log.d("message==>", response.message() + "");
-//                Log.d("raw==>", response.raw().toString() + "");
-//                Log.d("raw().networkResponse()", response.raw().networkResponse().toString() + "");
-//            }
-//
-//            @Override
-//            public void onFailure(Call<String> call, Throwable t) {
-//                Log.e(LOG_TAG, t.getMessage());
-//            }
-//        });
-//    }
-
-
-
-
 
 
 
@@ -672,20 +676,28 @@ public class ChatActivity extends AppCompatActivity{
             boolean isFirstUnreadMsg = true;
             int focus_index = 0;
             //저장된 메시지를 오래된 순서대로 화면에 띄워준다
-            //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각
+            //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 이미지파일 이름, 보낸시각, 읽었는지
             Cursor cursor2 = dbHelper.db.rawQuery("SELECT * FROM chat_logs WHERE room_id='" + roomId + "' ORDER BY time;", null);
             while (cursor2.moveToNext()) {
 
                 int message_id = cursor2.getInt(0);
+                int room_id = cursor2.getInt(1);
                 int sender_id = cursor2.getInt(2);
                 String sender_username = cursor2.getString(3);
                 String message = cursor2.getString(4);
-                long time = Long.valueOf(cursor2.getString(5));
-                int isRead = cursor2.getInt(6);
+                String image_name = cursor2.getString(5);
+                long time = Long.valueOf(cursor2.getString(6));
+                int isRead = cursor2.getInt(7);
 
-                    Log.d(TAG,"id: "+message_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
-                            +" / message: "+message+" / time: "+time+" / isRead: "+isRead);
+                    Log.d(TAG,"id: "+message_id+" / room id: "+room_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
+                            +" / message: "+message+"/ image name: "+image_name+" / time: "+time+" / isRead: "+isRead);
 
+
+                //이미지의 경우, 메시지가 Photo로 저장되어 있다
+                // 텍스트메시지 내용이 있으면 어댑터에서 이미지 뷰가 gone 처리 된다. 메시지 내용을 없애야 한다
+                if(!image_name.equals("N") && image_name.length()>10){
+                    message = "";
+                }
 
                 if(unreadMsgCount > 0){ //안읽은 메시지가 있을 때
                     if(isRead == 0){ //안읽은 메시지 중에서
@@ -701,27 +713,27 @@ public class ChatActivity extends AppCompatActivity{
 
                                 if(readMsgCount > 10){//읽은 메시지가 10개 초과일때
                                     //"여기서부터 안 읽었다"라고 메시지 위에 표시해준다
-                                    messageItemList.add(new MessageItem(0, "server", "You haven't read messages from here.", time));
-                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
+                                    messageItemList.add(new MessageItem(0, "server", "You haven't read messages from here.", room_id, "N", time));
+                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
 
                                 }else{ //읽은 메시지가 10개 이하일 때(주고받은 메시지 자체가 적을 때)
                                     //안읽음 표시를 하지 않는다
-                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
+                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
                                 }
                             }else{ //안읽은 메시지 개수가 10개 이하일때
-                                messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
+                                messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
                             }
 
                         }else{ //나머지 안읽은 메시지 -> 메시지를 화면에 표시한다
-                            messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
+                            messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
                         }
 
                     }else{ //이미 읽은 메시지일 때 -> 메시지를 화면에 표시한다
-                        messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
+                        messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
                     }
                 }else{ //안읽은 메시지가 없을 때 -> 메시지를 화면에 표시한다
 
-                    messageItemList.add(new MessageItem(sender_id, sender_username,message, time));
+                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
                 }
 
 
@@ -915,31 +927,55 @@ public class ChatActivity extends AppCompatActivity{
                     break;
 
                 case "msg":
-//                    msg/roomId/sender_id/sender_username/message
+//                    [텍스트] msg/roomId/sender_id/sender_username/message
+//                    [이미지] msg/roomId/sender_id/sender_username/image!-!파일이름1;파일이름2;파일이름3
 
-                    int roomId_msg = Integer.valueOf(message_array[1]);
+                    msg_roomId = Integer.valueOf(message_array[1]);
                     msg_sender_id = Integer.valueOf(message_array[2]);
                     msg_sender_username = message_array[3];
                     msg_text = message_array[4];
 
-                    if(roomId_msg == roomId){ //이 예외처리는 이미 서비스에서 했음. 재확인용
+
+                    //텍스트 메시지인지 이미지인지 확인한다
+                    msg_filename_string = "";
+                    try{
+                        String[] text_array = msg_text.split("!-!");
+                        if(text_array.length>0 && text_array[0].equals("image")){
+                            msg_filename_string = text_array[1];
+                        }
+                    }catch (Exception e){
+                        StringWriter sw = new StringWriter();
+                        e.printStackTrace(new PrintWriter(sw));
+                        String ex = sw.toString();
+
+                        Log.d(TAG,ex);
+                    }
+
+                    if(msg_roomId == roomId){ //이 예외처리는 이미 서비스에서 했음. 재확인용
 
                         handler.post(new Runnable() {
                             @Override
                             public void run() {
 
-                                //서버에서 보낸 알림 메시지와 일반 사용자가 보낸 메시지를 구분한다
-//                                if(msg_sender_id == 0 && msg_sender_username.equals("server")){ //서버 메시지
-//                                    Log.d(TAG, "adding server message..");
-//                                    messageItemList.add(new MessageItem("", msg_text));
-//
-//                                }else if(msg_sender_id == userId){//내가 보낸 메시지일때
-//                                    messageItemList.add(new MessageItem("[Me]", msg_text));
-//
-//                                }else{//다른 사람이 보낸 메시지
-//                                    messageItemList.add(new MessageItem(msg_sender_username, msg_text));
-//                                }
-                                messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text, System.currentTimeMillis()));
+                                long curTime = System.currentTimeMillis();
+
+                                if(msg_filename_string.equals("")){//텍스트일 때
+
+                                    messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text,
+                                            msg_roomId, "N", curTime));
+
+                                }else{//이미지일 때
+
+                                    //string 형태로 이어져있는 파일 이름을 분리한다
+                                    // -> 이미지를 한 개씩 화면에 띄워준다
+                                    String[] filename_array = msg_filename_string.split(";");
+                                    for(int i=0; i<filename_array.length; i++){
+
+                                        messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text,
+                                                msg_roomId, filename_array[i], curTime));
+                                    }
+
+                                }
                                 adapter.notifyItemInserted(adapter.getItemCount()-1);
                                 rcv.scrollToPosition(messageItemList.size()-1);
                             }

@@ -19,6 +19,18 @@
         android:textColor="#ffffff"
         android:layout_marginRight="8dp"
         app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        />
+
+    <ImageView
+        android:id="@+id/sent_image_imageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="8dp"
+        android:adjustViewBounds="true"
+        android:maxWidth="240dp"
+        app:layout_constraintEnd_toStartOf="@+id/sent_message_textView"
+        app:layout_constraintRight_toLeftOf="@+id/sent_message_textView"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
@@ -28,7 +40,7 @@
         android:layout_height="wrap_content"
         android:textSize="10sp"
         android:layout_marginRight="4dp"
-        app:layout_constraintBottom_toBottomOf="@+id/sent_message_textView"
-        app:layout_constraintRight_toLeftOf="@+id/sent_message_textView" />
+        app:layout_constraintBottom_toBottomOf="@+id/sent_image_imageView"
+        app:layout_constraintRight_toLeftOf="@+id/sent_image_imageView" />
 
 </android.support.constraint.ConstraintLayout>
