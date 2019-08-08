@@ -16,8 +16,8 @@
         android:layout_above="@id/userProfile_friend_username"
         android:layout_alignParentTop="true">
 
-        <ImageView
-            android:id="@+id/profile_image_imageView"
+        <com.github.chrisbanes.photoview.PhotoView
+            android:id="@+id/profile_image_photoView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 

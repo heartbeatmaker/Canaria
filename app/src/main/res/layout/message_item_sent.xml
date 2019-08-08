@@ -32,13 +32,47 @@
         app:layout_constraintTop_toTopOf="parent">
 
 
-        <ImageView
-            android:id="@+id/sent_image_imageView"
+        <FrameLayout
+            android:id="@+id/sent_image_frameLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:adjustViewBounds="true"
-            android:maxWidth="240dp"
-            android:layout_toRightOf="@id/sent_time_textView" />
+            android:layout_toRightOf="@id/sent_time_textView">
+
+            <ImageView
+                android:id="@+id/sent_image_imageView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:maxWidth="200dp"/>
+
+            <LinearLayout
+                android:id="@+id/sent_video_info_linearLayout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/transparent_black"
+                android:orientation="vertical"
+                android:paddingTop="30dp"
+                android:paddingBottom="30dp">
+
+                <ImageView
+                    android:id="@+id/sent_video_play_imageView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:background="@drawable/ic_play_circle_outline_black_24dp" />
+
+                <TextView
+                    android:id="@+id/sent_video_play_textView"
+                    android:layout_below="@id/sent_video_play_imageView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="02:56"
+                    android:textColor="@color/white" />
+            </LinearLayout>
+
+
+        </FrameLayout>
 
         <TextView
             android:id="@+id/sent_time_textView"

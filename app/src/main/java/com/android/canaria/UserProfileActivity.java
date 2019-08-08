@@ -20,10 +20,11 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
+import com.github.chrisbanes.photoview.PhotoView;
 
 public class UserProfileActivity extends AppCompatActivity {
 
-    ImageView imageView;
+    PhotoView photoView;
     TextView friend_username_textView;
     Button startChat_btn;
 
@@ -35,7 +36,7 @@ public class UserProfileActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_profile);
 
-        imageView = (ImageView)findViewById(R.id.profile_image_imageView);
+        photoView = (PhotoView)findViewById(R.id.profile_image_photoView);
         friend_username_textView = (TextView)findViewById(R.id.userProfile_friend_username);
         startChat_btn = (Button)findViewById(R.id.userProfile_startChat_btn);
 
@@ -58,7 +59,7 @@ public class UserProfileActivity extends AppCompatActivity {
 
         if(profileImage_name.equals("null")){
 
-            imageView.setBackgroundResource(R.drawable.user2);
+            photoView.setBackgroundResource(R.drawable.user2);
             progressBar.setVisibility(View.INVISIBLE);
 
         }else{
@@ -83,7 +84,7 @@ public class UserProfileActivity extends AppCompatActivity {
                             return false;
                         }
                     })
-                    .into(imageView);
+                    .into(photoView);
         }
 
     }

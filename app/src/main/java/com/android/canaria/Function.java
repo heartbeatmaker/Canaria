@@ -271,7 +271,7 @@ public class Function {
 
         final ProgressBar progressBar = new ProgressBar(context, null, android.R.attr.progressBarStyleLarge);
         progressBar.setIndeterminate(true);
-        progressBar.getIndeterminateDrawable().setColorFilter(Color.WHITE, PorterDuff.Mode.MULTIPLY); //색 변경
+        progressBar.getIndeterminateDrawable().setColorFilter(Color.BLUE, PorterDuff.Mode.MULTIPLY); //색 변경
 
         Glide.with(context)
                 .asBitmap()
