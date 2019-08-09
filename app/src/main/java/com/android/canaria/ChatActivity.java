@@ -11,7 +11,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ActivityInfo;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.media.ThumbnailUtils;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -42,6 +44,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.MainService;
+import com.android.canaria.connect_to_server.VideoCompressor;
 import com.android.canaria.db.DBHelper;
 import com.android.canaria.recyclerView.FriendListAdapter;
 import com.android.canaria.recyclerView.FriendListItem;
@@ -59,6 +62,7 @@ import org.json.JSONObject;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -150,7 +154,7 @@ public class ChatActivity extends AppCompatActivity{
 
     DBHelper dbHelper;
 
-    ArrayList<String> defaultDataArray = new ArrayList<>();
+    List<Image> selected_video_list;
 
 
     @Override
@@ -581,8 +585,8 @@ public class ChatActivity extends AppCompatActivity{
                                 //업로드 실패한 파일이 있다면, 사용자에게 그 사실을 알려준다
                                 String imageName_failed = "";
                                 if(fail_array.length()>0){
-                                    for(int k=0; k<success_array.length(); k++){
-                                        imageName_failed += success_array.get(k) + ",";
+                                    for(int k=0; k<fail_array.length(); k++){
+                                        imageName_failed += fail_array.get(k) + ",";
                                     }
                                     //마지막 , 제거
                                     imageName_failed = imageName_failed.substring(0, imageName_failed.length()-1);
@@ -704,8 +708,6 @@ public class ChatActivity extends AppCompatActivity{
         }else if(requestCode == PICK_VIDEO_REQUEST && resultCode == RESULT_OK){
 
 
-
-
             final OkHttpClient mOkHttpClient = new OkHttpClient.Builder()
                     .connectTimeout(20, TimeUnit.SECONDS)
                     .writeTimeout(60, TimeUnit.SECONDS)
@@ -717,10 +719,9 @@ public class ChatActivity extends AppCompatActivity{
 
             try{
 
-                List<Image> video_list = ImagePicker.getImages(data);
-                int count = video_list.size();
+                selected_video_list = ImagePicker.getImages(data);
+                int count = selected_video_list.size();
 
-                if(count > 0){ //파일이 1개 이상 선택되었을 때만 업로드한다
 
                     //방 id, 파일이 몇 개인지 전달한다
                     mRequestBody.addFormDataPart("room_id", String.valueOf(roomId));
@@ -728,42 +729,43 @@ public class ChatActivity extends AppCompatActivity{
 
                     for(int i = 0; i < count; i++){
 
-                        String path = video_list.get(i).getPath();
+                        //동영상 원본파일 경로
+                        String path = selected_video_list.get(i).getPath();
                         Log.d("이미지", "path="+path);
 
+
+                        //파일 크기를 검사한다
+                        File videoFile = new File(path);
+                        float length = videoFile.length() / 1024f; // Size in KB
+                        String value;
+                        float size;
+                        if (length >= 1024){
+
+                            size = (int) Math.ceil(length / 1024f);
+                            value = size + " MB";
+
+                            //파일 크기가 50MB를 넘으면, 업로드하지 않는다
+                            if(size > 50){
+                                Toast.makeText(this, "Cannot upload a file with the size over 50MB.", Toast.LENGTH_SHORT).show();
+                                continue;
+                            }
+                        }
+                        else
+                            value = length + " KB";
+
+                        Log.i("이미지", "파일 용량="+value);
+
+
+                        //파일 이름 추출
                         String[] path_split = path.split("/");
                         String file_name = path_split[path_split.length-1];
                         Log.d("이미지", "file_name="+file_name);
 
-                        String[] name_split = file_name.split("\\.");
-                        String extension = name_split[name_split.length-1];
-                        Log.d("이미지", "확장자="+extension);
 
-
-                        //압축 파일을 저장할 디렉토리를 지정
-                        //Environment.getExternalStorageDirector() : 저장공간의 기본경로를 가져옴. 기기마다 저장공간에 대한 경로 명이 상이함
-                        String destination_directory = Environment.getExternalStorageDirectory().toString() + "/Canaria/videos";
-                        File dir = new File(destination_directory);
-
-                        //위에서 지정한 디렉토리가 존재하지 않을 경우, 새로 생성한다
-                        if (!dir.exists()) {
-                            dir.mkdirs();
-                        }
-
-
-                        //파일 압축
-                        new VideoCompressAsyncTask(this).execute(path, destination_directory);
-
-
-//                    MediaType MEDIA_TYPE = path.get(0).endsWith("png") ?
-//                            MediaType.parse("image/png") : MediaType.parse("image/jpeg");
-
-
-//                        RequestBody imageBody = RequestBody.create(MultipartBody.FORM, file);
-//                        //key, 서버가 저장할 file 이름, 이미지파일
-//                        mRequestBody.addFormDataPart("image"+i, file_name, imageBody);
+                        RequestBody imageBody = RequestBody.create(MultipartBody.FORM, path);
+                        //key, 서버가 저장할 file 이름, 이미지파일
+                        mRequestBody.addFormDataPart("image"+i, file_name, imageBody);
                     }
-
 
 
 
@@ -775,64 +777,64 @@ public class ChatActivity extends AppCompatActivity{
                             .build();
 
 
+                Toast.makeText(ChatActivity.this, "Uploading files.. please wait", Toast.LENGTH_SHORT).show();
 
-                    new Thread(new Runnable() {
+
+                new Thread(new Runnable() {
 
                         public void run() {
 
                             String responseMsg;
-//                            try {
-//
-//                                //서버에 요청을 보낸다
-//                                Response mResponse = mOkHttpClient.newCall(request).execute();
-//                                if (!mResponse.isSuccessful()) throw new IOException();
-//
-//                                //서버로부터의 응답
-//                                responseMsg = mResponse.body().string();
-//                                Log.d("이미지", "response msg = "+responseMsg);
-//
-//
-//                            } catch (IOException e) {
-//                                responseMsg = "time out";
-//
-//                                StringWriter sw = new StringWriter();
-//                                e.printStackTrace(new PrintWriter(sw));
-//                                String ex = sw.toString();
-//
-//                                Log.d("이미지",ex);
-//                            }
+                            try {
+
+                                //서버에 요청을 보낸다
+                                Response mResponse = mOkHttpClient.newCall(request).execute();
+                                if (!mResponse.isSuccessful()) throw new IOException();
+
+                                //서버로부터의 응답
+                                responseMsg = mResponse.body().string();
+                                Log.d("이미지", "response msg = "+responseMsg);
+
+
+                            } catch (IOException e) {
+                                responseMsg = "time out";
+
+                                StringWriter sw = new StringWriter();
+                                e.printStackTrace(new PrintWriter(sw));
+                                String ex = sw.toString();
+
+                                Log.d("이미지",ex);
+                            }
 
                             try{
 
                                 //json 형태로 받은 응답을 파싱한다
-//                                JSONObject result_object = new JSONObject(responseMsg);
-//                                final JSONArray success_array = (JSONArray) result_object.get("success_data");
-//                                JSONArray fail_array = (JSONArray)result_object.get("fail_data");
-//
-//                                Log.d("이미지", "success_array = "+success_array);
-//                                Log.d("이미지", "fail_array = "+fail_array);
-//
-//
-//                                //업로드 실패한 파일이 있다면, 사용자에게 그 사실을 알려준다
-//                                String imageName_failed = "";
-//                                if(fail_array.length()>0){
-//                                    for(int k=0; k<success_array.length(); k++){
-//                                        imageName_failed += success_array.get(k) + ",";
-//                                    }
-//                                    //마지막 , 제거
-//                                    imageName_failed = imageName_failed.substring(0, imageName_failed.length()-1);
-//
-//                                    //토스트메시지로 파일이름을 보여준다
-//                                    Toast.makeText(ChatActivity.this, "Failed to upload "+imageName_failed, Toast.LENGTH_SHORT).show();
-//                                }
-//
-//
-//                                final long curTime = System.currentTimeMillis();
-//                                if(success_array.length() == 0){ //업로드 성공한 이미지가 없을 경우
-//
-//                                }else{//업로드 성공한 이미지가 있을 경우 -> 업로드 성공한 파일 이름을 db에 저장한다
-//
-//
+                                JSONObject result_object = new JSONObject(responseMsg);
+                                final JSONArray success_array = (JSONArray) result_object.get("success_data");
+                                JSONArray fail_array = (JSONArray)result_object.get("fail_data");
+
+                                Log.d("이미지", "success_array = "+success_array);
+                                Log.d("이미지", "fail_array = "+fail_array);
+
+
+                                //업로드 실패한 파일이 있다면, 사용자에게 그 사실을 알려준다 -- 아직 표시 안함
+                                String imageName_failed = "";
+                                if(fail_array.length()>0){
+                                    for(int k=0; k<fail_array.length(); k++){
+                                        imageName_failed += fail_array.get(k) + ",";
+                                    }
+                                    //마지막 , 제거
+                                    imageName_failed = imageName_failed.substring(0, imageName_failed.length()-1);
+
+                                }
+
+
+                                final long curTime = System.currentTimeMillis();
+                                if(success_array.length() == 0){ //업로드 성공한 이미지가 없을 경우
+
+                                }else{//업로드 성공한 이미지가 있을 경우 -> 업로드 성공한 파일 이름을 db에 저장한다
+
+
 //                                    handler.post(new Runnable() {
 //                                        @Override
 //                                        public void run() {
@@ -847,13 +849,13 @@ public class ChatActivity extends AppCompatActivity{
 //                                                    messageItemList.add(new MessageItem(userId, username, "", roomId, image_name, curTime));
 //
 //                                                    //이미지 파일의 이름을, db에 메시지 형태로 저장한다
-//                                                    //메시지 내용: 'Photo'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
+//                                                    //메시지 내용: 'Video'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
 //
 //                                                    int number_of_files = success_array.length();
 //                                                    if(number_of_files == 1){
-//                                                        message = number_of_files + " Photo";
+//                                                        message = number_of_files + " Video";
 //                                                    }else if(number_of_files >1){
-//                                                        message = number_of_files + " Photos";
+//                                                        message = number_of_files + " Videos";
 //                                                    }
 //
 //                                                    dbHelper.insert_chatLogs(roomId, userId, username, message, image_name, curTime, 1);
@@ -864,11 +866,6 @@ public class ChatActivity extends AppCompatActivity{
 //                                                //메시지 리사이클러뷰 업데이트
 //                                                adapter.notifyDataSetChanged();
 //                                                rcv.scrollToPosition(messageItemList.size()-1);
-//
-//
-//                                                //채팅 서버에 메시지를 보낸다
-//                                                filename_string = filename_string.substring(0, filename_string.length()-1);//마지막 ; 제거
-//                                                sendMsg("msg_image/"+roomId+"/"+filename_string);
 //
 //
 //                                                //채팅 방목록 업데이트
@@ -905,8 +902,8 @@ public class ChatActivity extends AppCompatActivity{
 //
 //                                        }
 //                                    });
-//
-//                                }
+
+                                }
 
 
                             }catch (Exception e){
@@ -923,9 +920,6 @@ public class ChatActivity extends AppCompatActivity{
                     }).start();
 
 
-                }
-
-
             }catch (Exception e){
                 StringWriter sw = new StringWriter();
                 e.printStackTrace(new PrintWriter(sw));
@@ -939,68 +933,6 @@ public class ChatActivity extends AppCompatActivity{
 
         }
     }
-
-
-
-
-
-    class VideoCompressAsyncTask extends AsyncTask<String, String, String> {
-
-        Context mContext;
-
-        public VideoCompressAsyncTask(Context context) {
-            mContext = context;
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-//            imageView.setImageDrawable(ContextCompat.getDrawable(mContext, R.drawable.ic_photo_camera_white_48px));
-//            compressionMsg.setVisibility(View.VISIBLE);
-//            picDescription.setVisibility(View.GONE);
-        }
-
-        @Override
-        protected String doInBackground(String... paths) {
-            Log.i("이미지", "doInBackground");
-            String filePath = null;
-            try {
-
-                //비트레이트: 3000k
-                //내 폰으로 찍은 영상 기준, 약 27퍼센트 수준으로 용량을 낮춤
-                filePath = SiliCompressor.with(mContext).compressVideo(paths[0], paths[1], 720, 480, 3000000);
-
-            } catch (URISyntaxException e) {
-                e.printStackTrace();
-            }
-            return filePath;
-
-        }
-
-
-        @Override
-        protected void onPostExecute(String compressedFilePath) {
-            super.onPostExecute(compressedFilePath);
-            File imageFile = new File(compressedFilePath);
-            float length = imageFile.length() / 1024f; // Size in KB
-            String value;
-            if (length >= 1024)
-                value = length / 1024f + " MB";
-            else
-                value = length + " KB";
-//            String text = String.format(Locale.US, "%s\nName: %s\nSize: %s", getString(R.string.video_compression_complete), imageFile.getName(), value);
-//            compressionMsg.setVisibility(View.GONE);
-//            picDescription.setVisibility(View.VISIBLE);
-//            picDescription.setText(text);
-            Log.i("이미지", "onPostExecute");
-            Log.i("이미지", "파일 용량="+value);
-            Log.i("이미지", "compressedFilePath: " + compressedFilePath);
-            sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(new File(compressedFilePath))));
-        }
-    }
-
-
-
 
 
 
@@ -1232,6 +1164,29 @@ public class ChatActivity extends AppCompatActivity{
 
 
 
+    //이미지파일 만들기
+    private File createImageFile_thumbnail(String video_name) throws IOException{
+
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+        String imageFileName = "thumb_"+video_name;
+
+        //여러 앱이 공용으로 사용할 수 있는 저장공간. 그림파일이 저장되는 디렉토리 경로를 불러온다
+        File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES); // = /mnt/sdcard/Pictures
+
+        //이미지를 서버로 전송하기 전에, 임시로 캐쉬폴더에 저장한다
+        //createTempFile : 캐쉬 디렉토리에 파일을 생성해주는 메소드
+        File image = File.createTempFile(
+                imageFileName, //접두어 prefix
+                ".jpg", //접미어 suffix = 확장자
+                storageDir //파일을 저장할 폴더 directory
+        );
+
+        return image; //이미지 파일을 return
+    }
+
+
+
+
 
 
     //사용자가 a 채팅방에서 채팅을 하고 있는데, b 채팅방에서 메시지가 온다(푸쉬 알람으로 뜸) 이것을 클릭할 경우, b 채팅방으로 넘어가야 한다
@@ -1264,6 +1219,7 @@ public class ChatActivity extends AppCompatActivity{
         super.onResume();
 
         LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, new IntentFilter("chat_event"));
+        LocalBroadcastManager.getInstance(this).registerReceiver(videoMessageReceiver, new IntentFilter("video_upload"));
     }
 
 
@@ -1272,7 +1228,21 @@ public class ChatActivity extends AppCompatActivity{
         super.onPause();
 
         LocalBroadcastManager.getInstance(this).unregisterReceiver(messageReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(videoMessageReceiver);
     }
+
+
+
+    private BroadcastReceiver videoMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            int position = intent.getIntExtra("position", 10000);
+            Log.d("이미지", "동영상이 업로드되지 않은 썸네일 이미지가 화면에 떴다는 알림. position="+position);
+
+        }
+    };
+
 
 
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {

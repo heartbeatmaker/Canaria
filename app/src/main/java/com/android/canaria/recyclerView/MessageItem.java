@@ -44,6 +44,16 @@ public class MessageItem {
     }
 
 
+    public boolean isVideoThumbnail(){
+        String[] image_name_split = image_name.split("_");
+        if(image_name_split[1].equals("thumb")){
+            return true;
+        }else{
+            return false;
+        }
+
+    }
+
     public String getUserImage_url() {
 
         ContentValues data = new ContentValues();
@@ -59,6 +69,11 @@ public class MessageItem {
         Log.d("tag", "result="+userImage_url);
 
         return userImage_url;
+    }
+
+
+    public int getRoom_id(){
+        return this.room_id;
     }
 
     public void setUserImage_url(String userImage_url) {

@@ -43,7 +43,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:adjustViewBounds="true"
-                android:maxWidth="200dp"/>
+                android:maxWidth="200dp" />
+
 
             <LinearLayout
                 android:id="@+id/sent_video_info_linearLayout"
@@ -60,6 +61,23 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:background="@drawable/ic_play_circle_outline_black_24dp" />
+
+
+                <!--<com.dinuscxj.progressbar.CircleProgressBar-->
+                    <!--android:id="@+id/sent_video_progressBar"-->
+                    <!--android:layout_width="50dp"-->
+                    <!--android:layout_height="50dp"-->
+                    <!--app:style="solid_line"-->
+                    <!--app:progress_stroke_width="4dp"-->
+                    <!--app:progress_text_color="#00ff0000"-->
+                    <!--app:progress_text_size="13sp"-->
+                    <!--android:layout_gravity="center"/>-->
+
+                <ProgressBar
+                    android:id="@+id/sent_video_progressBar"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_gravity="center" />
 
                 <TextView
                     android:id="@+id/sent_video_play_textView"

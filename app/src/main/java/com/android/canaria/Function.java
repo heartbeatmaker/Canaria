@@ -22,9 +22,11 @@ import android.preference.PreferenceManager;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.support.annotation.Nullable;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
 import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
@@ -41,7 +43,11 @@ import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.target.ViewTarget;
 import com.bumptech.glide.request.transition.Transition;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -80,8 +86,6 @@ public class Function {
     public static String dbName = "canaria.db";
     public static int dbVersion = 1;
     public static int activeRoomId = 0;
-
-
 
 
 
@@ -263,7 +267,8 @@ public class Function {
 
 
 
-    public static void displayResizedImage(Context context, String url, ImageView imageView){
+    public static void displayResizedImage(final Context context, String url, ImageView imageView,
+                                           final int position, final boolean isVideoThumbnail, final boolean isSender, final String filename, final int roomId){
 
         RequestOptions options = new RequestOptions()
                 .fitCenter();
@@ -286,7 +291,112 @@ public class Function {
 
                     @Override
                     public boolean onResourceReady(Bitmap resource, Object model, Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
+
                         progressBar.setVisibility(View.GONE);
+
+                        Log.d("이미지", "onResourceReady");
+                        Log.d("이미지", "isSender="+isSender+" && isVideoThumbnail="+isVideoThumbnail);
+
+
+                        /*비디오 파일 처리를 위한 코드*/
+                        //사진 전송자인지, 이 파일이 썸네일인지 검사한다
+//                        if(isVideoThumbnail){
+//
+//                            //이거아님~~~ 이렇게 추출하면 안됨 _ 가 다 사라짐
+//                            String[] name_split = filename.split("\\.");
+//                            //확장자 없는 이름을 추출
+//                            String file_name_without_extension = "";
+//                            for(int m=0; m<name_split.length-1; m++){
+//                                file_name_without_extension += name_split[m];
+//                            }
+//                            String[] origin_name_split = file_name_without_extension.split("_");
+//                            String origin_name_without_extension = "";
+//                            for(int m=2; m<origin_name_split.length; m++){
+//                                origin_name_without_extension += origin_name_split[m];
+//                            }
+//
+//                            String video_filename = origin_name_without_extension+".mp4";
+//                            Log.d("이미지", "원본 mp4파일 이름="+video_filename);
+//
+//
+//                            if(isSender){
+//
+//
+//                                //이미 동영상이 업로드 되었는지 검사한다
+//                                SharedPreferences pref = context.getSharedPreferences("video", Context.MODE_PRIVATE);
+//                                SharedPreferences.Editor editor = pref.edit();
+//
+//                                if(pref.contains(String.valueOf(roomId))){
+//
+//                                    try{
+//                                        String s = pref.getString(String.valueOf(roomId), "no data");
+//                                        JSONArray room_array = new JSONArray(s);
+//                                        for(int i=0; i<room_array.length(); i++){
+//
+//                                            if(room_array.getString(i).equals(video_filename)){ //이미 동영상이 존재하면
+//
+//                                                //동영상 재생 view를 띄워주라고 알림 발송
+//
+//                                            }else{//존재하지 않으면
+//
+//                                                //새로 저장한다
+//                                                room_array.put(video_filename);
+//                                                editor.putString(String.valueOf(roomId), room_array.toString());
+//                                                editor.commit();
+//
+//                                                //동영상을 업로드하라는 신호를 보낸다!!!!!
+//                                                Intent intent = new Intent("video_upload");
+//                                                intent.putExtra("message", "upload");
+//                                                intent.putExtra("position", position);
+//                                                LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+//                                            }
+//                                        }
+//
+//                                    }catch (Exception e){
+//                                        StringWriter sw = new StringWriter();
+//                                        e.printStackTrace(new PrintWriter(sw));
+//                                        String ex = sw.toString();
+//
+//                                        Log.d("이미지",ex);
+//
+//                                    }
+//
+//                                }else{ //이 방에 해당하는 값이 없을 경우
+//
+//                                    //jsonArray를 만들어서 이 방 이름으로 저장한다
+//                                    JSONArray room_array = new JSONArray();
+//                                    room_array.put(video_filename);
+//                                    editor.putString(String.valueOf(roomId), room_array.toString());
+//                                    editor.commit();
+//
+//                                    //동영상을 업로드하라는 신호를 보낸다!!!
+//
+//                                }
+//
+//
+//                            }else{
+//
+//                            }
+
+
+//
+//                            //압축 파일을 저장하는 디렉토리에 해당 동영상이 존재하는지 검사한다
+//                            String destination_directory = Environment.getExternalStorageDirectory().toString() + "/Canaria/videos/"+video_filename;
+//                            File video_file = new File(destination_directory);
+//
+//
+//                            //해당 파일이 존재하지 않는 경우 -> 동영상을 다운로드 할 수 있는 뷰를 만들라고 신호를 보낸다
+//                            if (!video_file.exists()) {
+//                                Log.d("이미지", "압축된 동영상이 디렉토리에 존재하지 않음");
+//
+//                                Intent intent = new Intent("video_upload");
+//                                intent.putExtra("position", position);
+//                                LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+//
+//                            }
+
+//                        }
+
                         return false;
                     }
                 })

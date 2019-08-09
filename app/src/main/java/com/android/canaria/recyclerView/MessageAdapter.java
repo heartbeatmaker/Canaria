@@ -164,8 +164,12 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 sent_image_imageView.layout(0,0,0,0); //이미지뷰의 레이아웃을 초기화
 //              layout(left, top, right, bottom) :  Assign a size and position to a view
 
-//                Context context, String url, ImageView imageView,int width, int height
-                Function.displayResizedImage(mContext, message.getImage_url(), sent_image_imageView);
+
+                Function.displayResizedImage(mContext, message.getImage_url(), sent_image_imageView,
+                        getAdapterPosition(), message.isVideoThumbnail(), true, message.getImage_name(), message.getRoom_id());
+
+                //glide 라이브러리는 비동기방식으로 작동한다. 이미지가 뜬 이후에 무언가 하려면, glide의 onResourceReady에 작성해야 한다
+
             }
 
 
@@ -233,8 +237,9 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 received_image_imageView.layout(0,0,0,0); //이미지뷰의 레이아웃을 초기화
 //              layout(left, top, right, bottom) :  Assign a size and position to a view
 
-//                Context context, String url, ImageView imageView,int width, int height
-                Function.displayResizedImage(mContext, message.getImage_url(), received_image_imageView);
+
+                Function.displayResizedImage(mContext, message.getImage_url(), received_image_imageView
+                        , getAdapterPosition(), message.isVideoThumbnail(), false, message.getImage_name(), message.getRoom_id());
 
 
                 /*
