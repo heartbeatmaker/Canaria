@@ -1264,6 +1264,7 @@ public class ChatActivity extends AppCompatActivity{
                     final String roomInfo_atTitleBar = message_array[1];
                     String memberInfo_string = message_array[2]; //참여자 정보(id;username;id;username..형식). 나중에 drawerLayout에 띄워줄 것
 
+
                     String[] memberInfo_array = memberInfo_string.split(";");
 
 

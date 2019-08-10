@@ -53,6 +53,14 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
         viewHolder.updatedTime_textView.setText(String.valueOf(item.getUpdatedTime()));
         viewHolder.roomId_textView.setText(Integer.toString(item.getRoomId()));
 
+
+        if(item.getNumberOfMembers() <= 2){
+            viewHolder.numberOfMembers_textView.setVisibility(View.INVISIBLE);
+        }else{
+            viewHolder.numberOfMembers_textView.setVisibility(View.VISIBLE);
+        }
+
+
         if(item.getUnreadMsgCount() > 0){
             viewHolder.unreadMsg_textView.setVisibility(View.VISIBLE);
             viewHolder.unreadMsg_textView.setText(Integer.toString(item.getUnreadMsgCount()));

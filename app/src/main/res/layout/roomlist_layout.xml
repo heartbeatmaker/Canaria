@@ -129,7 +129,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="10:22"
-                android:textSize="12sp" />
+                android:textSize="10sp" />
 
             <TextView
                 android:id="@+id/roomList_roomId"
