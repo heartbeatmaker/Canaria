@@ -503,7 +503,7 @@ public class ChatActivity extends AppCompatActivity{
 
 //                        //파일 압축
                         file = new Compressor(this)
-                                .setQuality(10)
+                                .setQuality(30)
                                 .compressToFile(file);
 
 
@@ -606,64 +606,13 @@ public class ChatActivity extends AppCompatActivity{
                                         @Override
                                         public void run() {
 
+                                            //jsonArray 에 있던 파일 이름을 string 으로 이어서 붙인다
+                                            //파일이름1;파일이름2;파일이름3...
                                             String filename_string = "";
                                             try{
-                                                String message = "";
                                                 for(int k=0; k<success_array.length(); k++){
-
-                                                    String image_name = success_array.getString(k);
-                                                    //화면에 사진을 보여준다
-                                                    messageItemList.add(new MessageItem(userId, username, "", roomId, image_name, curTime));
-
-                                                    //이미지 파일의 이름을, db에 메시지 형태로 저장한다
-                                                    //메시지 내용: 'Photo'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
-
-                                                    int number_of_files = success_array.length();
-                                                    if(number_of_files == 1){
-                                                        message = number_of_files + " Photo";
-                                                    }else if(number_of_files >1){
-                                                        message = number_of_files + " Photos";
-                                                    }
-
-                                                    dbHelper.insert_chatLogs(roomId, userId, username, message, image_name, curTime, 1);
-
-                                                    filename_string += image_name + ";";
+                                                    filename_string += success_array.getString(k) + ";";
                                                 }
-
-                                                //메시지 리사이클러뷰 업데이트
-                                                adapter.notifyDataSetChanged();
-                                                rcv.scrollToPosition(messageItemList.size()-1);
-
-
-                                                //채팅 서버에 메시지를 보낸다
-                                                filename_string = filename_string.substring(0, filename_string.length()-1);//마지막 ; 제거
-                                                sendMsg("msg_image/"+roomId+"/"+filename_string);
-
-
-                                                //채팅 방목록 업데이트
-                                                //1. sqlite 에서 방 정보를 불러온다
-                                                String roomInfo = dbHelper.get_chatRoomInfo(roomId);
-                                                String [] roomInfo_array = roomInfo.split("/");
-                                                String roomName_msg = roomInfo_array[1];
-                                                String memberInfo = roomInfo_array[3];
-                                                String[] memberInfo_array = memberInfo.split(";");
-                                                int number_of_members_msg = memberInfo_array.length/2;
-
-
-                                                //2. 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
-                                                Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
-                                                        message, Function.getCurrentTime(), roomId, 0));
-
-                                                for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
-                                                    RoomListItem item = Main_Fragment2.roomItemList.get(i);
-                                                    if(item.getRoomId() == roomId){
-                                                        Main_Fragment2.roomItemList.remove(i);
-                                                        Log.d(TAG, i+" item is removed from roomItemList");
-                                                    }
-                                                }
-
-
-
                                             }catch (Exception e){
                                                 StringWriter sw = new StringWriter();
                                                 e.printStackTrace(new PrintWriter(sw));
@@ -671,6 +620,58 @@ public class ChatActivity extends AppCompatActivity{
 
                                                 Log.d(TAG,ex);
                                             }
+                                            //마지막 ; 제거
+                                            filename_string = filename_string.substring(0, filename_string.length()-1);
+
+
+
+                                            //1. 이미지 파일의 이름을, db에 메시지 형태로 저장한다
+
+                                            //메시지 내용: 'Photo'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
+                                            String message = "";
+                                            int number_of_files = success_array.length(); //파일 개수
+                                            if(number_of_files == 1){
+                                                message = number_of_files + " Photo";
+                                            }else if(number_of_files >1){
+                                                message = number_of_files + " Photos";
+                                            }
+
+                                            dbHelper.insert_chatLogs(roomId, userId, username, message, filename_string, curTime, 1);
+
+
+
+                                            //2. 채팅 방목록 업데이트
+                                            //2-1. sqlite 에서 방 정보를 불러온다
+                                            String roomInfo = dbHelper.get_chatRoomInfo(roomId);
+                                            String [] roomInfo_array = roomInfo.split("/");
+                                            String roomName_msg = roomInfo_array[1];
+                                            String memberInfo = roomInfo_array[3];
+                                            String[] memberInfo_array = memberInfo.split(";");
+                                            int number_of_members_msg = memberInfo_array.length/2;
+
+                                            //2-2. 목록 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
+                                            Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
+                                                    message, Function.getCurrentTime(), roomId, 0));
+
+                                            for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
+                                                RoomListItem item = Main_Fragment2.roomItemList.get(i);
+                                                if(item.getRoomId() == roomId){
+                                                    Main_Fragment2.roomItemList.remove(i);
+                                                    Log.d(TAG, i+" item is removed from roomItemList");
+                                                }
+                                            }
+
+
+                                            //3. 메시지 리사이클러뷰에 아이템을 추가한다
+                                            messageItemList.add(new MessageItem(userId, username, "", roomId, filename_string, curTime));
+
+                                            //메시지 리사이클러뷰 업데이트
+                                            adapter.notifyDataSetChanged();
+                                            rcv.scrollToPosition(messageItemList.size()-1);
+
+
+                                            //4. 채팅 서버에 메시지를 보낸다
+//                                            sendMsg("msg_image/"+roomId+"/"+filename_string);
 
                                         }
                                     });

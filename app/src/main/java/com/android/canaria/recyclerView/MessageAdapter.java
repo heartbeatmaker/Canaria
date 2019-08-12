@@ -2,6 +2,7 @@ package com.android.canaria.recyclerView;
 
 import android.content.Context;
 import android.content.Intent;
+import android.media.Image;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -13,14 +14,18 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.android.canaria.Function;
 import com.android.canaria.ImageActivity;
 import com.android.canaria.R;
 import com.android.canaria.UserProfileActivity;
+import com.android.canaria.db.DBHelper;
+import com.android.canaria.view.CollageView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.BitmapImageViewTarget;
+
 
 import java.util.ArrayList;
 
@@ -34,8 +39,10 @@ public class MessageAdapter extends RecyclerView.Adapter {
     private int userId;
 
     private static final int VIEW_TYPE_MESSAGE_SENT = 1;
-    private static final int VIEW_TYPE_MESSAGE_RECEIVED = 2;
-    private static final int VIEW_TYPE_MESSAGE_SERVER = 3;
+    private static final int VIEW_TYPE_IMAGE_SENT = 2;
+    private static final int VIEW_TYPE_MESSAGE_RECEIVED = 3;
+    private static final int VIEW_TYPE_IMAGE_RECEIVED = 4;
+    private static final int VIEW_TYPE_MESSAGE_SERVER = 5;
 
     public MessageAdapter(ArrayList<MessageItem> mItemArrayList, Context mContext) {
         this.mItemArrayList = mItemArrayList;
@@ -50,21 +57,38 @@ public class MessageAdapter extends RecyclerView.Adapter {
     public int getItemViewType(int position) {
         MessageItem message = (MessageItem) mItemArrayList.get(position);
 
-        Log.d("msg", "sender_id="+message.getSender_id()+" / sender_username="+message.getSenderUsername());
+//        Log.d("msg", "sender_id="+message.getSender_id()+" / sender_username="+message.getSenderUsername());
 
-        if(message.getSender_id() == userId){
-            Log.d("msg", "my msg");
-            // If the current user is the sender of the message
-            return VIEW_TYPE_MESSAGE_SENT;
-
-        }else if (message.getSender_id()==0 && message.getSenderUsername().equals("server")) {
+        //서버메시지
+        if (message.getSender_id()==0 && message.getSenderUsername().equals("server")) {
             Log.d("msg", "server msg");
             // If server sent the message or etc(ex. dateTime indicator)
             return VIEW_TYPE_MESSAGE_SERVER;
         }else{
-            Log.d("msg", "general");
-            // If some other user sent the message
-            return VIEW_TYPE_MESSAGE_RECEIVED;
+
+            if(message.getSender_id() == userId){ //내가보낸 메시지
+                // If the current user is the sender of the message
+
+                if(message.getImage_name().equals("N") || message.getImage_name().equals("")){
+                    Log.d("msg", "VIEW_TYPE_MESSAGE_SENT");
+                    return VIEW_TYPE_MESSAGE_SENT;
+                }else{
+                    Log.d("msg", "VIEW_TYPE_IMAGE_SENT");
+                    return VIEW_TYPE_IMAGE_SENT;
+                }
+
+            }else{ //받은 메시지
+                // If some other user sent the message
+
+                if(message.getImage_name().equals("N") || message.getImage_name().equals("")){
+                    Log.d("msg", "VIEW_TYPE_MESSAGE_RECEIVED");
+                    return VIEW_TYPE_MESSAGE_RECEIVED;
+                }else{
+                    Log.d("msg", "VIEW_TYPE_IMAGE_RECEIVED");
+                    return VIEW_TYPE_IMAGE_RECEIVED;
+                }
+
+            }
         }
     }
 
@@ -74,20 +98,27 @@ public class MessageAdapter extends RecyclerView.Adapter {
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view;
 
-        if (viewType == VIEW_TYPE_MESSAGE_SENT) {
-            view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.message_item_sent, parent, false);
-            return new SentMessageHolder(view);
-
-        } else if (viewType == VIEW_TYPE_MESSAGE_RECEIVED) {
-            view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.message_item_received, parent, false);
-            return new ReceivedMessageHolder(view);
-
-        } else if (viewType == VIEW_TYPE_MESSAGE_SERVER) {
-            view = LayoutInflater.from(parent.getContext())
-                    .inflate(R.layout.message_item_notification, parent, false);
-            return new ServerMessageHolder(view);
+        switch (viewType){
+            case VIEW_TYPE_MESSAGE_SERVER:
+                view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.message_item_notification, parent, false);
+                return new ServerMessageHolder(view);
+            case VIEW_TYPE_MESSAGE_SENT:
+                view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.message_item_sent, parent, false);
+                return new SentMessageHolder(view);
+            case VIEW_TYPE_IMAGE_SENT:
+                view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.message_item_image_sent, parent, false);
+                return new SentImageHolder(view);
+            case VIEW_TYPE_MESSAGE_RECEIVED:
+                view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.message_item_received, parent, false);
+                return new ReceivedMessageHolder(view);
+            case VIEW_TYPE_IMAGE_RECEIVED:
+                view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.message_item_image_received, parent, false);
+                return new ReceivedImageHolder(view);
         }
 
         return null;
@@ -104,8 +135,14 @@ public class MessageAdapter extends RecyclerView.Adapter {
             case VIEW_TYPE_MESSAGE_SENT:
                 ((SentMessageHolder) holder).bind(message);
                 break;
+            case VIEW_TYPE_IMAGE_SENT:
+                ((SentImageHolder) holder).bind(message);
+                break;
             case VIEW_TYPE_MESSAGE_RECEIVED:
                 ((ReceivedMessageHolder) holder).bind(message);
+                break;
+            case VIEW_TYPE_IMAGE_RECEIVED:
+                ((ReceivedImageHolder) holder).bind(message);
                 break;
             case VIEW_TYPE_MESSAGE_SERVER:
                 ((ServerMessageHolder) holder).bind(message);
@@ -124,78 +161,49 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
     private class SentMessageHolder extends RecyclerView.ViewHolder {
         TextView sent_message_textView, sent_time_textView;
-        ImageView sent_image_imageView;
-        FrameLayout sent_image_frameLayout;
-        LinearLayout sent_video_linearLayout;
 
         SentMessageHolder(View itemView) {
             super(itemView);
 
             sent_message_textView = (TextView) itemView.findViewById(R.id.sent_message_textView);
             sent_time_textView = (TextView) itemView.findViewById(R.id.sent_time_textView);
-            sent_image_imageView = (ImageView) itemView.findViewById(R.id.sent_image_imageView);
-
-            sent_image_frameLayout = (FrameLayout)itemView.findViewById(R.id.sent_image_frameLayout);
-            sent_video_linearLayout = (LinearLayout)itemView.findViewById(R.id.sent_video_info_linearLayout);
         }
 
         void bind(final MessageItem message) {
-
-            sent_video_linearLayout.setVisibility(View.GONE);
-
-            //메시징 시각을 표시한다 - 공통
+            sent_message_textView.setText(message.getMessage());
             sent_time_textView.setText(Function.formatTime(message.getTimeMillis()));
-
-            //메시지 내용이 텍스트인지 이미지인지 확인한다
-            String image_name = message.getImage_name();
-            if(image_name.equals("N") || image_name.equals("")){//텍스트를 보냈을 경우
-
-                //이미지뷰를 숨기고, 텍스트뷰에 텍스트를 넣는다
-                sent_message_textView.setVisibility(View.VISIBLE);
-                sent_image_frameLayout.setVisibility(View.GONE);
-                sent_message_textView.setText(message.getMessage());
-
-            }else{//이미지를 보냈을 경우
-
-                //텍스트뷰를 숨기고, 이미지뷰에 이미지를 넣는다
-                sent_message_textView.setVisibility(View.GONE);
-                sent_image_frameLayout.setVisibility(View.VISIBLE);
-                sent_image_frameLayout.layout(0,0,0,0);//이미지뷰의 레이아웃을 초기화
-                sent_image_imageView.layout(0,0,0,0); //이미지뷰의 레이아웃을 초기화
-//              layout(left, top, right, bottom) :  Assign a size and position to a view
-
-
-                Function.displayResizedImage(mContext, message.getImage_url(), sent_image_imageView,
-                        getAdapterPosition(), message.isVideoThumbnail(), true, message.getImage_name(), message.getRoom_id());
-
-                //glide 라이브러리는 비동기방식으로 작동한다. 이미지가 뜬 이후에 무언가 하려면, glide의 onResourceReady에 작성해야 한다
-
-            }
-
-
-            //이미지를 클릭하면 -> 큰 이미지 화면이 나타난다
-            sent_image_frameLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-                    //해당 이미지의 url 을 전달한다
-                    Intent intent = new Intent(mContext, ImageActivity.class);
-                    intent.putExtra("url", message.getImage_url());
-                    mContext.startActivity(intent);
-
-                }
-            });
-
         }
 
     }
 
 
+    private class SentImageHolder extends RecyclerView.ViewHolder {
+        CollageView sent_image_collageView;
+        TextView sent_time_textView;
+
+        SentImageHolder(View itemView) {
+            super(itemView);
+
+            sent_image_collageView = (CollageView)itemView.findViewById(R.id.sent_image_collageView);
+            sent_time_textView = (TextView) itemView.findViewById(R.id.sent_image_time_textView);
+        }
+
+        void bind(final MessageItem message) {
+
+            Function.displayCollageImages(mContext, message.getRoom_id(), message.getImage_name(), sent_image_collageView);
+
+            sent_time_textView.setText(Function.formatTime(message.getTimeMillis()));
+
+        }
+
+
+    }
+
+
+
     private class ReceivedMessageHolder extends RecyclerView.ViewHolder {
         TextView received_message_textView, received_time_textView, received_username_textView;
-        ImageView received_profileImage_imageView, received_image_imageView;
-        FrameLayout received_image_frameLayout;
-        LinearLayout received_video_linearLayout;
+        ImageView received_profileImage_imageView;
 
         ReceivedMessageHolder(View itemView) {
             super(itemView);
@@ -203,81 +211,55 @@ public class MessageAdapter extends RecyclerView.Adapter {
             received_time_textView = (TextView) itemView.findViewById(R.id.received_time_textView);
             received_username_textView = (TextView) itemView.findViewById(R.id.received_username_textView);
             received_profileImage_imageView = (ImageView) itemView.findViewById(R.id.received_profileImage_imageView);
-            received_image_imageView = (ImageView) itemView.findViewById(R.id.received_image_imageView);
+        }
 
-            received_image_frameLayout = (FrameLayout)itemView.findViewById(R.id.received_image_frameLayout);
-            received_video_linearLayout = (LinearLayout)itemView.findViewById(R.id.received_video_linearLayout);
+
+        void bind(final MessageItem message) {
+            received_message_textView.setText(message.getMessage());
+
+            // Format the stored timestamp into a readable String using method.
+            received_time_textView.setText(Function.formatTime(message.getTimeMillis()));
+            received_username_textView.setText(message.getSenderUsername());
+
+            // Insert the profile image from the URL into the ImageView.
+            Function.displayRoundImageFromUrl(mContext, message.getUserImage_url(), received_profileImage_imageView);
+
+        }
+
+    }
+
+
+
+    private class ReceivedImageHolder extends RecyclerView.ViewHolder {
+        TextView received_time_textView, received_username_textView;
+        ImageView received_profileImage_imageView;
+        CollageView received_image_collageView;
+
+        ReceivedImageHolder(View itemView) {
+            super(itemView);
+            received_image_collageView = (CollageView) itemView.findViewById(R.id.received_image_collageView);
+            received_time_textView = (TextView) itemView.findViewById(R.id.received_image_time_textView);
+            received_username_textView = (TextView) itemView.findViewById(R.id.received_image_username_textView);
+            received_profileImage_imageView = (ImageView) itemView.findViewById(R.id.received_image_profileImage_imageView);
         }
 
 
         void bind(final MessageItem message) {
 
-            received_video_linearLayout.setVisibility(View.GONE);
+            Function.displayCollageImages(mContext, message.getRoom_id(), message.getImage_name(), received_image_collageView);
 
-            //메시징 시각, 수신자 이름, 수신자 프로필사진을 각각의 뷰에 넣는다 - 공통
+            // Format the stored timestamp into a readable String using method.
             received_time_textView.setText(Function.formatTime(message.getTimeMillis()));
             received_username_textView.setText(message.getSenderUsername());
+
+            // Insert the profile image from the URL into the ImageView.
             Function.displayRoundImageFromUrl(mContext, message.getUserImage_url(), received_profileImage_imageView);
 
-            //메시지 내용이 텍스트인지 이미지인지 확인한다
-            String image_name = message.getImage_name();
-            if(image_name.equals("N") || image_name.equals("")){//텍스트 메시지를 받았을 경우
-
-                //이미지뷰를 숨기고, 텍스트뷰에 텍스트를 넣는다
-                received_message_textView.setVisibility(View.VISIBLE);
-                received_image_frameLayout.setVisibility(View.GONE);
-                received_message_textView.setText(message.getMessage());
-
-            }else{//이미지를 받았을 경우
-
-                //텍스트뷰를 숨기고, 이미지뷰에 이미지를 넣는다
-                received_message_textView.setVisibility(View.GONE);
-                received_image_frameLayout.setVisibility(View.VISIBLE);
-                received_image_frameLayout.layout(0,0,0,0); //이미지뷰의 레이아웃을 초기화
-                received_image_imageView.layout(0,0,0,0); //이미지뷰의 레이아웃을 초기화
-//              layout(left, top, right, bottom) :  Assign a size and position to a view
-
-
-                Function.displayResizedImage(mContext, message.getImage_url(), received_image_imageView
-                        , getAdapterPosition(), message.isVideoThumbnail(), false, message.getImage_name(), message.getRoom_id());
-
-
-                /*
-                <received_image_imageView.layout(0,0,0,0); 쓴 이유>
-                * The list items are being reused, and when you scroll down you bind a larger image which makes the ImageView layout taller (wrap_content).
-                * When you scroll back up Glide sees that taller size and tries to load an image that has that size.
-                * wrap_content only works if the didn't have a layout before, otherwise Glide reads the laid-out width/height and uses that as the target size.
-                * I usually recommend a holder.iv.layout(0,0,0,0) to reset the size of the view/target and behave as if the list item was just inflated.
-                *
-                * */
-            }
-
-
-
-            //다른 사람의 프로필 사진을 클릭하면 -> 프로필 화면이 나타난다
-            received_profileImage_imageView.setOnClickListener(new View.OnClickListener() {
+            received_image_collageView.setOnPhotoClickListener(new CollageView.OnPhotoClickListener() {
                 @Override
-                public void onClick(View v) {
+                public void onPhotoClick(int position) {
 
-                    Intent intent = new Intent(mContext, UserProfileActivity.class);
-                    intent.putExtra("friend_id", message.getSender_id());
-                    intent.putExtra("friend_username", message.getSenderUsername());
-                    mContext.startActivity(intent);
-
-                }
-            });
-
-
-
-            //이미지를 클릭하면 -> 큰 이미지 화면이 나타난다
-            received_image_frameLayout.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-
-                    //해당 이미지의 url 을 전달한다
-                    Intent intent = new Intent(mContext, ImageActivity.class);
-                    intent.putExtra("url", message.getImage_url());
-                    mContext.startActivity(intent);
+                    Toast.makeText(mContext, "position"+position, Toast.LENGTH_SHORT).show();
 
                 }
             });

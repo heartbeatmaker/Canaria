@@ -30,9 +30,11 @@ import android.util.SparseBooleanArray;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.HttpRequest;
 import com.android.canaria.recyclerView.FriendListAdapter;
+import com.android.canaria.view.CollageView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
@@ -42,6 +44,7 @@ import com.bumptech.glide.request.target.BitmapImageViewTarget;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.target.ViewTarget;
 import com.bumptech.glide.request.transition.Transition;
+
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -60,6 +63,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -232,6 +236,55 @@ public class Function {
         SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm", Locale.getDefault());
         return dateFormat.format(timeInMillis);
     }
+
+
+
+
+    public static void displayCollageImages(final Context context, final int roomId, final String fileName_string, final CollageView collageView){
+
+        final String[] fileName_split = fileName_string.split(";");
+
+        List<String> urls_list = new ArrayList<String>();
+
+        //채팅 화면에 띄워주는 이미지 = 썸네일. 썸네일 폴더에서 가져온다
+        for (int i=0; i<fileName_split.length; i++){
+
+            String url = domain+"/images/"+roomId+"_thumb/"+fileName_split[i];
+            urls_list.add(url);
+        }
+
+        Log.d("이미지", "displayCollageImages) fileName_split="+ Arrays.asList(fileName_split));
+        Log.d("이미지", "displayCollageImages) urls_list="+ urls_list);
+
+        collageView
+                .photoMargin(0)
+                .photoPadding(0)
+//                .backgroundColor(Color.GRAY)
+//                .photoFrameColor(Color.GRAY)
+                .useFirstAsHeader(false) // makes first photo fit device widtdh and use full line
+                .defaultPhotosForLine(3) // sets default photos number for line of photos (can be changed by program at runtime)
+//                .iconSelector(context, getResources().getDimensionPixelSize(R.dimen.icon_size)) (or use 0 as size to wrap content)
+//                .useCards(true) // adds cardview backgrounds to all photos
+//                .maxWidth(60) // will resize images if their side is bigger than number
+//                .placeHolder(R.drawable.bird_icon) //adds placeholder resource
+//                .headerForm(CollageView.ImageForm.IMAGE_FORM_SQUARE) // sets form of image for header (if useFirstAsHeader == true)
+//                .photosForm(CollageView.ImageForm.IMAGE_FORM_HALF_HEIGHT) //sets form of image for other photos
+                .loadPhotos(urls_list); // here you can use Array/List of photo urls or array of resource ids
+
+        collageView.setOnPhotoClickListener(new CollageView.OnPhotoClickListener() {
+            @Override
+            public void onPhotoClick(int position) {
+//                Toast.makeText(context, "position="+position, Toast.LENGTH_SHORT).show();
+
+                //해당 이미지의 url 을 전달한다
+                Intent intent = new Intent(context, ImageActivity.class);
+                String url = domain+"/images/"+roomId+"/"+fileName_split[position];
+                intent.putExtra("url", url);
+                context.startActivity(intent);
+            }
+        });
+    }
+
 
 
     /**
