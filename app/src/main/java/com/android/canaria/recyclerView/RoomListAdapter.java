@@ -14,7 +14,10 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.android.canaria.ChatActivity;
+import com.android.canaria.Function;
 import com.android.canaria.R;
+import com.android.canaria.view.CollageView;
+import com.stfalcon.multiimageview.MultiImageView;
 
 import java.util.ArrayList;
 
@@ -46,7 +49,9 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
 
         final RoomListItem item = mItemArrayList.get(position);
 
-//        viewHolder.roomImage_imageView.setImageBitmap(item.getRoomImage());
+        //방 아이템 위에 참여자 프로필사진 띄우기
+        Function.displayRoomProfileImage(mContext, item.getRoomId(), viewHolder.collageView);
+
         viewHolder.roomName_textView.setText(item.getRoomName());
         viewHolder.numberOfMembers_textView.setText(String.valueOf(item.getNumberOfMembers()));
         viewHolder.recentMessage_textView.setText(item.getRecentMessage());
@@ -94,14 +99,14 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
 
     public class ViewHolder extends RecyclerView.ViewHolder implements View.OnCreateContextMenuListener{
 
-//        ImageView roomImage_imageView;
+        CollageView collageView;
         TextView roomName_textView, numberOfMembers_textView, recentMessage_textView, updatedTime_textView, roomId_textView, unreadMsg_textView;
         RelativeLayout parentLayout;
 
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-//            this.roomImage_imageView = itemView.findViewById(R.id.roomList_roomImage);
+            this.collageView = itemView.findViewById(R.id.roomList_collageView);
             this.roomName_textView = itemView.findViewById(R.id.roomList_roomName);
             this.numberOfMembers_textView = itemView.findViewById(R.id.roomList_numberOfMembers);
             this.recentMessage_textView = itemView.findViewById(R.id.roomList_recentMessage);
@@ -109,6 +114,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
             this.roomId_textView = itemView.findViewById(R.id.roomList_roomId);
             this.parentLayout = itemView.findViewById(R.id.roomList_relativeLayout);
             this.unreadMsg_textView = itemView.findViewById(R.id.roomList_unreadMsgCount);
+
 
             itemView.setOnCreateContextMenuListener(this);
 //            parentLayout.setOnLongClickListener(readMessageActivity);

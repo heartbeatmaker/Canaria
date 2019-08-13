@@ -8,22 +8,30 @@
     android:background="@color/cardview_dark_background">
 
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+    <view
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        class="android.support.v4.view.ViewPager"
+        android:id="@+id/view"
+        android:layout_centerVertical="true"
+        android:layout_centerHorizontal="true" />
 
-        <ProgressBar
-            android:id="@+id/imageActivity_progressBar"
-            android:layout_width="150dp"
-            android:layout_height="150dp"
-            android:layout_gravity="center"/>
 
-        <com.github.chrisbanes.photoview.PhotoView
-            android:id="@+id/imageActivity_photoView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"/>
+    <!--<FrameLayout-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent">-->
 
-    </FrameLayout>
+        <!--<ProgressBar-->
+            <!--android:id="@+id/imageActivity_progressBar"-->
+            <!--android:layout_width="150dp"-->
+            <!--android:layout_height="150dp"-->
+            <!--android:layout_gravity="center"/>-->
+
+        <!--<com.github.chrisbanes.photoview.PhotoView-->
+            <!--android:id="@+id/imageActivity_photoView"-->
+            <!--android:layout_width="wrap_content"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_gravity="center"/>-->
+    <!--</FrameLayout>-->
 
 </RelativeLayout>

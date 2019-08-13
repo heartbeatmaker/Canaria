@@ -190,6 +190,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
         void bind(final MessageItem message) {
 
+            //message.getImage_name() = 파일이름1;파일이름2;파일이름3... 다중이미지의 경우 이렇게 파일이름이 string 형태로 이어져 있다
             Function.displayCollageImages(mContext, message.getRoom_id(), message.getImage_name(), sent_image_collageView);
 
             sent_time_textView.setText(Function.formatTime(message.getTimeMillis()));
@@ -246,6 +247,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
         void bind(final MessageItem message) {
 
+            //message.getImage_name() = 파일이름1;파일이름2;파일이름3... 다중이미지의 경우 이렇게 파일이름이 string 형태로 이어져 있다
             Function.displayCollageImages(mContext, message.getRoom_id(), message.getImage_name(), received_image_collageView);
 
             // Format the stored timestamp into a readable String using method.
@@ -254,15 +256,6 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
             // Insert the profile image from the URL into the ImageView.
             Function.displayRoundImageFromUrl(mContext, message.getUserImage_url(), received_profileImage_imageView);
-
-            received_image_collageView.setOnPhotoClickListener(new CollageView.OnPhotoClickListener() {
-                @Override
-                public void onPhotoClick(int position) {
-
-                    Toast.makeText(mContext, "position"+position, Toast.LENGTH_SHORT).show();
-
-                }
-            });
 
         }
 

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    ​
+    ​
+    <com.github.chrisbanes.photoview.PhotoView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/slider_photoView"
+        android:layout_centerInParent="true" />
+
+
+    <TextView
+        android:layout_width = "wrap_content"
+        android:layout_height = "wrap_content"
+        android:id="@+id/slider_textView"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:textColor="@color/white"
+        android:layout_marginTop="20dp"
+        android:layout_alignTop="@id/slider_photoView"
+        android:layout_centerHorizontal="true"
+        android:padding="5dp"/>
+
+</RelativeLayout>
+

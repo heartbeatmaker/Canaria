@@ -366,17 +366,20 @@ public class MainService extends Service {
                         //image!-!파일이름1;파일이름2;파일이름3
                         boolean isImage = false;
                         String filename_string = "";
-                        int number_of_files = 0;
+                        int number_of_files = 0; //사진 개수
                         try{
                             String[] text_array = message.split("!-!");
                             if(text_array.length>0 && text_array[0].equals("image")){
 
                                 isImage = true;
 
-                                filename_string = text_array[1]; //파일이름을 가져온다
+                                //파일이름을 가져온다. 파일이름1;파일이름2;파일이름3..
+                                filename_string = text_array[1];
 
-                                //푸쉬알람에 띄워줄 내용 지정
+                                //사진 개수
                                 number_of_files = filename_string.split(";").length;
+
+                                //푸쉬알람에 띄워줄 내용을 지정한다
                                 if(number_of_files == 1){
                                     message = number_of_files +" Photo";
                                 }else{
@@ -436,14 +439,10 @@ public class MainService extends Service {
                             long curTime_long = System.currentTimeMillis();
                             if(isImage){ //이미지일 경우
 
-                                //string 형태로 이어져있는 파일 이름을 분리한다
-                                // -> 이미지 1개 = 메시지 1개 원칙으로 저장한다
-
-                                String[] filename_array = filename_string.split(";");
-
-                                for(int i=0; i<filename_array.length; i++){
-                                    dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, filename_array[i], curTime_long, isRead);
-                                }
+                                //string 형태로 이어져있는 파일 이름을 그대로 저장한다
+                                // : 다중이미지 1개 = 메시지 1개 원칙
+                                //filename_string = 파일이름1;파일이름2;파일이름3..
+                                dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, filename_string, curTime_long, isRead);
 
                             }else{ //텍스트 메시지일 경우
                                 dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, "N", curTime_long, isRead);

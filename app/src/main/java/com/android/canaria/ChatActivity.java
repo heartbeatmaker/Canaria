@@ -671,7 +671,7 @@ public class ChatActivity extends AppCompatActivity{
 
 
                                             //4. 채팅 서버에 메시지를 보낸다
-//                                            sendMsg("msg_image/"+roomId+"/"+filename_string);
+                                            sendMsg("msg_image/"+roomId+"/"+filename_string);
 
                                         }
                                     });
@@ -1388,16 +1388,10 @@ public class ChatActivity extends AppCompatActivity{
                                     messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text,
                                             msg_roomId, "N", curTime));
 
-                                }else{//이미지일 때
+                                }else{//이미지일 때 
 
-                                    //string 형태로 이어져있는 파일 이름을 분리한다
-                                    // -> 이미지를 한 개씩 화면에 띄워준다
-                                    String[] filename_array = msg_filename_string.split(";");
-                                    for(int i=0; i<filename_array.length; i++){
-
-                                        messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text,
-                                                msg_roomId, filename_array[i], curTime));
-                                    }
+                                    messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text,
+                                            msg_roomId, msg_filename_string, curTime));
 
                                 }
                                 adapter.notifyItemInserted(adapter.getItemCount()-1);

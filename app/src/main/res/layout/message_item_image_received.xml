@@ -28,16 +28,26 @@
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="4dp" />
 
-    <com.lopei.collageview.CollageView
-        android:id="@+id/received_image_collageView"
-        android:layout_width="wrap_content"
+
+    <RelativeLayout
+        android:id="@+id/received_image_relativeLayout"
+        android:layout_width="240dp"
         android:layout_height="wrap_content"
-        android:maxWidth="240dp"
         android:padding="8dp"
         android:layout_marginTop="4dp"
         app:layout_constraintTop_toBottomOf="@+id/received_image_username_textView"
         app:layout_constraintLeft_toRightOf="@+id/received_image_profileImage_imageView"
-        android:layout_marginLeft="8dp" />
+        android:layout_marginLeft="8dp">
+
+        <com.android.canaria.view.CollageView
+            android:id="@+id/received_image_collageView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </RelativeLayout>
+
+    <!--collage 효과를 주려면, parent layout의 width를 지정해줘야 한다!!!
+    wrap content하면 안됨-->
+
 
     <TextView
         android:id="@+id/received_image_time_textView"
@@ -45,8 +55,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="10sp"
-        app:layout_constraintLeft_toRightOf="@+id/received_image_collageView"
+        app:layout_constraintLeft_toRightOf="@+id/received_image_relativeLayout"
         android:layout_marginLeft="4dp"
-        app:layout_constraintBottom_toBottomOf="@+id/received_image_collageView" />
+        app:layout_constraintBottom_toBottomOf="@+id/received_image_relativeLayout" />
 
 </android.support.constraint.ConstraintLayout>

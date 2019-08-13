@@ -10,6 +10,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
@@ -33,7 +34,9 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.HttpRequest;
+import com.android.canaria.db.DBHelper;
 import com.android.canaria.recyclerView.FriendListAdapter;
+import com.android.canaria.recyclerView.FriendListItem;
 import com.android.canaria.view.CollageView;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
@@ -41,9 +44,11 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.BitmapImageViewTarget;
+import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.target.ViewTarget;
 import com.bumptech.glide.request.transition.Transition;
+import com.stfalcon.multiimageview.MultiImageView;
 
 
 import org.json.JSONArray;
@@ -279,11 +284,103 @@ public class Function {
                 //해당 이미지의 url 을 전달한다
                 Intent intent = new Intent(context, ImageActivity.class);
                 String url = domain+"/images/"+roomId+"/"+fileName_split[position];
+
+                //roomId, filename_string, position, 이 사진의 url
+                intent.putExtra("room_id", roomId);
+                intent.putExtra("filename_string", fileName_string);
+                intent.putExtra("position", position);
                 intent.putExtra("url", url);
+
                 context.startActivity(intent);
             }
         });
     }
+
+
+
+    public static void displayRoomProfileImage(Context context, int roomId, final CollageView collageView){
+
+        //db에서 이 방 참여자 목록을 가져온다 - id만 string 형태로 잇는다 (4명만 있으면 된다)
+        //php 서버로 보낸다(이를 처리하는 서버 코드를 작성한다) -> 각 참여자의 프로필 사진 url을 응답받는다
+        //collageView에 glide로 프로필 사진을 넣는다
+
+
+
+        //1. db에서 이 방 참여자 목록을 가져온다 - id만 string 형태로 잇는다 (4명만 있으면 된다)
+        DBHelper dbHelper = new DBHelper(context, Function.dbName, null, Function.dbVersion);
+        SQLiteDatabase db = dbHelper.getWritableDatabase();
+        Cursor cursor = db.rawQuery("SELECT members FROM chat_rooms WHERE room_id='" + roomId + "';", null);
+        cursor.moveToFirst();
+        String memberInfo = cursor.getString(0);
+
+        int count = 0;
+        String memberInfo_string = "";
+        String[] memberInfo_split = memberInfo.split(";");
+        for(int i=0; i<memberInfo_split.length; i++){
+
+            if(i%2 == 0){ //i가 짝수일 때: id
+                int member_id = Integer.valueOf(memberInfo_split[i]);
+
+                //자신의 id는 포함하지 않는다
+                if(member_id != Integer.valueOf(getString(context, "user_id"))){
+                    memberInfo_string += member_id +";";
+                    count += 1;
+                }
+
+            }
+
+            if(count == 4){ //4명의 id만 필요하다. 방목록에는 최대 4인의 프로필 사진이 들어간다
+                break;
+            }
+        }
+
+        //마지막 ';' 제거
+        memberInfo_string = memberInfo_string.substring(0, memberInfo_string.length()-1);
+
+
+
+        //2. php 서버로 보낸다 -> 각 참여자의 프로필 사진 url을 응답받는다
+        ContentValues data = new ContentValues();
+        data.put("user_id_group", memberInfo_string);
+
+        try {
+            //String response 를 jsonArray 로 파싱한다
+            final String response = new HttpRequest("image.php", data).execute().get();
+            JSONArray jsonArray = new JSONArray(response);
+
+
+            List<String> urls_list = new ArrayList<String>();
+            //3. collageView에 glide로 프로필 사진을 넣는다
+            for(int k=0; k<jsonArray.length(); k++){
+
+                String url = domain+"/uploads/"+jsonArray.getString(k);
+                urls_list.add(url);
+
+                Log.d("프로필", "url="+url);
+
+                RequestOptions options = new RequestOptions().placeholder(R.drawable.user);
+
+            }
+
+
+            collageView
+//                    .useCards(true)
+                    .photoMargin(0)
+                    .photoPadding(3)
+                    .placeHolder(R.drawable.bird)
+                    .useFirstAsHeader(false) // makes first photo fit device widtdh and use full line
+                    .defaultPhotosForLine(2) // sets default photos number for line of photos (can be changed by program at runtime)
+                    .loadPhotos(urls_list); // here you can use Array/List of photo urls or array of resource ids
+
+        } catch (Exception e) {
+            Log.d("tag", "Error: "+e);
+        }
+
+
+    }
+
+
+
 
 
 

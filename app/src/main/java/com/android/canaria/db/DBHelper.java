@@ -67,7 +67,7 @@ public class DBHelper extends SQLiteOpenHelper {
 
 
     //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 보낸시각
-    public void insert_chatLogs(int room_id, int sender_id, String sender_username, String message, String image_name, long time, int isRead) {
+    public int insert_chatLogs(int room_id, int sender_id, String sender_username, String message, String image_name, long time, int isRead) {
         // 읽고 쓰기가 가능하게 DB 열기
         long last_inserted_id;
 
@@ -85,6 +85,8 @@ public class DBHelper extends SQLiteOpenHelper {
         last_inserted_id = db.insert("chat_logs", null, contentValues);
 
         Log.d(TAG, "chat_logs ITEM IS INSERTED. ID="+(int)last_inserted_id);
+
+        return (int)last_inserted_id;
     }
 
 

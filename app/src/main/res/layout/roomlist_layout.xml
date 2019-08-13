@@ -15,59 +15,16 @@
         tools:layout_editor_absoluteY="8dp">
 
 
-        <LinearLayout
+        <com.android.canaria.view.CollageView
+            android:id="@+id/roomList_collageView"
             android:layout_gravity="center"
             android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_height="wrap_content"
             android:layout_weight="0"
             android:padding="5dp"
-            android:orientation="vertical">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
-
-                <ImageView
-                    android:id="@+id/roomItem_profileImage_one"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/user"/>
-
-                <ImageView
-                    android:id="@+id/roomItem_profileImage_two"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/user"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
-
-                <ImageView
-                    android:id="@+id/roomItem_profileImage_three"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/user"
-                    android:layout_gravity="center"/>
-
-                <ImageView
-                    android:id="@+id/roomItem_profileImage_four"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/user" />
-
-            </LinearLayout>
+            android:orientation="vertical"/>
 
 
-        </LinearLayout>
 
         <LinearLayout
             android:layout_width="380dp"
