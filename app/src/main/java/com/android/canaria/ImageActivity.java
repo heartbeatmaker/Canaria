@@ -5,6 +5,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.media.Image;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
@@ -67,7 +68,7 @@ public class ImageActivity extends AppCompatActivity {
     int room_id;
 
 
-    int swipe_direction;
+//    int swipe_direction;
 
 
     boolean isRightSideLoaded = false;
@@ -75,6 +76,9 @@ public class ImageActivity extends AppCompatActivity {
 
     boolean isFirstImage = false;
     boolean isLastImage = false;
+
+    boolean beforeInit = false;
+    int position; //다중이미지 내 해당 사진의 인덱스
 
 //    ArrayList<Integer> loaded_db_id_arrayList; //chat_logs 테이블에서, url_list에 이미 load 된 row의 db id를 담아놓는 곳
 
@@ -93,12 +97,28 @@ public class ImageActivity extends AppCompatActivity {
         url_list = new ArrayList<>();
 
         //이전화면 (채팅화면) 에서 보낸 값을 받는다
-        url = getIntent().getStringExtra("url");
-        filename_string = getIntent().getStringExtra("filename_string");
-        int position = getIntent().getIntExtra("position", 0);
-        room_id = getIntent().getIntExtra("room_id", 0);
+        String data_type = getIntent().getStringExtra("type");
 
-        Log.d("스와이프", "이미지 큰화면) url="+url+" / filename_string="+filename_string+" / position="+position+" / room_id="+room_id);
+        if(data_type.equals("image")){ //이미지를 띄우는 것이라면
+
+            Log.d("스와이프", "데이터 타입: 이미지");
+
+            url = getIntent().getStringExtra("url");
+            filename_string = getIntent().getStringExtra("filename_string");
+            position = getIntent().getIntExtra("position", 0);
+            room_id = getIntent().getIntExtra("room_id", 0);
+
+            Log.d("스와이프", "url="+url+" / filename_string="+filename_string+" " +
+                    "/ position="+position+" / room_id="+room_id);
+
+
+        }else if(data_type.equals("video")){ //비디오의 썸네일을 띄우는 것이라면
+
+            Log.d("스와이프", "데이터 타입: 비디오 썸네일");
+            position = 0; //동영상 썸네일: 다중이미지로 띄우지 않는다. 무조건 개별사진이므로, position = 0
+
+        }
+
 
         //string 으로 이어져 있는 여러 개의 파일 이름을, 개별로 분할한다 -> url 형태로 만든다 -> url_list 에 담는다
         String[] filename_split = filename_string.split(";");
@@ -116,14 +136,42 @@ public class ImageActivity extends AppCompatActivity {
         //맨 처음 띄워주는 사진이 다중이미지 중에서 첫번째 or 마지막 이미지일 때 => 이전 or 다음에 띄워줄 사진이 없다
         //-> db에서 새로운 데이터를 가져온다
         //-> 그 다음에 어댑터를 연결한다(loadMoreImage 메소드 안에 어댑터 연결하는 부분이 있다)
-        if(position == 0 || position == url_list.size()-1){
 
-            loadMoreImage(position);
+        if(url_list.size() == 1){ //단독 이미지일 때
+            Log.d("스와이프", "단독 이미지임");
 
-            if(isFirstImage || isLastImage){ //사용자가 채팅화면에서 클릭한 이 사진이, 이 채팅방에서 주고받은 최초의 or 마지막 사진일 때
+            //이전, 이후 데이터를 다 가져온다
+            int position_updated = loadAllImages();
 
-                Log.d("스와이프", "사용자가 채팅화면에서 클릭한 이 사진이, 이 채팅방에서 주고받은 최초의 or 마지막 사진임");
+            //어댑터를 연결한다
+            slideAdapter = new SlideAdapter(this, url_list);
+            viewPager.setAdapter(slideAdapter);
 
+            //많은 사진 중에서 아까 사용자가 클릭한 사진이 바로 뜰 수 있도록, 현재 아이템을 설정한다
+            viewPager.setCurrentItem(position_updated);
+
+
+        } else if(url_list.size()>1){ //다중이미지일 때
+            Log.d("스와이프", "다중 이미지임");
+
+
+            if(position == 0 || position >= url_list.size()-1){ //다중이미지 중에서 첫번째 or 마지막 이미지일 때
+
+                beforeInit = true;
+                loadMoreImage(position);
+
+                if(isFirstImage || isLastImage){ //사용자가 채팅화면에서 클릭한 이 사진이, 이 채팅방에서 주고받은 최초의 or 마지막 사진일 때
+
+                    Log.d("스와이프", "사용자가 채팅화면에서 클릭한 이 사진이, 이 채팅방에서 주고받은 최초의 or 마지막 사진임");
+
+                    slideAdapter = new SlideAdapter(this, url_list);
+                    viewPager.setAdapter(slideAdapter);
+
+                    //많은 사진 중에서 아까 사용자가 클릭한 사진이 바로 뜰 수 있도록, 현재 아이템을 설정한다
+                    viewPager.setCurrentItem(position);
+                }
+
+            }else{//첫번째 or 마지막 이미지가 아닐 때: 아직 앞뒤로 띄워줄 수 있는 이미지가 있다. 어댑터를 연결한다
                 slideAdapter = new SlideAdapter(this, url_list);
                 viewPager.setAdapter(slideAdapter);
 
@@ -131,13 +179,6 @@ public class ImageActivity extends AppCompatActivity {
                 viewPager.setCurrentItem(position);
             }
 
-        }else{ //첫번째 or 마지막 이미지가 아닐 때: 아직 앞뒤로 띄워줄 수 있는 이미지가 있다. 어댑터를 연결한다
-
-            slideAdapter = new SlideAdapter(this, url_list);
-            viewPager.setAdapter(slideAdapter);
-
-            //많은 사진 중에서 아까 사용자가 클릭한 사진이 바로 뜰 수 있도록, 현재 아이템을 설정한다
-            viewPager.setCurrentItem(position);
         }
 
 
@@ -208,7 +249,7 @@ public class ImageActivity extends AppCompatActivity {
 
                 Log.d("스와이프", "왼쪽 데이터가 로드된 적이 없음. 지금부터 시작");
 
-                swipe_direction = 0;// 왼쪽으로 스와이프 했다는 표시
+//                swipe_direction = 0;// 왼쪽으로 스와이프 했다는 표시
 
                 //db에서 이전 데이터를 더 가져온다
                 //최근 순서대로 가져와야함(order by time desc)
@@ -225,6 +266,7 @@ public class ImageActivity extends AppCompatActivity {
                         //이전에 주고받은 이미지의 이름을 가져온다
                         int db_id = cursor2.getInt(0);
                         String filename_string = cursor2.getString(5);
+
 
                         //여러 파일의 이름이 String 으로 이어져 있다. 개별 이름으로 분리한다
                         String[] filename_split = filename_string.split(";");
@@ -250,6 +292,29 @@ public class ImageActivity extends AppCompatActivity {
                     viewPager.setCurrentItem(url_list.size()-origin_size);
 
 
+//                    handler.post(new Runnable() {
+//                        @Override
+//                        public void run() {
+//
+//
+//                            if(beforeInit){
+//                                slideAdapter = new SlideAdapter(ImageActivity.this, url_list);
+//                                viewPager.setAdapter(slideAdapter);
+//                                viewPager.setCurrentItem(url_list.size()-origin_size);
+//                                Log.d("스와이프", "1");
+//
+//                                beforeInit = false;
+//                            }else{
+//                                slideAdapter.notifyDataSetChanged();
+//                                viewPager.setCurrentItem(url_list.size()-origin_size);
+//
+//                                Log.d("스와이프", "2");
+//                            }
+//
+//                        }
+//                    });
+
+
                 }else{ //이전 데이터가 없을 때 = 이 사진이 이 채팅방에서 주고받은 최초의 사진일 때
 
                     Log.d("스와이프", "db에 이전 데이터가 없음");
@@ -264,13 +329,13 @@ public class ImageActivity extends AppCompatActivity {
             }
 
 
-        }else if(currentIndex == url_list.size() -1){ //이 사진 이후에 띄워줄 데이터가 없는 경우
+        }else if(currentIndex >= url_list.size() -1){ //이 사진 이후에 띄워줄 데이터가 없는 경우
             Log.d("스와이프", "currentIndex == url_list.size() -1. 이후 데이터가 떨어짐");
 
             if(!isRightSideLoaded){
                 Log.d("스와이프", "오른쪽 데이터가 로드된 적이 없음. 지금부터 시작");
 
-                swipe_direction = 1;
+//                swipe_direction = 1;
 
                 //db에서 이후 데이터를 더 가져온다
                 //오래된 순서대로 가져와야함
@@ -300,11 +365,31 @@ public class ImageActivity extends AppCompatActivity {
 
                     Log.d("스와이프", "이후 데이터 업데이트 완료. url_list="+url_list);
 
+
                     //어댑터를 새것으로 교체한다
                     slideAdapter = new SlideAdapter(getApplicationContext(), url_list);
                     slideAdapter.notifyDataSetChanged();
                     viewPager.setAdapter(slideAdapter);
                     viewPager.setCurrentItem(origin_size-1);
+
+//                    handler.post(new Runnable() {
+//                        @Override
+//                        public void run() {
+//
+//                            if(beforeInit){
+//                                slideAdapter = new SlideAdapter(ImageActivity.this, url_list);
+//                                viewPager.setAdapter(slideAdapter);
+//                                viewPager.setCurrentItem(origin_size-1);
+//                                Log.d("스와이프", "3");
+//
+//                                beforeInit = false;
+//                            }else{
+//                                slideAdapter.notifyDataSetChanged();
+//                                viewPager.setCurrentItem(origin_size-1);
+//                                Log.d("스와이프", "4");
+//                            }
+//                        }
+//                    });
 
 
                 }else{//이후 데이터가 없을 때 = 이 사진이 이 채팅방에서 주고받은 마지막 사진일 때
@@ -322,6 +407,126 @@ public class ImageActivity extends AppCompatActivity {
         }
 
     }
+
+
+
+
+    public int loadAllImages(){
+
+
+        //데이터가 추가되기 전, url_list 의 사이즈
+        final int origin_size = url_list.size();
+
+        //db에서 찾은 row의 개수를 담는 변수
+        int result_count = 0;
+
+        int added_image_count_left = 0;
+
+        //현재 사진이 db의 chat_logs 테이블에서 어떤 id를 가지고 있는지 확인한다
+        int current_db_id = 0;
+        //roomId와 image name이 일치하는 row를 찾는다
+        Cursor cursor = db.rawQuery
+                ("SELECT * FROM chat_logs WHERE room_id='" + room_id + "' AND image_name= '"+filename_string+"';", null);
+        while (cursor.moveToNext()) {
+            current_db_id = cursor.getInt(0);
+        }
+        Log.d("스와이프", "current_db_id="+current_db_id);
+
+
+
+
+        //db에서 이전 데이터를 더 가져온다
+        //최근 순서대로 가져와야함(order by time desc)
+        Cursor cursor2 = db.rawQuery
+                ("SELECT * FROM chat_logs WHERE id<'"+current_db_id+"' AND room_id='" + room_id + "' AND image_name != 'N' ORDER BY time DESC;", null);
+
+        //결과 개수를 확인
+        result_count = cursor2.getCount();
+        if(result_count > 0){
+            Log.d("스와이프", "db에 이전 데이터가 있음. 가져오면 됨");
+
+            while (cursor2.moveToNext()) {
+
+                //이전에 주고받은 이미지의 이름을 가져온다
+                int db_id = cursor2.getInt(0);
+                String filename_string = cursor2.getString(5);
+
+
+                //여러 파일의 이름이 String 으로 이어져 있다. 개별 이름으로 분리한다
+                String[] filename_split = filename_string.split(";");
+
+                //분리한 이름을 url로 바꾼다음, url_list에 하나씩 추가한다
+                //가장 최근 사진부터 추가해야 하므로, 인덱스를 거꾸로 놓는다
+                for(int i=filename_split.length-1; i>=0; i--){
+                    String url = Function.domain+"/images/"+room_id+"/"+filename_split[i];
+
+                    //현재 데이터의 '앞에' 새로운 데이터를 추가한다
+                    url_list.add(0, url);
+
+                    added_image_count_left +=1;
+                }
+
+                Log.d("스와이프", "이전데이터 가져옴. db_id="+db_id+" / filename_string="+filename_string);
+            }
+
+            Log.d("스와이프", "이전데이터 업데이트 완료. url_list="+url_list);
+
+
+        }else{ //이전 데이터가 없을 때 = 이 사진이 이 채팅방에서 주고받은 최초의 사진일 때
+
+            Log.d("스와이프", "db에 이전 데이터가 없음");
+        }
+
+        isLeftSideLoaded = true;
+
+
+
+
+
+
+        //db에서 이후 데이터를 더 가져온다
+        //오래된 순서대로 가져와야함
+        Cursor cursor3 = db.rawQuery
+                ("SELECT * FROM chat_logs WHERE id>'"+current_db_id+"' AND room_id='" + room_id + "' AND image_name != 'N' ORDER BY time;", null);
+
+        result_count = cursor3.getCount();
+
+        if(result_count>0){
+
+            while (cursor3.moveToNext()) {
+
+                //이 사진 이후로 주고받은 이미지의 이름을 가져온다
+                int db_id = cursor3.getInt(0);
+                String filename_string = cursor3.getString(5);
+
+                //현재 데이터의 뒤에 새로운 데이터를 추가한다
+                String[] filename_split = filename_string.split(";");
+                for(int i=0; i<filename_split.length; i++){
+
+                    String url = Function.domain+"/images/"+room_id+"/"+filename_split[i];
+                    url_list.add(url);
+                }
+
+                Log.d("스와이프", "이후 데이터 가져옴. db_id="+db_id+" / filename_string="+filename_string);
+            }
+
+            Log.d("스와이프", "이후 데이터 업데이트 완료. url_list="+url_list);
+
+
+
+        }else{//이후 데이터가 없을 때 = 이 사진이 이 채팅방에서 주고받은 마지막 사진일 때
+
+            Log.d("스와이프", "db에 이후 데이터가 없음");
+        }
+
+        isRightSideLoaded = true;
+
+
+        //왼쪽에 추가된 이미지이름 개수 = 최초에 불러온 이미지의 updated 된 position
+        return added_image_count_left;
+    }
+
+
 
 
 

@@ -286,6 +286,7 @@ public class Function {
                 String url = domain+"/images/"+roomId+"/"+fileName_split[position];
 
                 //roomId, filename_string, position, 이 사진의 url
+                intent.putExtra("type", "image"); //데이터 타입을 알려준다. 이미지 or 동영상
                 intent.putExtra("room_id", roomId);
                 intent.putExtra("filename_string", fileName_string);
                 intent.putExtra("position", position);
@@ -350,10 +351,10 @@ public class Function {
 
 
             List<String> urls_list = new ArrayList<String>();
-            //3. collageView에 glide로 프로필 사진을 넣는다
+            //3. collageView에 glide로 프로필 사진을 넣는다 -- 썸네일을 가져온다
             for(int k=0; k<jsonArray.length(); k++){
 
-                String url = domain+"/uploads/"+jsonArray.getString(k);
+                String url = domain+"/uploads_thumb/"+jsonArray.getString(k);
                 urls_list.add(url);
 
                 Log.d("프로필", "url="+url);
@@ -391,7 +392,7 @@ public class Function {
 
 //        if(!fileName.equals("null")){ //서버에서 프로필 사진을 찾을 때, 파일이 없으면 "null"이라고 반환하도록 설정해놓음
 
-            String url = "http://15.164.193.65/uploads/"+fileName;
+            String url = "http://15.164.193.65/uploads_thumb/"+fileName;
 
             RequestOptions options = new RequestOptions()
                     .placeholder(R.drawable.user)

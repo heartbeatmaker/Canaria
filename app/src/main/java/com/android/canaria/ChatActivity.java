@@ -156,6 +156,10 @@ public class ChatActivity extends AppCompatActivity{
 
     List<Image> selected_video_list;
 
+    HashMap<String, String> video_hash = new HashMap<>();
+    ArrayList<String> all_videos = new ArrayList<>();
+
+    int video_count = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -337,10 +341,10 @@ public class ChatActivity extends AppCompatActivity{
                         .toolbarFolderTitle("Folder") // folder selection title
                         .toolbarImageTitle("Tap to select") // image selection title
                         .toolbarArrowColor(Color.WHITE) // Toolbar 'up' arrow color
-                        .includeVideo(false) // Show video on image picker
+                        .includeVideo(true) // Show video on image picker
 //                        .single() // single mode
                         .multi() // multi mode (default mode)
-                        .limit(10) // max images can be selected (99 by default)
+                        .limit(9) // max images can be selected (99 by default)
                         .showCamera(true) // show camera or not (true by default)
                         .imageDirectory("Camera") // directory name for captured image  ("Camera" folder by default)
 //                        .origin(images) // original selected images, used in multi mode
@@ -515,6 +519,76 @@ public class ChatActivity extends AppCompatActivity{
                         Log.d("이미지", "file_name="+file_name);
 
 
+                        //확장자를 추출한다
+                        String[] file_name_split = file_name.split(".");
+                        String extension = file_name_split[file_name_split.length-1];
+                        Log.d("이미지", "확장자="+extension);
+
+                        //이미지와 동영상을 구분한다
+                        if(extension.equals("jpg")){ //이미지일 때
+
+
+                        }else if(extension.equals("mp4")){ //동영상일 때
+
+
+                            all_videos.add(video_count, file_name);
+
+
+                            //파일 크기를 검사한다
+                            File videoFile = new File(path);
+                            float length = videoFile.length() / 1024f; // Size in KB
+                            String value;
+                            float size;
+                            if (length >= 1024){
+
+                                size = (int) Math.ceil(length / 1024f);
+                                value = size + " MB";
+
+                                //파일 크기가 50MB를 넘으면, 업로드하지 않는다
+                                if(size > 50){
+                                    Toast.makeText(this, "Cannot upload a file with the size over 50MB.", Toast.LENGTH_SHORT).show();
+                                    continue;
+                                }
+                            }else{
+                                value = length + " KB";
+                            }
+                            Log.i("이미지", "파일 용량="+value);
+
+
+
+
+                            // 동영상의 썸네일 이미지를 추출한다
+                            //비트맵으로 추출한 썸네일을 임시경로에 저장한다
+                            Bitmap bitmap = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.FULL_SCREEN_KIND);
+                            Bitmap thumbnail_bitmap = ThumbnailUtils.extractThumbnail(bitmap, 360, 480);
+
+
+                            //썸네일 파일 이름 = video_원래이름.jpg
+                            String thumbnail_filename = "video_"+video_count+"_"+file_name.substring(0, file_name.length()-4)+".jpg";
+                            Log.i("이미지", "썸네일 파일 이름="+thumbnail_filename);
+
+                            
+
+                            //파일 생성
+                            File thumbnail_file = createImageFile_thumbnail(thumbnail_filename);
+
+                            FileOutputStream out = new FileOutputStream(thumbnail_file);
+                            // 넘겨 받은 bitmap을 jpeg(손실압축)으로 저장한다
+                            thumbnail_bitmap.compress(Bitmap.CompressFormat.JPEG, 50 , out);
+                            out.close();
+
+                            //file_name = 썸네일 이름
+                            file_name = thumbnail_filename;
+
+                            //file = 썸네일 파일
+                            String thumbnail_path = thumbnail_file.getAbsolutePath(); //썸네일 파일 경로
+                            file = new File(thumbnail_path);
+
+
+                            video_count++;
+                        }
+
+
                         RequestBody imageBody = RequestBody.create(MultipartBody.FORM, file);
                         //key, 서버가 저장할 file 이름, 이미지파일
                         mRequestBody.addFormDataPart("image"+i, file_name, imageBody);
@@ -606,11 +680,30 @@ public class ChatActivity extends AppCompatActivity{
                                         @Override
                                         public void run() {
 
+                                            //동영상 썸네일과 이미지를 구분한다
+                                            //동영상 - 개별 / 이미지 - 하나로 묶어서
+                                            ArrayList<String> arrayList_video_thumbnail = new ArrayList<>();
+
                                             //jsonArray 에 있던 파일 이름을 string 으로 이어서 붙인다
                                             //파일이름1;파일이름2;파일이름3...
                                             String filename_string = "";
                                             try{
                                                 for(int k=0; k<success_array.length(); k++){
+
+                                                    String filename = success_array.getString(k);
+
+                                                    //서버에서 받은 썸네일 파일 이름 = 날짜_video_원래이름.jpg
+                                                    //서버에서 받은 썸네일 파일 이름 = 날짜_video_원래이름(1).jpg
+
+                                                    String[] filename_split = filename_string.split("_");
+
+                                                    if(filename_split[1].equals("video")){
+
+
+
+                                                    }
+
+
                                                     filename_string += success_array.getString(k) + ";";
                                                 }
                                             }catch (Exception e){
