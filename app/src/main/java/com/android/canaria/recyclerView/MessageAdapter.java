@@ -12,6 +12,7 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -40,9 +41,11 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
     private static final int VIEW_TYPE_MESSAGE_SENT = 1;
     private static final int VIEW_TYPE_IMAGE_SENT = 2;
-    private static final int VIEW_TYPE_MESSAGE_RECEIVED = 3;
-    private static final int VIEW_TYPE_IMAGE_RECEIVED = 4;
-    private static final int VIEW_TYPE_MESSAGE_SERVER = 5;
+    private static final int VIEW_TYPE_VIDEO_SENT = 3;
+    private static final int VIEW_TYPE_MESSAGE_RECEIVED = 4;
+    private static final int VIEW_TYPE_IMAGE_RECEIVED = 5;
+    private static final int VIEW_TYPE_VIDEO_RECEIVED = 6;
+    private static final int VIEW_TYPE_MESSAGE_SERVER = 7;
 
     public MessageAdapter(ArrayList<MessageItem> mItemArrayList, Context mContext) {
         this.mItemArrayList = mItemArrayList;
@@ -72,9 +75,25 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 if(message.getImage_name().equals("N") || message.getImage_name().equals("")){
                     Log.d("msg", "VIEW_TYPE_MESSAGE_SENT");
                     return VIEW_TYPE_MESSAGE_SENT;
-                }else{
-                    Log.d("msg", "VIEW_TYPE_IMAGE_SENT");
-                    return VIEW_TYPE_IMAGE_SENT;
+                }else{ //이미지 or 썸네일 이미지를 포함하고 있을 때
+
+                    String image_name = message.getImage_name();
+
+//                    썸네일 파일 이름 = 날짜_video_index_원래이름.jpg or (1).jpg
+                    String[] image_name_split = image_name.split("_");
+
+                    if(image_name_split[1].equals("video")){ //이 이미지 = 비디오 파일의 썸네일
+
+                        Log.d("msg", "VIEW_TYPE_IMAGE_SENT");
+                        return VIEW_TYPE_VIDEO_SENT;
+
+                    }else{//이 이미지 = 일반 이미지
+
+                        Log.d("msg", "VIEW_TYPE_IMAGE_SENT");
+                        return VIEW_TYPE_IMAGE_SENT;
+
+                    }
+
                 }
 
             }else{ //받은 메시지
@@ -111,6 +130,10 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 view = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.message_item_image_sent, parent, false);
                 return new SentImageHolder(view);
+            case VIEW_TYPE_VIDEO_SENT:
+                view = LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.message_item_video_sent, parent, false);
+                return new SentVideoHolder(view);
             case VIEW_TYPE_MESSAGE_RECEIVED:
                 view = LayoutInflater.from(parent.getContext())
                         .inflate(R.layout.message_item_received, parent, false);
@@ -137,6 +160,9 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 break;
             case VIEW_TYPE_IMAGE_SENT:
                 ((SentImageHolder) holder).bind(message);
+                break;
+            case VIEW_TYPE_VIDEO_SENT:
+                ((SentVideoHolder) holder).bind(message);
                 break;
             case VIEW_TYPE_MESSAGE_RECEIVED:
                 ((ReceivedMessageHolder) holder).bind(message);
@@ -260,6 +286,44 @@ public class MessageAdapter extends RecyclerView.Adapter {
         }
 
     }
+
+
+    private class SentVideoHolder extends RecyclerView.ViewHolder {
+        ImageView sent_video_thumbnail_imageView, sent_video_playBtn_imageView;
+        ProgressBar sent_video_progressBar;
+        TextView sent_video_textView, sent_video_time_textView;
+
+        SentVideoHolder(View itemView) {
+            super(itemView);
+
+            sent_video_thumbnail_imageView = itemView.findViewById(R.id.sent_video_imageView);
+            sent_video_playBtn_imageView = itemView.findViewById(R.id.sent_video_playBtn_imageView);
+            sent_video_progressBar = itemView.findViewById(R.id.sent_video_progressBar);
+            sent_video_textView = itemView.findViewById(R.id.sent_video_textView);
+            sent_video_time_textView = itemView.findViewById(R.id.sent_video_time_textView);
+        }
+
+        void bind(final MessageItem message) {
+
+            //썸네일 이미지를 띄운다
+            Glide.with(mContext).asBitmap().load(message.getThumbImage_url()).into(sent_video_thumbnail_imageView);
+
+            //메시지 보낸 시각 표시
+            sent_video_time_textView.setText(Function.formatTime(message.getTimeMillis()));
+
+            //프로그레스 바를 보여준다
+            sent_video_progressBar.setVisibility(View.VISIBLE);
+
+            //처음 띄워줄 때: 재생버튼을 숨긴다
+            sent_video_playBtn_imageView.setVisibility(View.GONE);
+            sent_video_textView.setText("Encoding");
+
+        }
+
+
+    }
+
+
 
 
     private class ServerMessageHolder extends RecyclerView.ViewHolder {

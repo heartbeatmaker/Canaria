@@ -75,9 +75,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import cz.msebera.android.httpclient.entity.mime.content.ContentBody;
@@ -157,9 +159,9 @@ public class ChatActivity extends AppCompatActivity{
     List<Image> selected_video_list;
 
     HashMap<String, String> video_hash = new HashMap<>();
-    ArrayList<String> all_videos = new ArrayList<>();
+    ArrayList<String> video_path_list = new ArrayList<>();
 
-    int video_count = 0;
+    int video_count;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -498,40 +500,48 @@ public class ChatActivity extends AppCompatActivity{
                     mRequestBody.addFormDataPart("room_id", String.valueOf(roomId));
                     mRequestBody.addFormDataPart("count", String.valueOf(count));
 
+                    Log.d("이미지", "방 id ="+roomId);
+                    Log.d("이미지", "선택된 파일 개수 ="+count);
+
+                    video_count = 0;
                     for(int i = 0; i < count; i++){
 
                         String path = images_list.get(i).getPath();
-                        Log.d("이미지", "path="+path);
+                        Log.d("이미지", i+"번째 파일의 path="+path);
 
-                        File file = new File(path);
-
-//                        //파일 압축
-                        file = new Compressor(this)
-                                .setQuality(30)
-                                .compressToFile(file);
-
+                        File file = null;
 
 //                    MediaType MEDIA_TYPE = path.get(0).endsWith("png") ?
 //                            MediaType.parse("image/png") : MediaType.parse("image/jpeg");
 
                         String[] path_split = path.split("/");
                         String file_name = path_split[path_split.length-1];
-                        Log.d("이미지", "file_name="+file_name);
+                        Log.d("이미지", i+"번째 파일의 file_name="+file_name);
 
 
                         //확장자를 추출한다
-                        String[] file_name_split = file_name.split(".");
+                        String[] file_name_split = file_name.split("\\.");
+
                         String extension = file_name_split[file_name_split.length-1];
-                        Log.d("이미지", "확장자="+extension);
+                        Log.d("이미지", i+"번째 파일의 확장자="+extension);
 
                         //이미지와 동영상을 구분한다
                         if(extension.equals("jpg")){ //이미지일 때
+                            Log.d("이미지", i+"번째 파일은 이미지임");
 
+                            file = new File(path);
+                            //이미지 파일 압축
+                            file = new Compressor(this)
+                                    .setQuality(30)
+                                    .compressToFile(file);
+
+                            Log.d("이미지", i+"번째 파일을 압축함");
 
                         }else if(extension.equals("mp4")){ //동영상일 때
+                            Log.d("이미지", i+"번째 파일은 동영상임");
 
-
-                            all_videos.add(video_count, file_name);
+                            //동영상마다 인덱스를 지정하여, 동영상 경로를 리스트에 담는다
+                            video_path_list.add(video_count, path);
 
 
                             //파일 크기를 검사한다
@@ -552,29 +562,29 @@ public class ChatActivity extends AppCompatActivity{
                             }else{
                                 value = length + " KB";
                             }
-                            Log.i("이미지", "파일 용량="+value);
-
+                            Log.i("이미지", i+"번째 파일의 용량="+value);
 
 
 
                             // 동영상의 썸네일 이미지를 추출한다
                             //비트맵으로 추출한 썸네일을 임시경로에 저장한다
+                            Log.i("이미지", i+"번째 파일(동영상)의 썸네일을 추출함");
                             Bitmap bitmap = ThumbnailUtils.createVideoThumbnail(path, MediaStore.Video.Thumbnails.FULL_SCREEN_KIND);
                             Bitmap thumbnail_bitmap = ThumbnailUtils.extractThumbnail(bitmap, 360, 480);
 
 
                             //썸네일 파일 이름 = video_원래이름.jpg
                             String thumbnail_filename = "video_"+video_count+"_"+file_name.substring(0, file_name.length()-4)+".jpg";
-                            Log.i("이미지", "썸네일 파일 이름="+thumbnail_filename);
+                            Log.i("이미지", i+"번째 파일(동영상)의 썸네일 이미지 이름="+thumbnail_filename);
 
-                            
+
 
                             //파일 생성
                             File thumbnail_file = createImageFile_thumbnail(thumbnail_filename);
 
                             FileOutputStream out = new FileOutputStream(thumbnail_file);
                             // 넘겨 받은 bitmap을 jpeg(손실압축)으로 저장한다
-                            thumbnail_bitmap.compress(Bitmap.CompressFormat.JPEG, 50 , out);
+                            thumbnail_bitmap.compress(Bitmap.CompressFormat.JPEG, 70 , out);
                             out.close();
 
                             //file_name = 썸네일 이름
@@ -587,6 +597,29 @@ public class ChatActivity extends AppCompatActivity{
 
                             video_count++;
                         }
+
+
+
+                        //최종 이미지 파일의 크기를 검사한다
+
+                        float length = file.length() / 1024f; // Size in KB
+                        String value;
+                        float size;
+                        if (length >= 1024){
+
+                            size = (int) Math.ceil(length / 1024f);
+                            value = size + " MB";
+
+                            //파일 크기가 50MB를 넘으면, 업로드하지 않는다
+                            if(size > 50){
+                                Toast.makeText(this, "Cannot upload a file with the size over 50MB.", Toast.LENGTH_SHORT).show();
+                                continue;
+                            }
+                        }
+                        else
+                            value = length + " KB";
+
+                        Log.i("이미지", i+"번째 파일(동영상)의 최종 크기="+value);
 
 
                         RequestBody imageBody = RequestBody.create(MultipartBody.FORM, file);
@@ -675,37 +708,50 @@ public class ChatActivity extends AppCompatActivity{
 
                                 }else{//업로드 성공한 이미지가 있을 경우 -> 업로드 성공한 파일 이름을 db에 저장한다
 
+                                    Log.d("이미지", "서버에 업로드 성공한 이미지가 있음");
 
                                     handler.post(new Runnable() {
                                         @Override
                                         public void run() {
 
-                                            //동영상 썸네일과 이미지를 구분한다
-                                            //동영상 - 개별 / 이미지 - 하나로 묶어서
-                                            ArrayList<String> arrayList_video_thumbnail = new ArrayList<>();
 
                                             //jsonArray 에 있던 파일 이름을 string 으로 이어서 붙인다
                                             //파일이름1;파일이름2;파일이름3...
-                                            String filename_string = "";
+                                            String image_filename_string = "";
                                             try{
                                                 for(int k=0; k<success_array.length(); k++){
 
                                                     String filename = success_array.getString(k);
+                                                    Log.d("이미지", k+"번째 filename="+filename);
 
-                                                    //서버에서 받은 썸네일 파일 이름 = 날짜_video_원래이름.jpg
-                                                    //서버에서 받은 썸네일 파일 이름 = 날짜_video_원래이름(1).jpg
+                                                    //서버에서 받은 썸네일 파일 이름 = 날짜_video_index_원래이름.jpg or (1).jpg
+                                                    //video_list 의 index와 썸네일 이름의 index가 일치하는지 검사한다
+                                                    //일치하면 -> hashmap에 담는다
 
-                                                    String[] filename_split = filename_string.split("_");
+                                                    String[] filename_split = filename.split("_");
+                                                    Log.d("이미지", "이 파일이 동영상인지 검사. filename_split[1]="+filename_split[1]);
 
-                                                    if(filename_split[1].equals("video")){
+                                                    if(filename_split[1].equals("video")){ //이 파일이 비디오라면
+                                                        Log.d("이미지", k+"번째 파일은 동영상 썸네일임");
 
 
+                                                        //인덱스를 가져온다
+                                                        int index_extracted = Integer.valueOf(filename_split[2]);
+                                                        Log.d("이미지", k+"번째 파일(동영상 썸네일)의 index="+index_extracted);
 
+                                                        Log.d("이미지", k+"번째 파일(동영상 썸네일)의 원본 동영상 path="+video_path_list.get(index_extracted));
+
+                                                        //key=썸네일 이름, value=원본 동영상 파일 경로
+                                                        video_hash.put(filename, video_path_list.get(index_extracted));
+
+                                                    }else{ //이 파일이 사진이라면
+                                                        Log.d("이미지", k+"번째 파일은 사진임");
+
+                                                        image_filename_string += filename + ";";
                                                     }
 
-
-                                                    filename_string += success_array.getString(k) + ";";
                                                 }
+
                                             }catch (Exception e){
                                                 StringWriter sw = new StringWriter();
                                                 e.printStackTrace(new PrintWriter(sw));
@@ -713,23 +759,32 @@ public class ChatActivity extends AppCompatActivity{
 
                                                 Log.d(TAG,ex);
                                             }
-                                            //마지막 ; 제거
-                                            filename_string = filename_string.substring(0, filename_string.length()-1);
 
 
+                                            //이미지 파일이 존재하는 경우
+                                            if(!image_filename_string.equals("")){
+                                                //마지막 ; 제거
+                                                Log.d("이미지", "이미지 파일의 이름을 string으로 엮음. image_filename_string="+image_filename_string);
+                                                image_filename_string = image_filename_string.substring(0, image_filename_string.length()-1);
+                                            }else{
+                                                Log.d("이미지", "image_filename_string 이 빈 값임");
+                                            }
+
+
+                                            //---------------이미지 파일을 처리하는 부분---------------
 
                                             //1. 이미지 파일의 이름을, db에 메시지 형태로 저장한다
 
                                             //메시지 내용: 'Photo'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
                                             String message = "";
-                                            int number_of_files = success_array.length(); //파일 개수
+                                            int number_of_files = success_array.length()-video_hash.size(); //파일 개수
                                             if(number_of_files == 1){
                                                 message = number_of_files + " Photo";
                                             }else if(number_of_files >1){
                                                 message = number_of_files + " Photos";
                                             }
 
-                                            dbHelper.insert_chatLogs(roomId, userId, username, message, filename_string, curTime, 1);
+                                            dbHelper.insert_chatLogs(roomId, userId, username, message, image_filename_string, curTime, 1);
 
 
 
@@ -756,16 +811,49 @@ public class ChatActivity extends AppCompatActivity{
 
 
                                             //3. 메시지 리사이클러뷰에 아이템을 추가한다
-                                            messageItemList.add(new MessageItem(userId, username, "", roomId, filename_string, curTime));
+                                            messageItemList.add(new MessageItem(userId, username, "", roomId, image_filename_string, curTime));
+
+                                            //메시지 리사이클러뷰 업데이트 - 아래 동영상 부분과 겹친다
+//                                            adapter.notifyDataSetChanged();
+//                                            rcv.scrollToPosition(messageItemList.size()-1);
+
+
+                                            //4. 채팅 서버에 메시지를 보낸다
+                                            sendMsg("msg_image/"+roomId+"/"+image_filename_string);
+
+                                            //--------------------------------이미지 처리 끝---------------------------------
+
+
+
+
+                                            //---------------------동영상 파일을 처리하는 부분----------------------------
+
+                                            //3. 메시지 리사이클러뷰에 아이템을 추가한다 (썸네일 이미지를 화면에 띄운다)
+
+                                            if(video_hash.size()>0){ //동영상 썸네일이 있을 경우에만 아래 코드를 실행한다
+                                                Log.d("이미지", "화면에 띄울 썸네일 파일이 있음. 메시지 화면에 추가하기 시작");
+
+                                                Set set = video_hash.keySet();
+
+                                                Iterator iterator = set.iterator();
+                                                while(iterator.hasNext()){
+
+                                                    //hashmap에서 key만 가져오면 된다. key = 이미지 이름
+                                                    String thumbnail_image_name = (String)iterator.next();
+                                                    messageItemList.add(new MessageItem(userId, username, "", roomId, thumbnail_image_name, curTime));
+
+                                                    Log.d("이미지", "hashMap Key(=thumbnail_image_name) : " + thumbnail_image_name);
+
+                                                }
+
+                                            }
+
+                                            //--------------------------------동영상 처리 끝---------------------------------
+
 
                                             //메시지 리사이클러뷰 업데이트
                                             adapter.notifyDataSetChanged();
                                             rcv.scrollToPosition(messageItemList.size()-1);
-
-
-                                            //4. 채팅 서버에 메시지를 보낸다
-                                            sendMsg("msg_image/"+roomId+"/"+filename_string);
-
                                         }
                                     });
 

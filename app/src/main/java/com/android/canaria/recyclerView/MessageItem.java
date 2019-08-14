@@ -36,9 +36,9 @@ public class MessageItem {
         return image_name;
     }
 
-    public String getImage_url() {
+    public String getThumbImage_url() {
 
-        image_url = Function.domain+"/images/"+room_id+"/"+image_name;
+        image_url = Function.domain+"/images/"+room_id+"_thumb/"+image_name;
 
         return image_url;
     }
