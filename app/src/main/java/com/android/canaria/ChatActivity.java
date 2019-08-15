@@ -196,6 +196,9 @@ public class ChatActivity extends AppCompatActivity{
         adapter = new MessageAdapter(messageItemList, this);
         rcv.setAdapter(adapter);
 
+        rcv.getRecycledViewPool().setMaxRecycledViews(3, 0); //SENT_VIDEO 뷰타입의 뷰는 재활용하지 않는다
+        rcv.getRecycledViewPool().setMaxRecycledViews(6, 0); //RECEIVED_VIDEO 뷰타입의 뷰는 재활용하지 않는다
+
 
         //(drawerLayout에 띄워주는) 참여자 리사이클러뷰 초기화
         members_rcv = (RecyclerView)findViewById(R.id.chatRoom_members_rcv);
@@ -828,7 +831,6 @@ public class ChatActivity extends AppCompatActivity{
 
                                             //---------------------동영상 파일을 처리하는 부분----------------------------
 
-                                            //3. 메시지 리사이클러뷰에 아이템을 추가한다 (썸네일 이미지를 화면에 띄운다)
 
                                             if(video_hash.size()>0){ //동영상 썸네일이 있을 경우에만 아래 코드를 실행한다
                                                 Log.d("이미지", "화면에 띄울 썸네일 파일이 있음. 메시지 화면에 추가하기 시작");
@@ -838,11 +840,37 @@ public class ChatActivity extends AppCompatActivity{
                                                 Iterator iterator = set.iterator();
                                                 while(iterator.hasNext()){
 
-                                                    //hashmap에서 key만 가져오면 된다. key = 이미지 이름
+                                                    //hashmap 에서 key 와 value 를 가져온다
+                                                    //key=썸네일 이름, value=원본 동영상 파일 경로
                                                     String thumbnail_image_name = (String)iterator.next();
-                                                    messageItemList.add(new MessageItem(userId, username, "", roomId, thumbnail_image_name, curTime));
+                                                    String origin_video_path = video_hash.get(thumbnail_image_name);
 
-                                                    Log.d("이미지", "hashMap Key(=thumbnail_image_name) : " + thumbnail_image_name);
+                                                    Log.d("이미지", "썸네일 이미지 이름 = "+thumbnail_image_name);
+                                                    Log.d("이미지", "원본 동영상의 저장경로 = "+origin_video_path);
+
+
+                                                    //1. 이미지 파일의 이름을, db에 메시지 형태로 저장한다
+                                                    //@@@@@ video_path 를 "yet"이라고 저장한다 @@@@
+                                                    //db id를 받아온다
+                                                    int db_id = dbHelper.insert_chatLogs_with_videoPath(roomId, userId, username, message, image_filename_string, curTime, 1,
+                                                            "yet");
+
+                                                    Log.d("이미지", "썸네일 이미지를 db에 저장함. inserted_db_id = "+db_id);
+
+
+
+                                                    //2. 메시지 리사이클러뷰에 아이템을 추가한다 (썸네일 이미지를 화면에 띄운다)
+                                                    MessageItem messageItem = new MessageItem(userId, username, "", roomId, thumbnail_image_name, curTime);
+
+                                                    //원본 동영상 파일의 주소를 set 한다
+                                                    messageItem.setVideo_file_path(origin_video_path);
+
+                                                    //이 메시지의 db id도 set 한다
+                                                    messageItem.setDb_id(db_id);
+
+                                                    messageItemList.add(messageItem);
+
+                                                    Log.d("이미지", "메시지 리사이클러뷰에 아이템을 추가함");
 
                                                 }
 
@@ -885,235 +913,8 @@ public class ChatActivity extends AppCompatActivity{
                 Log.d("이미지",ex);
             }
 
-
-
-        }else if(requestCode == PICK_VIDEO_REQUEST && resultCode == RESULT_OK){
-
-
-            final OkHttpClient mOkHttpClient = new OkHttpClient.Builder()
-                    .connectTimeout(20, TimeUnit.SECONDS)
-                    .writeTimeout(60, TimeUnit.SECONDS)
-                    .readTimeout(40, TimeUnit.SECONDS)
-                    .build();
-
-            MultipartBody.Builder mRequestBody = new MultipartBody.Builder()
-                    .setType(MultipartBody.FORM);
-
-            try{
-
-                selected_video_list = ImagePicker.getImages(data);
-                int count = selected_video_list.size();
-
-
-                    //방 id, 파일이 몇 개인지 전달한다
-                    mRequestBody.addFormDataPart("room_id", String.valueOf(roomId));
-                    mRequestBody.addFormDataPart("count", String.valueOf(count));
-
-                    for(int i = 0; i < count; i++){
-
-                        //동영상 원본파일 경로
-                        String path = selected_video_list.get(i).getPath();
-                        Log.d("이미지", "path="+path);
-
-
-                        //파일 크기를 검사한다
-                        File videoFile = new File(path);
-                        float length = videoFile.length() / 1024f; // Size in KB
-                        String value;
-                        float size;
-                        if (length >= 1024){
-
-                            size = (int) Math.ceil(length / 1024f);
-                            value = size + " MB";
-
-                            //파일 크기가 50MB를 넘으면, 업로드하지 않는다
-                            if(size > 50){
-                                Toast.makeText(this, "Cannot upload a file with the size over 50MB.", Toast.LENGTH_SHORT).show();
-                                continue;
-                            }
-                        }
-                        else
-                            value = length + " KB";
-
-                        Log.i("이미지", "파일 용량="+value);
-
-
-                        //파일 이름 추출
-                        String[] path_split = path.split("/");
-                        String file_name = path_split[path_split.length-1];
-                        Log.d("이미지", "file_name="+file_name);
-
-
-                        RequestBody imageBody = RequestBody.create(MultipartBody.FORM, path);
-                        //key, 서버가 저장할 file 이름, 이미지파일
-                        mRequestBody.addFormDataPart("image"+i, file_name, imageBody);
-                    }
-
-
-
-                    RequestBody rb = mRequestBody.build();
-
-                    final Request request = new Request.Builder()
-                            .url(upLoadServerUri)
-                            .post(rb)
-                            .build();
-
-
-                Toast.makeText(ChatActivity.this, "Uploading files.. please wait", Toast.LENGTH_SHORT).show();
-
-
-                new Thread(new Runnable() {
-
-                        public void run() {
-
-                            String responseMsg;
-                            try {
-
-                                //서버에 요청을 보낸다
-                                Response mResponse = mOkHttpClient.newCall(request).execute();
-                                if (!mResponse.isSuccessful()) throw new IOException();
-
-                                //서버로부터의 응답
-                                responseMsg = mResponse.body().string();
-                                Log.d("이미지", "response msg = "+responseMsg);
-
-
-                            } catch (IOException e) {
-                                responseMsg = "time out";
-
-                                StringWriter sw = new StringWriter();
-                                e.printStackTrace(new PrintWriter(sw));
-                                String ex = sw.toString();
-
-                                Log.d("이미지",ex);
-                            }
-
-                            try{
-
-                                //json 형태로 받은 응답을 파싱한다
-                                JSONObject result_object = new JSONObject(responseMsg);
-                                final JSONArray success_array = (JSONArray) result_object.get("success_data");
-                                JSONArray fail_array = (JSONArray)result_object.get("fail_data");
-
-                                Log.d("이미지", "success_array = "+success_array);
-                                Log.d("이미지", "fail_array = "+fail_array);
-
-
-                                //업로드 실패한 파일이 있다면, 사용자에게 그 사실을 알려준다 -- 아직 표시 안함
-                                String imageName_failed = "";
-                                if(fail_array.length()>0){
-                                    for(int k=0; k<fail_array.length(); k++){
-                                        imageName_failed += fail_array.get(k) + ",";
-                                    }
-                                    //마지막 , 제거
-                                    imageName_failed = imageName_failed.substring(0, imageName_failed.length()-1);
-
-                                }
-
-
-                                final long curTime = System.currentTimeMillis();
-                                if(success_array.length() == 0){ //업로드 성공한 이미지가 없을 경우
-
-                                }else{//업로드 성공한 이미지가 있을 경우 -> 업로드 성공한 파일 이름을 db에 저장한다
-
-
-//                                    handler.post(new Runnable() {
-//                                        @Override
-//                                        public void run() {
-//
-//                                            String filename_string = "";
-//                                            try{
-//                                                String message = "";
-//                                                for(int k=0; k<success_array.length(); k++){
-//
-//                                                    String image_name = success_array.getString(k);
-//                                                    //화면에 사진을 보여준다
-//                                                    messageItemList.add(new MessageItem(userId, username, "", roomId, image_name, curTime));
-//
-//                                                    //이미지 파일의 이름을, db에 메시지 형태로 저장한다
-//                                                    //메시지 내용: 'Video'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
-//
-//                                                    int number_of_files = success_array.length();
-//                                                    if(number_of_files == 1){
-//                                                        message = number_of_files + " Video";
-//                                                    }else if(number_of_files >1){
-//                                                        message = number_of_files + " Videos";
-//                                                    }
-//
-//                                                    dbHelper.insert_chatLogs(roomId, userId, username, message, image_name, curTime, 1);
-//
-//                                                    filename_string += image_name + ";";
-//                                                }
-//
-//                                                //메시지 리사이클러뷰 업데이트
-//                                                adapter.notifyDataSetChanged();
-//                                                rcv.scrollToPosition(messageItemList.size()-1);
-//
-//
-//                                                //채팅 방목록 업데이트
-//                                                //1. sqlite 에서 방 정보를 불러온다
-//                                                String roomInfo = dbHelper.get_chatRoomInfo(roomId);
-//                                                String [] roomInfo_array = roomInfo.split("/");
-//                                                String roomName_msg = roomInfo_array[1];
-//                                                String memberInfo = roomInfo_array[3];
-//                                                String[] memberInfo_array = memberInfo.split(";");
-//                                                int number_of_members_msg = memberInfo_array.length/2;
-//
-//
-//                                                //2. 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
-//                                                Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
-//                                                        message, Function.getCurrentTime(), roomId, 0));
-//
-//                                                for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
-//                                                    RoomListItem item = Main_Fragment2.roomItemList.get(i);
-//                                                    if(item.getRoomId() == roomId){
-//                                                        Main_Fragment2.roomItemList.remove(i);
-//                                                        Log.d(TAG, i+" item is removed from roomItemList");
-//                                                    }
-//                                                }
-//
-//
-//
-//                                            }catch (Exception e){
-//                                                StringWriter sw = new StringWriter();
-//                                                e.printStackTrace(new PrintWriter(sw));
-//                                                String ex = sw.toString();
-//
-//                                                Log.d(TAG,ex);
-//                                            }
-//
-//                                        }
-//                                    });
-
-                                }
-
-
-                            }catch (Exception e){
-                                StringWriter sw = new StringWriter();
-                                e.printStackTrace(new PrintWriter(sw));
-                                String ex = sw.toString();
-
-                                Log.d(TAG,ex);
-                            }
-
-
-                        }
-
-                    }).start();
-
-
-            }catch (Exception e){
-                StringWriter sw = new StringWriter();
-                e.printStackTrace(new PrintWriter(sw));
-                String ex = sw.toString();
-
-                Log.d("이미지",ex);
-            }
-
-
-
-
         }
+
     }
 
 

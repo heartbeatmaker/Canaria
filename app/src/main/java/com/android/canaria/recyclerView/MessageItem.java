@@ -21,6 +21,11 @@ public class MessageItem {
 
     private String image_name;
 
+    private String video_file_path;
+
+
+    private int db_id;
+
     public MessageItem(int sender_id, String senderUsername, String message, int room_id, String image_name, long timeMillis) {
         this.room_id = room_id;
         this.sender_id = sender_id;
@@ -30,6 +35,25 @@ public class MessageItem {
         this.image_name = image_name;
     }
 
+
+
+
+
+    public int getDb_id() {
+        return db_id;
+    }
+
+    public void setDb_id(int db_id) {
+        this.db_id = db_id;
+    }
+
+    public String getVideo_file_path() {
+        return video_file_path;
+    }
+
+    public void setVideo_file_path(String video_file_path) {
+        this.video_file_path = video_file_path;
+    }
 
 
     public String getImage_name() {

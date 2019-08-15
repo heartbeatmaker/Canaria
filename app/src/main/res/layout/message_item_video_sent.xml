@@ -31,7 +31,8 @@
             android:layout_centerInParent="true"
             android:background="@color/white"
             android:layout_alignTop="@id/sent_video_imageView"
-            android:layout_marginTop="50dp"/>
+            android:layout_marginTop="50dp"
+            android:visibility="gone"/>
 
         <ImageView
             android:id="@+id/sent_video_playBtn_imageView"
@@ -41,7 +42,22 @@
             android:layout_centerInParent="true"
             android:paddingTop="10dp"
             android:background="@drawable/ic_play_circle_outline_black_24dp"
-            />
+            android:visibility="gone"/>
+
+        <com.dinuscxj.progressbar.CircleProgressBar
+            android:id="@+id/sent_video_circleProgressBar"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_centerInParent="true"
+            android:paddingTop="10dp"
+            android:layout_below="@id/sent_video_textView"
+
+            app:progress_start_color="@color/colorPrimary"
+            app:style="solid_line"
+            app:progress_stroke_width="10dp"
+            app:progress_text_color="@color/colorPrimary"
+            app:progress_text_size="15sp"
+            android:visibility="gone" />
 
         <ProgressBar
             android:id="@+id/sent_video_progressBar"
@@ -50,7 +66,7 @@
             android:layout_centerInParent="true"
             android:paddingTop="10dp"
             android:layout_below="@id/sent_video_textView"
-            />
+            android:visibility="gone"/>
 
     </RelativeLayout>
 
