@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.media.Image;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
@@ -255,6 +257,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 ((SentImageHolder) holder).bind(message);
                 break;
             case VIEW_TYPE_VIDEO_SENT:
+                ((SentVideoHolder) holder).setIsRecyclable(false);
                 ((SentVideoHolder) holder).bind(message);
                 break;
             case VIEW_TYPE_MESSAGE_RECEIVED:
@@ -264,6 +267,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 ((ReceivedImageHolder) holder).bind(message);
                 break;
             case VIEW_TYPE_VIDEO_RECEIVED:
+                ((ReceivedVideoHolder) holder).setIsRecyclable(false);
                 ((ReceivedVideoHolder) holder).bind(message);
                 break;
             case VIEW_TYPE_MESSAGE_SERVER:
@@ -458,9 +462,14 @@ public class MessageAdapter extends RecyclerView.Adapter {
             sent_video_progressBar = itemView.findViewById(R.id.sent_video_progressBar);
             sent_video_textView = itemView.findViewById(R.id.sent_video_textView);
             sent_video_time_textView = itemView.findViewById(R.id.sent_video_time_textView);
+
         }
 
         void bind(final MessageItem message) {
+
+            final int room_id = message.getRoom_id();
+            final int db_id = message.getDb_id();
+            final String video_file_path = message.getVideo_file_path();
 
 
             //썸네일 이미지를 띄운다
@@ -482,7 +491,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
                     //이 동영상이 이미 서버에 업로드 되어 있는지 확인한다
                     Cursor cursor = db.rawQuery
-                            ("SELECT video_path FROM chat_logs WHERE id='" + message.getDb_id()+"';", null);
+                            ("SELECT video_path FROM chat_logs WHERE id='" + db_id +"';", null);
 
                     cursor.moveToFirst();
                     String video_path = cursor.getString(0);
@@ -495,13 +504,12 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
                         //동영상 압축 -> 업로드 쓰레드를 순차적으로 진행한다
                         //업로드 쓰레드는 videoCompressor 클래스 안에서 실행된다
-                        videoUploader = new VideoUploader(mContext, compressed_filePath, sent_video_circleProgressBar, sent_video_progressBar,
-                                sent_video_textView, sent_video_playBtn_imageView, message.getRoom_id(), message.getDb_id());
-                        VideoCompressor videoCompressor = new VideoCompressor(mContext, message.getVideo_file_path(), sent_video_progressBar, sent_video_textView);
+                        VideoCompressor videoCompressor = new VideoCompressor(mContext, video_file_path, sent_video_progressBar, sent_video_textView,
+                                sent_video_circleProgressBar, sent_video_playBtn_imageView, room_id, db_id);
 
 
                         //압축 -> 업로드 절차는 순차적으로 실행되어야 한다. 다만 여러개의 동영상 업로드 절차는 병렬로 실행되어야 한다!!
-                        videoCompressor.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                        videoCompressor.execute();
 
 
                     }else if(video_path.length() > 10){//이 썸네일의 원본 동영상은 이미 서버에 업로드 되었음
@@ -512,7 +520,8 @@ public class MessageAdapter extends RecyclerView.Adapter {
                         sent_video_playBtn_imageView.setVisibility(View.VISIBLE);
 
                         //재생 시간을 보여준다
-                        sent_video_textView.setText(getDuration(message.getVideo_file_path()));
+                        sent_video_textView.setVisibility(View.VISIBLE);
+                        sent_video_textView.setText(getDuration(video_file_path));
 
                         Log.d("이미지", "보낸 동영상) 재생버튼과 재생시간이 썸네일 위에 보여야됨");
                     }
@@ -528,7 +537,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
                     //이 동영상이 이미 서버에 업로드 되어 있는지 확인한다
                     Cursor cursor = db.rawQuery
-                            ("SELECT video_path FROM chat_logs WHERE id='" + message.getDb_id()+"';", null);
+                            ("SELECT video_path FROM chat_logs WHERE id='" + db_id +"';", null);
 
                     cursor.moveToFirst();
                     String video_path = cursor.getString(0);
@@ -536,14 +545,21 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
                     if(video_path.length() > 10){//이 썸네일의 원본 동영상은 이미 서버에 업로드 되었음
 
-                        Toast.makeText(mContext, "uploaded", Toast.LENGTH_SHORT).show();
-
                         //클릭하면 크게보는 화면이 뜨도록 만든다
                         //원본 동영상의 path 를 전달한다
 
-                    }else{//이 썸네일의 원본 동영상은 서버에 업로드 되지 않았음 -- 업로드 중임
+                        //해당 이미지의 url 을 전달한다
+                        Intent intent = new Intent(mContext, ImageActivity.class);
 
-                        Toast.makeText(mContext, "not uploaded", Toast.LENGTH_SHORT).show();
+                        intent.putExtra("type", "video"); //데이터 타입을 알려준다. 이미지 or 동영상
+                        intent.putExtra("room_id", room_id);
+                        intent.putExtra("thumbnail_filename", message.getImage_name());
+                        intent.putExtra("video_path", video_file_path);
+
+                        mContext.startActivity(intent);
+
+
+                    }else{//이 썸네일의 원본 동영상은 서버에 업로드 되지 않았음 -- 업로드 중이거나, 업로드 실패한 것
 
                         //클릭이벤트가 발생하지 않도록 한다
 
@@ -608,12 +624,26 @@ public class MessageAdapter extends RecyclerView.Adapter {
         ProgressBar progressBar;
         TextView encoding_info_textView;
 
-        public VideoCompressor(Context context, String origin_video_file_path, ProgressBar progressBar, TextView encoding_info_textView) {
+
+        //업로드 쓰레드에서 필요한 변수
+        CircleProgressBar circleProgressBar;
+        ImageView playBtn_imageView;
+        int room_id, message_db_id;
+
+
+        public VideoCompressor(Context context, String origin_video_file_path, ProgressBar progressBar, TextView encoding_info_textView
+        , CircleProgressBar circleProgressBar,
+                               ImageView playBtn_imageView, int room_id, int message_db_id) {
             this.mContext = context;
             this.origin_video_file_path = origin_video_file_path;
 
             this.progressBar = progressBar;
             this.encoding_info_textView = encoding_info_textView;
+
+            this.circleProgressBar = circleProgressBar;
+            this.playBtn_imageView = playBtn_imageView;
+            this.room_id = room_id;
+            this.message_db_id = message_db_id;
 
             Log.d("이미지", "Video compressor) 원본 동영상의 path = "+origin_video_file_path);
         }
@@ -625,6 +655,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
             //화면에 프로그레스바를 띄우고, 압축중이라는 메시지를 보여준다
             progressBar.setVisibility(View.VISIBLE);
+            encoding_info_textView.setVisibility(View.VISIBLE);
             encoding_info_textView.setText("Encoding..");
 
             Log.d("이미지", "Video compressor) 화면에 프로그레스바, 압축중 메시지가 보여야됨");
@@ -688,6 +719,9 @@ public class MessageAdapter extends RecyclerView.Adapter {
             Log.d("이미지", "Video compressor) 썸네일 위에 프로그레스바, 압축중 메시지가 없어야 됨");
 
 
+            VideoUploader videoUploader = new VideoUploader(mContext, compressed_filePath, circleProgressBar, progressBar,
+                    encoding_info_textView, playBtn_imageView, room_id, message_db_id);
+
             //업로드 쓰레드를 실행시킨다
             videoUploader.execute();
 
@@ -706,6 +740,8 @@ public class MessageAdapter extends RecyclerView.Adapter {
         long hours = duration / 3600;
         long minutes = (duration - hours * 3600) / 60;
         long seconds = duration - (hours * 3600 + minutes * 60);
+
+        retriever.release();
 
         return minutes + " : " + seconds;
     }
@@ -745,7 +781,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
             this.room_id = room_id;
             this.message_db_id = message_db_id;
 
-            Log.d("이미지", "Video uploader) 압축한 동영상을 서버에 업로드 할 것임. video_file_path="+compressed_video_file_path);
+            Log.d("이미지", "Video uploader 생성자) 압축한 동영상을 서버에 업로드 할 것임. video_file_path="+compressed_video_file_path);
         }
 
         @Override
@@ -756,7 +792,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
             //화면에 원형 프로그레스바를 띄우고, 0% 업로드 되었음을 알려준다
             circleProgressBar.setVisibility(View.VISIBLE);
-            upload_info_textView.setText("0");
+            upload_info_textView.setText("Uploading..");
 
             Log.d("이미지", "Video uploader) 화면에 원형 프로그레스바가 보여야 함. 그 안에 0 이라고 써있어야 함");
         }
@@ -851,72 +887,93 @@ public class MessageAdapter extends RecyclerView.Adapter {
             String result = "";
             try{
 
-                JSONObject result_object = new JSONObject(responseMsg);
-                final JSONArray success_array = (JSONArray) result_object.get("success_data");
-                JSONArray fail_array = (JSONArray)result_object.get("fail_data");
+                if(responseMsg.equals("")){
 
-                Log.d("이미지", "Video uploader) 동영상 업로드 후 success_array = "+success_array);
-                Log.d("이미지", "Video uploader) 동영상 업로드 후 fail_array = "+fail_array);
+                    return "fail";
 
-
-                //업로드 성공 시
-                if(success_array.length()>0){
-                    result = "success";
-
-                    //1. 서버가 저장한 파일의 이름을 받아온다
-                    returned_filename = (String)success_array.get(0);
-                    Log.d("이미지", "Video uploader) 서버가 저장한 동영상 파일의 이름 = "+returned_filename);
+                }else{
 
 
-                    //2. db에 저장된 메시지 정보를 업데이트한다. video_path = 압축 동영상 파일의 path
-                    db.execSQL("UPDATE chat_logs SET video_path='"+compressed_video_file_path+"' WHERE id='" + message_db_id + "';");
+                    JSONObject result_object = new JSONObject(responseMsg);
+                    final JSONArray success_array = (JSONArray) result_object.get("success_data");
+                    JSONArray fail_array = (JSONArray)result_object.get("fail_data");
 
-                    Log.d("이미지", "Video uploader) db를 업데이트 함. video_path 수정");
-
-
-                    //3. 채팅 서버로 메시지를 발송한다
-                    String msg = "msg_video/"+room_id+"/"+returned_filename;
-
-                    Intent intent = new Intent(mContext, MainService.class);
-                    intent.putExtra("message", msg);
-                    mContext.startService(intent);
-
-                    Log.d("이미지", "Video uploader) 채팅 서버로 메시지 발송함. 자바 서버에 메시지 도착했는지 확인");
+                    Log.d("이미지", "Video uploader) 동영상 업로드 후 success_array = "+success_array);
+                    Log.d("이미지", "Video uploader) 동영상 업로드 후 fail_array = "+fail_array);
 
 
-                    //4. 채팅방 목록을 업데이트한다
+                    //업로드 성공 시
+                    if(success_array.length()>0){
+                        result = "success";
 
-                    //4-1. sqlite 에서 방 정보를 불러온다
-                    String roomInfo = dbHelper.get_chatRoomInfo(room_id);
-                    String [] roomInfo_array = roomInfo.split("/");
-                    String roomName_msg = roomInfo_array[1];
-                    String memberInfo = roomInfo_array[3];
-                    String[] memberInfo_array = memberInfo.split(";");
-                    int number_of_members_msg = memberInfo_array.length/2;
+                        //1. 서버가 저장한 파일의 이름을 받아온다
+                        returned_filename = (String)success_array.get(0);
+                        Log.d("이미지", "Video uploader) 서버가 저장한 동영상 파일의 이름 = "+returned_filename);
 
 
-                    //4-2. 목록 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
-                    Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
-                            "1 Video", Function.getCurrentTime(), room_id, 0));
+                        //2. db에 저장된 메시지 정보를 업데이트한다. video_path = 압축 동영상 파일의 path
+                        db.execSQL("UPDATE chat_logs SET video_path='"+compressed_video_file_path+"' WHERE id='" + message_db_id + "';");
 
-                    for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
-                        RoomListItem item = Main_Fragment2.roomItemList.get(i);
-                        if(item.getRoomId() == room_id){
-                            Main_Fragment2.roomItemList.remove(i);
-                            Log.d(TAG, i+" item is removed from roomItemList");
+                        Log.d("이미지", "Video uploader) db를 업데이트 함. video_path 수정");
+
+//
+//                        if(ChatActivity.uploading_video_db_id_list.contains(message_db_id)){
+//
+//                            ChatActivity.uploading_video_db_id_list.remove(new Integer(message_db_id));
+//
+//                            Log.d("이미지", "Video uploader) ChatActivity 의 uploading_video_db_id_list에서 이 동영상을 제거함");
+//                        }else{
+//                            Log.d("이미지", "Video uploader) ChatActivity 의 uploading_video_db_id_list에 이 동영상이 없음. 원래 있어야 함");
+//                        }
+
+
+                        //3. 채팅 서버로 메시지를 발송한다
+                        String msg = "msg_video/"+room_id+"/"+returned_filename;
+
+                        Intent intent = new Intent(mContext, MainService.class);
+                        intent.putExtra("message", msg);
+                        mContext.startService(intent);
+
+                        Log.d("이미지", "Video uploader) 채팅 서버로 메시지 발송함. 자바 서버에 메시지 도착했는지 확인");
+
+
+                        //4. 채팅방 목록을 업데이트한다
+
+                        //4-1. sqlite 에서 방 정보를 불러온다
+                        String roomInfo = dbHelper.get_chatRoomInfo(room_id);
+                        String [] roomInfo_array = roomInfo.split("/");
+                        String roomName_msg = roomInfo_array[1];
+                        String memberInfo = roomInfo_array[3];
+                        String[] memberInfo_array = memberInfo.split(";");
+                        int number_of_members_msg = memberInfo_array.length/2;
+
+
+                        //4-2. 목록 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
+                        Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
+                                "1 Video", Function.getCurrentTime(), room_id, 0));
+
+                        for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
+                            RoomListItem item = Main_Fragment2.roomItemList.get(i);
+                            if(item.getRoomId() == room_id){
+                                Main_Fragment2.roomItemList.remove(i);
+                                Log.d(TAG, i+" item is removed from roomItemList");
+                            }
                         }
+
+                        Log.d("이미지", "Video uploader) 채팅방 목록 업데이트 함. 진짜 되었는지 확인");
+
+
                     }
 
-                    Log.d("이미지", "Video uploader) 채팅방 목록 업데이트 함. 진짜 되었는지 확인");
+
+                    //업로드 실패 시
+                    if(fail_array.length()>0){
+                        result = "fail";
+                    }
 
 
                 }
 
-
-                //업로드 실패 시
-                if(fail_array.length()>0){
-                    result = "fail";
-                }
 
             }catch (Exception e){
                 StringWriter sw = new StringWriter();
@@ -968,7 +1025,6 @@ public class MessageAdapter extends RecyclerView.Adapter {
             if(result.equals("success")){ //업로드 성공 시
 
                 //재생버튼과 재생시간을 띄운다
-                playBtn_imageView.setImageResource(R.drawable.ic_play_circle_outline_black_24dp);
                 playBtn_imageView.setVisibility(View.VISIBLE);
 
                 String duration = getDuration(compressed_video_file_path);
@@ -979,6 +1035,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
             }else{ //업로드 실패 시
 
                 //실패를 뜻하는 그림을 띄워준다
+                playBtn_imageView.setImageResource(0); //이미지뷰를 비움
                 playBtn_imageView.setImageResource(R.drawable.ic_warning_black_24dp);
                 playBtn_imageView.setVisibility(View.VISIBLE);
 
@@ -994,6 +1051,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
         }
 
     }
+
 
 
 }

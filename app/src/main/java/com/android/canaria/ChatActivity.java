@@ -158,8 +158,9 @@ public class ChatActivity extends AppCompatActivity{
 
     List<Image> selected_video_list;
 
-    HashMap<String, String> video_hash = new HashMap<>();
-    ArrayList<String> video_path_list = new ArrayList<>();
+    HashMap<String, String> video_hash;
+    ArrayList<String> video_path_list;
+//    public static ArrayList<Integer> uploading_video_db_id_list = new ArrayList<>();
 
     int video_count;
 
@@ -195,9 +196,6 @@ public class ChatActivity extends AppCompatActivity{
         messageItemList = new ArrayList<>();
         adapter = new MessageAdapter(messageItemList, this);
         rcv.setAdapter(adapter);
-
-        rcv.getRecycledViewPool().setMaxRecycledViews(3, 0); //SENT_VIDEO 뷰타입의 뷰는 재활용하지 않는다
-        rcv.getRecycledViewPool().setMaxRecycledViews(6, 0); //RECEIVED_VIDEO 뷰타입의 뷰는 재활용하지 않는다
 
 
         //(drawerLayout에 띄워주는) 참여자 리사이클러뷰 초기화
@@ -481,6 +479,11 @@ public class ChatActivity extends AppCompatActivity{
             }
 
         }else if(requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK){
+
+
+            //변수 초기화
+            video_hash = new HashMap<>();
+            video_path_list = new ArrayList<>();
 
 
             final OkHttpClient mOkHttpClient = new OkHttpClient.Builder()
@@ -769,60 +772,64 @@ public class ChatActivity extends AppCompatActivity{
                                                 //마지막 ; 제거
                                                 Log.d("이미지", "이미지 파일의 이름을 string으로 엮음. image_filename_string="+image_filename_string);
                                                 image_filename_string = image_filename_string.substring(0, image_filename_string.length()-1);
-                                            }else{
-                                                Log.d("이미지", "image_filename_string 이 빈 값임");
-                                            }
 
 
-                                            //---------------이미지 파일을 처리하는 부분---------------
+                                                //---------------이미지 파일을 처리하는 부분---------------
 
-                                            //1. 이미지 파일의 이름을, db에 메시지 형태로 저장한다
+                                                //1. 이미지 파일의 이름을, db에 메시지 형태로 저장한다
 
-                                            //메시지 내용: 'Photo'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
-                                            String message = "";
-                                            int number_of_files = success_array.length()-video_hash.size(); //파일 개수
-                                            if(number_of_files == 1){
-                                                message = number_of_files + " Photo";
-                                            }else if(number_of_files >1){
-                                                message = number_of_files + " Photos";
-                                            }
-
-                                            dbHelper.insert_chatLogs(roomId, userId, username, message, image_filename_string, curTime, 1);
-
-
-
-                                            //2. 채팅 방목록 업데이트
-                                            //2-1. sqlite 에서 방 정보를 불러온다
-                                            String roomInfo = dbHelper.get_chatRoomInfo(roomId);
-                                            String [] roomInfo_array = roomInfo.split("/");
-                                            String roomName_msg = roomInfo_array[1];
-                                            String memberInfo = roomInfo_array[3];
-                                            String[] memberInfo_array = memberInfo.split(";");
-                                            int number_of_members_msg = memberInfo_array.length/2;
-
-                                            //2-2. 목록 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
-                                            Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
-                                                    message, Function.getCurrentTime(), roomId, 0));
-
-                                            for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
-                                                RoomListItem item = Main_Fragment2.roomItemList.get(i);
-                                                if(item.getRoomId() == roomId){
-                                                    Main_Fragment2.roomItemList.remove(i);
-                                                    Log.d(TAG, i+" item is removed from roomItemList");
+                                                //메시지 내용: 'Photo'라고 저장한다. 방목록이나 푸쉬 메시지에서 띄워줄 내용
+                                                String message = "";
+                                                int number_of_files = success_array.length()-video_hash.size(); //파일 개수
+                                                if(number_of_files == 1){
+                                                    message = number_of_files + " Photo";
+                                                }else if(number_of_files >1){
+                                                    message = number_of_files + " Photos";
                                                 }
-                                            }
+
+                                                dbHelper.insert_chatLogs(roomId, userId, username, message, image_filename_string, curTime, 1);
 
 
-                                            //3. 메시지 리사이클러뷰에 아이템을 추가한다
-                                            messageItemList.add(new MessageItem(userId, username, "", roomId, image_filename_string, curTime));
 
-                                            //메시지 리사이클러뷰 업데이트 - 아래 동영상 부분과 겹친다
+                                                //2. 채팅 방목록 업데이트
+                                                //2-1. sqlite 에서 방 정보를 불러온다
+                                                String roomInfo = dbHelper.get_chatRoomInfo(roomId);
+                                                String [] roomInfo_array = roomInfo.split("/");
+                                                String roomName_msg = roomInfo_array[1];
+                                                String memberInfo = roomInfo_array[3];
+                                                String[] memberInfo_array = memberInfo.split(";");
+                                                int number_of_members_msg = memberInfo_array.length/2;
+
+                                                //2-2. 목록 맨 위에 아이템을 추가하고, 기존 아이템을 삭제한다
+                                                Main_Fragment2.roomItemList.add(0, new RoomListItem(roomName_msg, number_of_members_msg,
+                                                        message, Function.getCurrentTime(), roomId, 0));
+
+                                                for(int i=Main_Fragment2.roomItemList.size()-1; i>0; i--){
+                                                    RoomListItem item = Main_Fragment2.roomItemList.get(i);
+                                                    if(item.getRoomId() == roomId){
+                                                        Main_Fragment2.roomItemList.remove(i);
+                                                        Log.d(TAG, i+" item is removed from roomItemList");
+                                                    }
+                                                }
+
+
+                                                //3. 메시지 리사이클러뷰에 아이템을 추가한다
+                                                messageItemList.add(new MessageItem(userId, username, "", roomId, image_filename_string, curTime, 0, ""));
+
+                                                //메시지 리사이클러뷰 업데이트 - 아래 동영상 부분과 겹친다
 //                                            adapter.notifyDataSetChanged();
 //                                            rcv.scrollToPosition(messageItemList.size()-1);
 
 
-                                            //4. 채팅 서버에 메시지를 보낸다
-                                            sendMsg("msg_image/"+roomId+"/"+image_filename_string);
+                                                //4. 채팅 서버에 메시지를 보낸다
+                                                sendMsg("msg_image/"+roomId+"/"+image_filename_string);
+
+
+
+                                            }else{
+                                                Log.d("이미지", "image_filename_string 이 빈 값임");
+                                            }
+
 
                                             //--------------------------------이미지 처리 끝---------------------------------
 
@@ -849,10 +856,10 @@ public class ChatActivity extends AppCompatActivity{
                                                     Log.d("이미지", "원본 동영상의 저장경로 = "+origin_video_path);
 
 
-                                                    //1. 이미지 파일의 이름을, db에 메시지 형태로 저장한다
+                                                    //1. db에 메시지 형태로 저장한다
                                                     //@@@@@ video_path 를 "yet"이라고 저장한다 @@@@
                                                     //db id를 받아온다
-                                                    int db_id = dbHelper.insert_chatLogs_with_videoPath(roomId, userId, username, message, image_filename_string, curTime, 1,
+                                                    int db_id = dbHelper.insert_chatLogs_with_videoPath(roomId, userId, username, "1 Video", thumbnail_image_name, curTime, 1,
                                                             "yet");
 
                                                     Log.d("이미지", "썸네일 이미지를 db에 저장함. inserted_db_id = "+db_id);
@@ -860,17 +867,19 @@ public class ChatActivity extends AppCompatActivity{
 
 
                                                     //2. 메시지 리사이클러뷰에 아이템을 추가한다 (썸네일 이미지를 화면에 띄운다)
-                                                    MessageItem messageItem = new MessageItem(userId, username, "", roomId, thumbnail_image_name, curTime);
+                                                    MessageItem messageItem = new MessageItem(userId, username, "", roomId, thumbnail_image_name, curTime, db_id, origin_video_path);
 
                                                     //원본 동영상 파일의 주소를 set 한다
-                                                    messageItem.setVideo_file_path(origin_video_path);
+//                                                    messageItem.setVideo_file_path(origin_video_path);
 
                                                     //이 메시지의 db id도 set 한다
-                                                    messageItem.setDb_id(db_id);
+//                                                    messageItem.setDb_id(db_id);
 
                                                     messageItemList.add(messageItem);
 
                                                     Log.d("이미지", "메시지 리사이클러뷰에 아이템을 추가함");
+
+//                                                    uploading_video_db_id_list.add(db_id); //업로드 중인 동영상 목록에 이 동영상의 db id를 추가한다
 
                                                 }
 
@@ -1028,9 +1037,10 @@ public class ChatActivity extends AppCompatActivity{
                 String image_name = cursor2.getString(5);
                 long time = Long.valueOf(cursor2.getString(6));
                 int isRead = cursor2.getInt(7);
+                String video_path = cursor2.getString(8);
 
                     Log.d(TAG,"id: "+message_id+" / room id: "+room_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
-                            +" / message: "+message+"/ image name: "+image_name+" / time: "+time+" / isRead: "+isRead);
+                            +" / message: "+message+"/ image name: "+image_name+" / time: "+time+" / isRead: "+isRead+" / video_path: "+video_path);
 
 
                 //이미지의 경우, 메시지가 Photo로 저장되어 있다
@@ -1053,27 +1063,27 @@ public class ChatActivity extends AppCompatActivity{
 
                                 if(readMsgCount > 10){//읽은 메시지가 10개 초과일때
                                     //"여기서부터 안 읽었다"라고 메시지 위에 표시해준다
-                                    messageItemList.add(new MessageItem(0, "server", "You haven't read messages from here.", room_id, "N", time));
-                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
+                                    messageItemList.add(new MessageItem(0, "server", "You haven't read messages from here.", room_id, "N", time, message_id, video_path));
+                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path));
 
                                 }else{ //읽은 메시지가 10개 이하일 때(주고받은 메시지 자체가 적을 때)
                                     //안읽음 표시를 하지 않는다
-                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
+                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path));
                                 }
                             }else{ //안읽은 메시지 개수가 10개 이하일때
-                                messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
+                                messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path));
                             }
 
                         }else{ //나머지 안읽은 메시지 -> 메시지를 화면에 표시한다
-                            messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
+                            messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path));
                         }
 
                     }else{ //이미 읽은 메시지일 때 -> 메시지를 화면에 표시한다
-                        messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
+                        messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path));
                     }
                 }else{ //안읽은 메시지가 없을 때 -> 메시지를 화면에 표시한다
 
-                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time));
+                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path));
                 }
 
 
@@ -1368,12 +1378,12 @@ public class ChatActivity extends AppCompatActivity{
                                 if(msg_filename_string.equals("")){//텍스트일 때
 
                                     messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text,
-                                            msg_roomId, "N", curTime));
+                                            msg_roomId, "N", curTime, 0, ""));
 
                                 }else{//이미지일 때 
 
                                     messageItemList.add(new MessageItem(msg_sender_id, msg_sender_username, msg_text,
-                                            msg_roomId, msg_filename_string, curTime));
+                                            msg_roomId, msg_filename_string, curTime, 0, ""));
 
                                 }
                                 adapter.notifyItemInserted(adapter.getItemCount()-1);

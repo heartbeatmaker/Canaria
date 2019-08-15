@@ -26,13 +26,15 @@ public class MessageItem {
 
     private int db_id;
 
-    public MessageItem(int sender_id, String senderUsername, String message, int room_id, String image_name, long timeMillis) {
+    public MessageItem(int sender_id, String senderUsername, String message, int room_id, String image_name, long timeMillis, int db_id, String video_path) {
         this.room_id = room_id;
         this.sender_id = sender_id;
         this.senderUsername = senderUsername;
         this.message = message;
         this.timeMillis = timeMillis;
         this.image_name = image_name;
+        this.video_file_path = video_path;
+        this.db_id = db_id;
     }
 
 

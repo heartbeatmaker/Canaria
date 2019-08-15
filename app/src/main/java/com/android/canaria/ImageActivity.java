@@ -51,10 +51,10 @@ public class ImageActivity extends AppCompatActivity {
     * */
 
     ActionBar actionBar;
-    String url;
-    ProgressBar progressBar;
 
-    ArrayList<String> url_list;
+//    ArrayList<String> url_list;
+    ArrayList<SlideImageItem> imageItemArrayList;
+
 
     SlideAdapter slideAdapter;
     ViewPager viewPager;
@@ -80,6 +80,8 @@ public class ImageActivity extends AppCompatActivity {
     boolean beforeInit = false;
     int position; //다중이미지 내 해당 사진의 인덱스
 
+    String video_file_path;
+
 //    ArrayList<Integer> loaded_db_id_arrayList; //chat_logs 테이블에서, url_list에 이미 load 된 row의 db id를 담아놓는 곳
 
     @Override
@@ -94,7 +96,9 @@ public class ImageActivity extends AppCompatActivity {
         db = dbHelper.getWritableDatabase();
 
         //스와이핑에 필요한 url을 담는 리스트
-        url_list = new ArrayList<>();
+//        url_list = new ArrayList<>();
+        imageItemArrayList = new ArrayList<>();
+
 
         //이전화면 (채팅화면) 에서 보낸 값을 받는다
         String data_type = getIntent().getStringExtra("type");
@@ -103,13 +107,25 @@ public class ImageActivity extends AppCompatActivity {
 
             Log.d("스와이프", "데이터 타입: 이미지");
 
-            url = getIntent().getStringExtra("url");
             filename_string = getIntent().getStringExtra("filename_string");
             position = getIntent().getIntExtra("position", 0);
             room_id = getIntent().getIntExtra("room_id", 0);
 
-            Log.d("스와이프", "url="+url+" / filename_string="+filename_string+" " +
+            Log.d("스와이프", "filename_string="+filename_string+" " +
                     "/ position="+position+" / room_id="+room_id);
+
+
+            //string 으로 이어져 있는 여러 개의 파일 이름을, 개별로 분할한다 -> url 형태로 만든다 -> 아이템 list 에 담는다
+            String[] filename_split = filename_string.split(";");
+            for(int i=0; i<filename_split.length; i++){
+
+                String filename = filename_split[i];
+                String url = Function.domain+"/images/"+room_id+"/"+filename;
+//                url_list.add(i, url);
+
+//                String type, int room_id, String filename, String url, String video_path
+                imageItemArrayList.add(new SlideImageItem(data_type, room_id, filename, url, ""));
+            }
 
 
         }else if(data_type.equals("video")){ //비디오의 썸네일을 띄우는 것이라면
@@ -117,16 +133,18 @@ public class ImageActivity extends AppCompatActivity {
             Log.d("스와이프", "데이터 타입: 비디오 썸네일");
             position = 0; //동영상 썸네일: 다중이미지로 띄우지 않는다. 무조건 개별사진이므로, position = 0
 
+            String thumbnail_filename = getIntent().getStringExtra("thumbnail_filename");
+            room_id = getIntent().getIntExtra("room_id", 0);
+
+            String thumbnail_url = Function.domain+"/images/"+room_id+"/"+thumbnail_filename;
+
+            video_file_path = getIntent().getStringExtra("video_path");
+
+            //썸네일 이미지를 url_list 에 담는다
+//            url_list.add(url);
+            imageItemArrayList.add(new SlideImageItem(data_type, room_id, thumbnail_filename, thumbnail_url, video_file_path));
         }
 
-
-        //string 으로 이어져 있는 여러 개의 파일 이름을, 개별로 분할한다 -> url 형태로 만든다 -> url_list 에 담는다
-        String[] filename_split = filename_string.split(";");
-        for(int i=0; i<filename_split.length; i++){
-
-            String url = Function.domain+"/images/"+room_id+"/"+filename_split[i];
-            url_list.add(i, url);
-        }
 
 
 
@@ -137,25 +155,25 @@ public class ImageActivity extends AppCompatActivity {
         //-> db에서 새로운 데이터를 가져온다
         //-> 그 다음에 어댑터를 연결한다(loadMoreImage 메소드 안에 어댑터 연결하는 부분이 있다)
 
-        if(url_list.size() == 1){ //단독 이미지일 때
+        if(imageItemArrayList.size() == 1){ //단독 이미지일 때
             Log.d("스와이프", "단독 이미지임");
 
             //이전, 이후 데이터를 다 가져온다
             int position_updated = loadAllImages();
 
             //어댑터를 연결한다
-            slideAdapter = new SlideAdapter(this, url_list);
+            slideAdapter = new SlideAdapter(this, imageItemArrayList);
             viewPager.setAdapter(slideAdapter);
 
             //많은 사진 중에서 아까 사용자가 클릭한 사진이 바로 뜰 수 있도록, 현재 아이템을 설정한다
             viewPager.setCurrentItem(position_updated);
 
 
-        } else if(url_list.size()>1){ //다중이미지일 때
+        } else if(imageItemArrayList.size()>1){ //다중이미지일 때
             Log.d("스와이프", "다중 이미지임");
 
 
-            if(position == 0 || position >= url_list.size()-1){ //다중이미지 중에서 첫번째 or 마지막 이미지일 때
+            if(position == 0 || position >= imageItemArrayList.size()-1){ //다중이미지 중에서 첫번째 or 마지막 이미지일 때
 
                 beforeInit = true;
                 loadMoreImage(position);
@@ -164,7 +182,7 @@ public class ImageActivity extends AppCompatActivity {
 
                     Log.d("스와이프", "사용자가 채팅화면에서 클릭한 이 사진이, 이 채팅방에서 주고받은 최초의 or 마지막 사진임");
 
-                    slideAdapter = new SlideAdapter(this, url_list);
+                    slideAdapter = new SlideAdapter(this, imageItemArrayList);
                     viewPager.setAdapter(slideAdapter);
 
                     //많은 사진 중에서 아까 사용자가 클릭한 사진이 바로 뜰 수 있도록, 현재 아이템을 설정한다
@@ -172,7 +190,7 @@ public class ImageActivity extends AppCompatActivity {
                 }
 
             }else{//첫번째 or 마지막 이미지가 아닐 때: 아직 앞뒤로 띄워줄 수 있는 이미지가 있다. 어댑터를 연결한다
-                slideAdapter = new SlideAdapter(this, url_list);
+                slideAdapter = new SlideAdapter(this, imageItemArrayList);
                 viewPager.setAdapter(slideAdapter);
 
                 //많은 사진 중에서 아까 사용자가 클릭한 사진이 바로 뜰 수 있도록, 현재 아이템을 설정한다
@@ -194,7 +212,7 @@ public class ImageActivity extends AppCompatActivity {
             public void onPageSelected(int index) {
 
                 //앞뒤로 띄워줄 데이터가 없을 경우 -> db에서 새로운 데이터를 가져온다
-                if(index ==0 || index == url_list.size()-1){
+                if(index ==0 || index == imageItemArrayList.size()-1){
 
                     loadMoreImage(index);
                 }
@@ -224,7 +242,7 @@ public class ImageActivity extends AppCompatActivity {
     public void loadMoreImage(int currentIndex){
 
         //데이터가 추가되기 전, url_list 의 사이즈
-        final int origin_size = url_list.size();
+        final int origin_size = imageItemArrayList.size();
 
         //리스트에 추가된 이미지의 개수를 담는 변수
         int result_count = 0;
@@ -271,25 +289,50 @@ public class ImageActivity extends AppCompatActivity {
                         //여러 파일의 이름이 String 으로 이어져 있다. 개별 이름으로 분리한다
                         String[] filename_split = filename_string.split(";");
 
-                        //분리한 이름을 url로 바꾼다음, url_list에 하나씩 추가한다
-                        //가장 최근 사진부터 추가해야 하므로, 인덱스를 거꾸로 놓는다
-                        for(int i=filename_split.length-1; i>=0; i--){
-                            String url = Function.domain+"/images/"+room_id+"/"+filename_split[i];
+                        if(filename_split.length == 1){ //단독 이미지일 경우
 
-                            //현재 데이터의 '앞에' 새로운 데이터를 추가한다
-                            url_list.add(0, url);
+                            String url = Function.domain+"/images/"+room_id+"/"+filename_string;
+
+                            //썸네일 이미지인지 일반 이미지인지 확인한다
+                            String[] filename_split_2 = filename_string.split("_");
+
+                            if(filename_split_2[1].equals("video")){
+
+                                //가장 최근 사진부터 추가해야 하므로, 인덱스를 거꾸로 놓는다
+                                imageItemArrayList.add(0, new SlideImageItem("video", room_id, filename_string, url, ""));
+
+                            }else{
+
+                                String video_path = cursor2.getString(8);
+                                imageItemArrayList.add(0, new SlideImageItem("image", room_id, filename_string, url, video_path));
+                            }
+
+
+                        }else{ //다중이미지일 경우
+
+                            //가장 최근 이미지부터 추가해야 하므로, 인덱스를 거꾸로 놓는다
+                            for(int i=filename_split.length-1; i>=0; i--){
+
+                                String filename = filename_split[i];
+                                String url = Function.domain+"/images/"+room_id+"/"+filename;
+
+//                String type, int room_id, String filename, String url, String video_path
+                                imageItemArrayList.add(0, new SlideImageItem("image", room_id, filename, url, ""));
+                            }
+
                         }
+
 
                         Log.d("스와이프", "이전데이터 가져옴. db_id="+db_id+" / filename_string="+filename_string);
                     }
 
-                    Log.d("스와이프", "이전데이터 업데이트 완료. url_list="+url_list);
+                    Log.d("스와이프", "이전데이터 업데이트 완료");
 
                     //어댑터를 새것으로 교체한다
-                    slideAdapter = new SlideAdapter(getApplicationContext(), url_list);
+                    slideAdapter = new SlideAdapter(getApplicationContext(), imageItemArrayList);
                     slideAdapter.notifyDataSetChanged();
                     viewPager.setAdapter(slideAdapter);
-                    viewPager.setCurrentItem(url_list.size()-origin_size);
+                    viewPager.setCurrentItem(imageItemArrayList.size()-origin_size);
 
 
 //                    handler.post(new Runnable() {
@@ -329,7 +372,7 @@ public class ImageActivity extends AppCompatActivity {
             }
 
 
-        }else if(currentIndex >= url_list.size() -1){ //이 사진 이후에 띄워줄 데이터가 없는 경우
+        }else if(currentIndex >= imageItemArrayList.size() -1){ //이 사진 이후에 띄워줄 데이터가 없는 경우
             Log.d("스와이프", "currentIndex == url_list.size() -1. 이후 데이터가 떨어짐");
 
             if(!isRightSideLoaded){
@@ -352,22 +395,51 @@ public class ImageActivity extends AppCompatActivity {
                         int db_id = cursor3.getInt(0);
                         String filename_string = cursor3.getString(5);
 
-                        //현재 데이터의 뒤에 새로운 데이터를 추가한다
-                        String[] filename_split = filename_string.split(";");
-                        for(int i=0; i<filename_split.length; i++){
 
-                            String url = Function.domain+"/images/"+room_id+"/"+filename_split[i];
-                            url_list.add(url);
+                        //여러 파일의 이름이 String 으로 이어져 있다. 개별 이름으로 분리한다
+                        String[] filename_split = filename_string.split(";");
+
+                        if(filename_split.length == 1){ //단독 이미지일 경우
+
+                            String url = Function.domain+"/images/"+room_id+"/"+filename_string;
+
+                            //썸네일 이미지인지 일반 이미지인지 확인한다
+                            String[] filename_split_2 = filename_string.split("_");
+
+                            if(filename_split_2[1].equals("video")){
+
+                                //현재 데이터의 뒤에 새로운 데이터를 추가한다
+                                imageItemArrayList.add(new SlideImageItem("video", room_id, filename_string, url, ""));
+
+                            }else{
+
+                                String video_path = cursor3.getString(8);
+                                imageItemArrayList.add(new SlideImageItem("image", room_id, filename_string, url, video_path));
+                            }
+
+
+                        }else{ //다중이미지일 경우
+
+                            for(int i=0; i<filename_split.length; i++){
+
+                                String filename = filename_split[i];
+                                String url = Function.domain+"/images/"+room_id+"/"+filename;
+
+//                String type, int room_id, String filename, String url, String video_path
+                                imageItemArrayList.add(new SlideImageItem("image", room_id, filename, url, ""));
+                            }
+
                         }
+
 
                         Log.d("스와이프", "이후 데이터 가져옴. db_id="+db_id+" / filename_string="+filename_string);
                     }
 
-                    Log.d("스와이프", "이후 데이터 업데이트 완료. url_list="+url_list);
+                    Log.d("스와이프", "이후 데이터 업데이트 완료");
 
 
                     //어댑터를 새것으로 교체한다
-                    slideAdapter = new SlideAdapter(getApplicationContext(), url_list);
+                    slideAdapter = new SlideAdapter(getApplicationContext(), imageItemArrayList);
                     slideAdapter.notifyDataSetChanged();
                     viewPager.setAdapter(slideAdapter);
                     viewPager.setCurrentItem(origin_size-1);
@@ -415,7 +487,7 @@ public class ImageActivity extends AppCompatActivity {
 
 
         //데이터가 추가되기 전, url_list 의 사이즈
-        final int origin_size = url_list.size();
+        final int origin_size = imageItemArrayList.size();
 
         //db에서 찾은 row의 개수를 담는 변수
         int result_count = 0;
@@ -455,21 +527,53 @@ public class ImageActivity extends AppCompatActivity {
                 //여러 파일의 이름이 String 으로 이어져 있다. 개별 이름으로 분리한다
                 String[] filename_split = filename_string.split(";");
 
-                //분리한 이름을 url로 바꾼다음, url_list에 하나씩 추가한다
-                //가장 최근 사진부터 추가해야 하므로, 인덱스를 거꾸로 놓는다
-                for(int i=filename_split.length-1; i>=0; i--){
-                    String url = Function.domain+"/images/"+room_id+"/"+filename_split[i];
 
-                    //현재 데이터의 '앞에' 새로운 데이터를 추가한다
-                    url_list.add(0, url);
+                if(filename_split.length == 1){ //단독 이미지일 경우
+
+                    Log.d("스와이프", "단독 이미지임. 썸네일인지 일반 이미지인지 확인");
 
                     added_image_count_left +=1;
+
+                    String url = Function.domain+"/images/"+room_id+"/"+filename_string;
+
+                    //썸네일 이미지인지 일반 이미지인지 확인한다
+                    String[] filename_split_2 = filename_string.split("_");
+
+                    if(filename_split_2[1].equals("video")){
+                        Log.d("스와이프", "썸네일임");
+
+                        imageItemArrayList.add(0, new SlideImageItem("video", room_id, filename_string, url, ""));
+
+                    }else{
+                        Log.d("스와이프", "일반 이미지임");
+
+                        String video_path = cursor2.getString(8);
+                        imageItemArrayList.add(0, new SlideImageItem("image", room_id, filename_string, url, video_path));
+                    }
+
+
+                }else{ //다중이미지일 경우
+
+                    Log.d("스와이프", "다중 이미지임");
+
+                    //가장 최근 사진부터 추가해야 하므로, 인덱스를 거꾸로 놓는다
+                    for(int i=filename_split.length-1; i>=0; i--){
+
+                        String filename = filename_split[i];
+                        String url = Function.domain+"/images/"+room_id+"/"+filename;
+
+//                String type, int room_id, String filename, String url, String video_path
+                        imageItemArrayList.add(0, new SlideImageItem("image", room_id, filename, url, ""));
+
+                        added_image_count_left +=1;
+                    }
+
                 }
 
                 Log.d("스와이프", "이전데이터 가져옴. db_id="+db_id+" / filename_string="+filename_string);
             }
 
-            Log.d("스와이프", "이전데이터 업데이트 완료. url_list="+url_list);
+            Log.d("스와이프", "이전데이터 업데이트 완료. 왼쪽 데이터 몇개 추가 했음? "+added_image_count_left+" 개");
 
 
         }else{ //이전 데이터가 없을 때 = 이 사진이 이 채팅방에서 주고받은 최초의 사진일 때
@@ -479,8 +583,7 @@ public class ImageActivity extends AppCompatActivity {
 
         isLeftSideLoaded = true;
 
-
-
+        
 
 
 
@@ -501,16 +604,42 @@ public class ImageActivity extends AppCompatActivity {
 
                 //현재 데이터의 뒤에 새로운 데이터를 추가한다
                 String[] filename_split = filename_string.split(";");
-                for(int i=0; i<filename_split.length; i++){
 
-                    String url = Function.domain+"/images/"+room_id+"/"+filename_split[i];
-                    url_list.add(url);
+
+                if(filename_split.length == 1){ //단독 이미지일 경우
+
+                    String url = Function.domain+"/images/"+room_id+"/"+filename_string;
+
+                    //썸네일 이미지인지 일반 이미지인지 확인한다
+                    String[] filename_split_2 = filename_string.split("_");
+
+                    if(filename_split_2[1].equals("video")){
+
+                        //현재 데이터의 뒤에 새로운 데이터를 추가한다
+                        imageItemArrayList.add(new SlideImageItem("video", room_id, filename_string, url, ""));
+
+                    }else{
+
+                        String video_path = cursor3.getString(8);
+                        imageItemArrayList.add(new SlideImageItem("image", room_id, filename_string, url, video_path));
+                    }
+
+
+                }else{ //다중이미지일 경우
+
+                    for(int i=0; i<filename_split.length; i++){
+
+                        String filename = filename_split[i];
+                        String url = Function.domain+"/images/"+room_id+"/"+filename;
+
+//                String type, int room_id, String filename, String url, String video_path
+                        imageItemArrayList.add(new SlideImageItem("image", room_id, filename, url, ""));
+                    }
+
                 }
-
-                Log.d("스와이프", "이후 데이터 가져옴. db_id="+db_id+" / filename_string="+filename_string);
             }
 
-            Log.d("스와이프", "이후 데이터 업데이트 완료. url_list="+url_list);
+            Log.d("스와이프", "이후 데이터 업데이트 완료");
 
 
 
@@ -547,7 +676,19 @@ public class ImageActivity extends AppCompatActivity {
                 return true;
             case R.id.action_download:
 //                progressBar.setVisibility(View.VISIBLE);
-                new ImageDownload().execute(url_list.get(viewPager.getCurrentItem()));
+
+                int current_position = viewPager.getCurrentItem();
+                String type = imageItemArrayList.get(current_position).getType();
+
+                if(type.equals("image")){
+
+                    new ImageDownload().execute(imageItemArrayList.get(viewPager.getCurrentItem()).getUrl());
+
+                }else if(type.equals("video")){
+
+                    new ImageDownload().execute(imageItemArrayList.get(viewPager.getCurrentItem()).getVideo_path());
+                }
+
                 break;
         }
 

@@ -54,7 +54,8 @@
             android:layout_centerInParent="true"
             android:background="@color/white"
             android:layout_alignTop="@id/received_video_imageView"
-            android:layout_marginTop="50dp"/>
+            android:layout_marginTop="50dp"
+            android:visibility="gone"/>
 
         <ImageView
             android:id="@+id/received_video_playBtn_imageView"
@@ -64,6 +65,7 @@
             android:layout_centerInParent="true"
             android:paddingTop="10dp"
             android:background="@drawable/ic_play_circle_outline_black_24dp"
+            android:visibility="gone"
             />
 
         <ProgressBar
@@ -73,6 +75,9 @@
             android:layout_centerInParent="true"
             android:paddingTop="10dp"
             android:layout_below="@id/received_video_textView"
+            android:indeterminateTint="@color/colorPrimary"
+            android:indeterminateTintMode="src_in"
+            android:visibility="gone"
             />
 
 

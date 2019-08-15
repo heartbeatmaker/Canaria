@@ -283,14 +283,13 @@ public class Function {
 
                 //해당 이미지의 url 을 전달한다
                 Intent intent = new Intent(context, ImageActivity.class);
-                String url = domain+"/images/"+roomId+"/"+fileName_split[position];
+//                String url = domain+"/images/"+roomId+"/"+fileName_split[position];
 
                 //roomId, filename_string, position, 이 사진의 url
                 intent.putExtra("type", "image"); //데이터 타입을 알려준다. 이미지 or 동영상
                 intent.putExtra("room_id", roomId);
                 intent.putExtra("filename_string", fileName_string);
                 intent.putExtra("position", position);
-                intent.putExtra("url", url);
 
                 context.startActivity(intent);
             }
