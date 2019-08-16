@@ -41,7 +41,7 @@
 
 
         <ImageView
-            android:id="@+id/received_video_imageView"
+            android:id="@+id/received_video_thumbnail_imageView"
             android:layout_width="240dp"
             android:layout_height="240dp" />
 
@@ -52,19 +52,18 @@
             android:text="Encoding.."
             android:textSize="15sp"
             android:layout_centerInParent="true"
-            android:background="@color/white"
-            android:layout_alignTop="@id/received_video_imageView"
+            android:background="@color/colorPrimary"
+            android:layout_alignTop="@id/received_video_thumbnail_imageView"
             android:layout_marginTop="50dp"
             android:visibility="gone"/>
 
         <ImageView
             android:id="@+id/received_video_playBtn_imageView"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:layout_below="@id/received_video_textView"
             android:layout_centerInParent="true"
             android:paddingTop="10dp"
-            android:background="@drawable/ic_play_circle_outline_black_24dp"
             android:visibility="gone"
             />
 

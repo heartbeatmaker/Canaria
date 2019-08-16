@@ -157,7 +157,7 @@ public class ChatActivity extends AppCompatActivity{
     int video_count;
 
     String dataType;
-    String video_server_path;
+    String video_path_server;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -1035,10 +1035,10 @@ public class ChatActivity extends AppCompatActivity{
 
                 //동영상을 띄울 때 필요한 값
                 String video_path = cursor2.getString(8); //내가 보낸 동영상일 때, 받은 동영상인데 다운받았을 때 -> 무조건 있어야 함
-                String video_server_path = cursor2.getString(9);//내가 받은 동영상일 때 -> 무조건 있어야 함
+                String video_path_server = cursor2.getString(9);//내가 받은 동영상일 때 -> 무조건 있어야 함
 
                     Log.d(TAG,"id: "+message_id+" / room id: "+room_id+" / sender id: "+sender_id+" / sender_name : "+sender_username
-                            +" / message: "+message+"/ image name: "+image_name+" / time: "+time+" / isRead: "+isRead+" / video_path: "+video_path+" / video_server_path: "+video_server_path);
+                            +" / message: "+message+"/ image name: "+image_name+" / time: "+time+" / isRead: "+isRead+" / video_path: "+video_path+" / video_path_server: "+video_path_server);
 
 
                 //이미지의 경우, 메시지가 Photo로 저장되어 있다
@@ -1061,27 +1061,27 @@ public class ChatActivity extends AppCompatActivity{
 
                                 if(readMsgCount > 10){//읽은 메시지가 10개 초과일때
                                     //"여기서부터 안 읽었다"라고 메시지 위에 표시해준다
-                                    messageItemList.add(new MessageItem(0, "server", "You haven't read messages from here.", room_id, "N", time, message_id, video_path, video_server_path));
-                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_server_path));
+                                    messageItemList.add(new MessageItem(0, "server", "You haven't read messages from here.", room_id, "N", time, message_id, video_path, video_path_server));
+                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_path_server));
 
                                 }else{ //읽은 메시지가 10개 이하일 때(주고받은 메시지 자체가 적을 때)
                                     //안읽음 표시를 하지 않는다
-                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_server_path));
+                                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_path_server));
                                 }
                             }else{ //안읽은 메시지 개수가 10개 이하일때
-                                messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_server_path));
+                                messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_path_server));
                             }
 
                         }else{ //나머지 안읽은 메시지 -> 메시지를 화면에 표시한다
-                            messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_server_path));
+                            messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_path_server));
                         }
 
                     }else{ //이미 읽은 메시지일 때 -> 메시지를 화면에 표시한다
-                        messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_server_path));
+                        messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_path_server));
                     }
                 }else{ //안읽은 메시지가 없을 때 -> 메시지를 화면에 표시한다
 
-                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_server_path));
+                    messageItemList.add(new MessageItem(sender_id, sender_username,message, room_id, image_name, time, message_id, video_path, video_path_server));
                 }
 
 
@@ -1365,11 +1365,11 @@ public class ChatActivity extends AppCompatActivity{
                             dataType = "image";
 
                         }else if(text_array[0].equals("video")){
-                            thumbnail_filename = text_array[2];
-                            video_filename = text_array[3];
+                            thumbnail_filename = text_array[1];
+                            video_filename = text_array[2];
 
                             msg_filename_string = thumbnail_filename;
-                            video_server_path = Function.domain+"/images/"+roomId+"/"+video_filename;
+                            video_path_server = Function.domain+"/images/"+roomId+"/"+video_filename;
 
                             dataType = "video";
 
@@ -1412,7 +1412,7 @@ public class ChatActivity extends AppCompatActivity{
                                         //@@받은 동영상의 경우, 아직 다운받지 않았으므로 로컬 video_path 가 없다
                                         //전달받은 동영상 경로를, 서버경로 변수에 할당한다
                                         MessageItem messageItem = new MessageItem(msg_sender_id, msg_sender_username, msg_text,
-                                                msg_roomId, msg_filename_string, curTime, 0, "", video_server_path);
+                                                msg_roomId, msg_filename_string, curTime, 0, "", video_path_server);
 
                                         messageItemList.add(messageItem);
                                         break;

@@ -180,6 +180,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
             }else{ //받은 메시지
                 // If some other user sent the message
+                Log.d("msg", "message.getImage_name()="+message.getImage_name());
 
                 if(message.getImage_name().equals("N") || message.getImage_name().equals("")){
                     Log.d("msg", "VIEW_TYPE_MESSAGE_RECEIVED");
@@ -242,7 +243,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 return new ReceivedImageHolder(view);
             case VIEW_TYPE_VIDEO_RECEIVED:
                 view = LayoutInflater.from(parent.getContext())
-                        .inflate(R.layout.message_item_image_received, parent, false);
+                        .inflate(R.layout.message_item_video_received, parent, false);
                 return new ReceivedVideoHolder(view);
         }
 
@@ -398,7 +399,8 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
     private class ReceivedVideoHolder extends RecyclerView.ViewHolder {
         TextView received_time_textView, received_username_textView;
-        ImageView received_profileImage_imageView, received_video_thumbnail_imageView;
+        ImageView received_profileImage_imageView;
+        ImageView received_video_thumbnail_imageView;
 
 
         //동영상의 다운로드 상태에 따라 바뀌는 변수 - 디폴트: GONE(숨겨져 있다)
@@ -409,14 +411,14 @@ public class MessageAdapter extends RecyclerView.Adapter {
         ReceivedVideoHolder(View itemView) {
             super(itemView);
 
-            received_time_textView = (TextView) itemView.findViewById(R.id.received_image_time_textView);
-            received_username_textView = (TextView) itemView.findViewById(R.id.received_image_username_textView);
-            received_profileImage_imageView = (ImageView) itemView.findViewById(R.id.received_image_profileImage_imageView);
+            received_time_textView = (TextView) itemView.findViewById(R.id.received_video_time_textView);
+            received_username_textView = (TextView) itemView.findViewById(R.id.received_video_username_textView);
+            received_profileImage_imageView = (ImageView) itemView.findViewById(R.id.received_video_profileImage_imageView);
+            received_video_thumbnail_imageView = (ImageView) itemView.findViewById(R.id.received_video_thumbnail_imageView);
 
-            received_video_thumbnail_imageView = itemView.findViewById(R.id.received_video_imageView);
-            received_video_playBtn_imageView = itemView.findViewById(R.id.received_video_playBtn_imageView);
-            received_video_circleProgressBar = itemView.findViewById(R.id.received_video_circleProgressBar);
-            received_video_textView = itemView.findViewById(R.id.received_video_textView);
+            received_video_playBtn_imageView =(ImageView) itemView.findViewById(R.id.received_video_playBtn_imageView);
+            received_video_circleProgressBar =(CircleProgressBar) itemView.findViewById(R.id.received_video_circleProgressBar);
+            received_video_textView =(TextView) itemView.findViewById(R.id.received_video_textView);
         }
 
 
@@ -425,15 +427,19 @@ public class MessageAdapter extends RecyclerView.Adapter {
             final int room_id = message.getRoom_id();
 //            final int db_id = message.getDb_id(); -- 이건 SentVideoHolder 에서만 적용된다. 받은 메시지 아이템에는 db_id 값이 항상 0이다
 //            final String video_file_path = message.getVideo_path(); -- 동영상의 로컬경로. 아직 동영상을 다운받지 않았다면, 이 값이 비어있다
-            final String video_server_path = message.getVideo_server_path(); // 동영상의 서버경로. 받은 메시지라면 이 값이 반드시 저장되어 있다
+            final String video_path_server = message.getVideo_server_path(); // 동영상의 서버경로. 받은 메시지라면 이 값이 반드시 저장되어 있다
+
+            String thumbnail_url = message.getThumbImage_url();
+            Log.d("이미지", "thumbnail_url="+thumbnail_url);
 
 
             /*동영상 관련 정보를 띄워주는 뷰*/
 
+
             //썸네일 이미지를 띄운다
             Glide.with(mContext)
                     .asBitmap()
-                    .load(message.getThumbImage_url())
+                    .load(thumbnail_url)
                     .listener(new RequestListener<Bitmap>() {
                 @Override
                 public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Bitmap> target, boolean isFirstResource) {
@@ -450,7 +456,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
                     //이 동영상이 이미 서버에 업로드 되어 있는지 확인한다 -- video_path 컬럼에 값이 있는지 검사한다
 
                     Cursor cursor = db.rawQuery
-                            ("SELECT video_path FROM chat_logs WHERE room_id='"+room_id+"' AND video_server_path='" + video_server_path +"';", null);
+                            ("SELECT video_path FROM chat_logs WHERE room_id='"+room_id+"' AND video_path_server='" + video_path_server +"';", null);
 
                     cursor.moveToFirst();
 
@@ -459,11 +465,12 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
                     Log.d("이미지", "받은 동영상) db에 저장된 video_path = "+video_path);
 
-                    if(video_path.length() > 10){//로컬 경로가 있음 = 이미 영상을 다운 받았음
+                    if(video_path != null){//로컬 경로가 있음 = 이미 영상을 다운 받았음
 
                         Log.d("이미지", "받은 동영상) 사용자가 이 동영상을 이미 다운 받았음");
 
                         //재생버튼을 보여준다
+                        received_video_playBtn_imageView.setImageResource(R.drawable.ic_play_circle_outline_black_24dp);
                         received_video_playBtn_imageView.setVisibility(View.VISIBLE);
 
                         //재생 시간을 보여준다
@@ -476,8 +483,12 @@ public class MessageAdapter extends RecyclerView.Adapter {
                         Log.d("이미지", "받은 동영상) 사용자가 이 동영상을 아직 다운받지 않았음");
 
                         //다운로드 버튼을 보여준다
-                        received_video_playBtn_imageView.setImageResource(R.drawable.ic_play_for_work_black_24dp);
+                        received_video_playBtn_imageView.setImageResource(R.drawable.ic_file_download_black_24dp);
                         received_video_playBtn_imageView.setVisibility(View.VISIBLE);
+
+                        //재생 시간을 보여준다
+                        received_video_textView.setVisibility(View.VISIBLE);
+                        received_video_textView.setText("Video");
                     }
 
                     return false;
@@ -492,7 +503,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
                     //이 동영상이 이미 서버에 업로드 되어 있는지 확인한다 -- video_path 컬럼에 값이 있는지 검사한다
 
                     Cursor cursor = db.rawQuery
-                            ("SELECT id, video_path FROM chat_logs WHERE room_id='"+room_id+"' AND video_server_path='" + video_server_path +"';", null);
+                            ("SELECT id, video_path FROM chat_logs WHERE room_id='"+room_id+"' AND video_path_server='" + video_path_server +"';", null);
 
                     cursor.moveToFirst();
 
@@ -500,7 +511,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
                     int db_id = cursor.getInt(0);
                     String video_path = cursor.getString(1);
 
-                    if(video_path.length() > 10){//로컬 경로가 있음 = 이미 영상을 다운 받았음
+                    if(video_path != null){//로컬 경로가 있음 = 이미 영상을 다운 받았음
 
                         //클릭하면 크게보는 화면이 뜨도록 만든다
                         //원본 동영상의 path 를 전달한다
@@ -520,7 +531,6 @@ public class MessageAdapter extends RecyclerView.Adapter {
                         //다운로드 쓰레드를 시작한다
                         VideoDownloader videoDownloader = new VideoDownloader(db_id, received_video_circleProgressBar,received_video_playBtn_imageView, received_video_textView);
                         videoDownloader.execute();
-
                     }
 
                 }

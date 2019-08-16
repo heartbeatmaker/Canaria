@@ -466,8 +466,8 @@ public class MainService extends Service {
 
                             }else if(isVideo){ //비디오일 경우
 
-                                String video_server_path = Function.domain+"/images/"+roomId_msg+"/"+video_filename;
-                                dbHelper.insert_chatLogs_with_videoServePath(roomId_msg, sender_id, sender_username, message, "N", curTime_long, isRead, video_server_path);
+                                String video_path_server = Function.domain+"/images/"+roomId_msg+"/"+video_filename;
+                                dbHelper.insert_chatLogs_with_videoServePath(roomId_msg, sender_id, sender_username, message, thumbnail_filename, curTime_long, isRead, video_path_server);
 
                             }else{ //텍스트 메시지일 경우
                                 dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, "N", curTime_long, isRead);

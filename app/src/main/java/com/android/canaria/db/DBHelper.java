@@ -114,7 +114,7 @@ public class DBHelper extends SQLiteOpenHelper {
         return (int)last_inserted_id;
     }
 
-    public int insert_chatLogs_with_videoServePath(int room_id, int sender_id, String sender_username, String message, String image_name, long time, int isRead, String video_server_path) {
+    public int insert_chatLogs_with_videoServePath(int room_id, int sender_id, String sender_username, String message, String image_name, long time, int isRead, String video_path_server) {
         // 읽고 쓰기가 가능하게 DB 열기
         long last_inserted_id;
 
@@ -128,7 +128,7 @@ public class DBHelper extends SQLiteOpenHelper {
         contentValues.put("image_name", image_name);
         contentValues.put("time", String.valueOf(time));
         contentValues.put("isRead", isRead);
-        contentValues.put("video_server_path", video_server_path);
+        contentValues.put("video_path_server", video_path_server);
 
         last_inserted_id = db.insert("chat_logs", null, contentValues);
 
