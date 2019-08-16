@@ -68,15 +68,18 @@
             android:visibility="gone"
             />
 
-        <ProgressBar
-            android:id="@+id/received_video_progressBar"
+        <com.dinuscxj.progressbar.CircleProgressBar
+            android:id="@+id/received_video_circleProgressBar"
+            android:layout_below="@id/received_video_textView"
             android:layout_width="100dp"
             android:layout_height="100dp"
             android:layout_centerInParent="true"
             android:paddingTop="10dp"
-            android:layout_below="@id/received_video_textView"
-            android:indeterminateTint="@color/colorPrimary"
-            android:indeterminateTintMode="src_in"
+            app:progress_start_color="@color/colorPrimary"
+            app:style="solid_line"
+            app:progress_stroke_width="10dp"
+            app:progress_text_color="@color/colorPrimary"
+            app:progress_text_size="15sp"
             android:visibility="gone"
             />
 

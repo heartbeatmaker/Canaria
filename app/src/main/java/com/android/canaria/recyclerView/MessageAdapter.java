@@ -52,11 +52,18 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
+import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -396,7 +403,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
         //동영상의 다운로드 상태에 따라 바뀌는 변수 - 디폴트: GONE(숨겨져 있다)
         ImageView received_video_playBtn_imageView;
-        ProgressBar received_video_progressBar;
+        CircleProgressBar received_video_circleProgressBar;
         TextView received_video_textView;
 
         ReceivedVideoHolder(View itemView) {
@@ -408,31 +415,127 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
             received_video_thumbnail_imageView = itemView.findViewById(R.id.received_video_imageView);
             received_video_playBtn_imageView = itemView.findViewById(R.id.received_video_playBtn_imageView);
-            received_video_progressBar = itemView.findViewById(R.id.received_video_progressBar);
+            received_video_circleProgressBar = itemView.findViewById(R.id.received_video_circleProgressBar);
             received_video_textView = itemView.findViewById(R.id.received_video_textView);
         }
 
 
         void bind(final MessageItem message) {
 
+            final int room_id = message.getRoom_id();
+//            final int db_id = message.getDb_id(); -- 이건 SentVideoHolder 에서만 적용된다. 받은 메시지 아이템에는 db_id 값이 항상 0이다
+//            final String video_file_path = message.getVideo_path(); -- 동영상의 로컬경로. 아직 동영상을 다운받지 않았다면, 이 값이 비어있다
+            final String video_server_path = message.getVideo_server_path(); // 동영상의 서버경로. 받은 메시지라면 이 값이 반드시 저장되어 있다
+
+
+            /*동영상 관련 정보를 띄워주는 뷰*/
+
             //썸네일 이미지를 띄운다
-            Glide.with(mContext).asBitmap().load(message.getThumbImage_url()).into(received_video_thumbnail_imageView);
+            Glide.with(mContext)
+                    .asBitmap()
+                    .load(message.getThumbImage_url())
+                    .listener(new RequestListener<Bitmap>() {
+                @Override
+                public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Bitmap> target, boolean isFirstResource) {
+                    return false;
+                }
 
-            //프로그레스 바를 숨긴다
-            received_video_progressBar.setVisibility(View.GONE);
 
-            //처음 띄워줄 때: 다운로드 버튼을 보여준다
-            received_video_playBtn_imageView.setVisibility(View.VISIBLE);
-            received_video_playBtn_imageView.setImageResource(R.drawable.ic_play_for_work_black_24dp);
-            received_video_textView.setText("");
+                //이미지 업로드가 완료되었을 때
+                @Override
+                public boolean onResourceReady(Bitmap resource, Object model, Target<Bitmap> target, DataSource dataSource, boolean isFirstResource) {
+
+                    Log.d("이미지", "보낸 동영상) 썸네일이 화면에 뜸");
+
+                    //이 동영상이 이미 서버에 업로드 되어 있는지 확인한다 -- video_path 컬럼에 값이 있는지 검사한다
+
+                    Cursor cursor = db.rawQuery
+                            ("SELECT video_path FROM chat_logs WHERE room_id='"+room_id+"' AND video_server_path='" + video_server_path +"';", null);
+
+                    cursor.moveToFirst();
+
+                    // db에 저장된 동영상의 로컬 경로를 가져온다
+                    String video_path = cursor.getString(0);
+
+                    Log.d("이미지", "받은 동영상) db에 저장된 video_path = "+video_path);
+
+                    if(video_path.length() > 10){//로컬 경로가 있음 = 이미 영상을 다운 받았음
+
+                        Log.d("이미지", "받은 동영상) 사용자가 이 동영상을 이미 다운 받았음");
+
+                        //재생버튼을 보여준다
+                        received_video_playBtn_imageView.setVisibility(View.VISIBLE);
+
+                        //재생 시간을 보여준다
+                        received_video_textView.setVisibility(View.VISIBLE);
+                        received_video_textView.setText(getDuration(video_path));
+
+                        Log.d("이미지", "받은 동영상) 재생버튼과 재생시간이 썸네일 위에 보여야됨");
+
+                    }else{//로컬 경로가 없음 = 영상을 다운받은 적 없음
+                        Log.d("이미지", "받은 동영상) 사용자가 이 동영상을 아직 다운받지 않았음");
+
+                        //다운로드 버튼을 보여준다
+                        received_video_playBtn_imageView.setImageResource(R.drawable.ic_play_for_work_black_24dp);
+                        received_video_playBtn_imageView.setVisibility(View.VISIBLE);
+                    }
+
+                    return false;
+                }
+            }).into(received_video_thumbnail_imageView);
 
 
+            received_video_thumbnail_imageView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    //이 동영상이 이미 서버에 업로드 되어 있는지 확인한다 -- video_path 컬럼에 값이 있는지 검사한다
+
+                    Cursor cursor = db.rawQuery
+                            ("SELECT id, video_path FROM chat_logs WHERE room_id='"+room_id+"' AND video_server_path='" + video_server_path +"';", null);
+
+                    cursor.moveToFirst();
+
+                    // db에 저장된 id, 동영상의 로컬 경로를 가져온다
+                    int db_id = cursor.getInt(0);
+                    String video_path = cursor.getString(1);
+
+                    if(video_path.length() > 10){//로컬 경로가 있음 = 이미 영상을 다운 받았음
+
+                        //클릭하면 크게보는 화면이 뜨도록 만든다
+                        //원본 동영상의 path 를 전달한다
+
+                        //해당 이미지의 url 을 전달한다
+                        Intent intent = new Intent(mContext, ImageActivity.class);
+
+                        intent.putExtra("type", "video"); //데이터 타입을 알려준다. 이미지 or 동영상
+                        intent.putExtra("room_id", room_id);
+                        intent.putExtra("thumbnail_filename", message.getImage_name());
+                        intent.putExtra("video_path", video_path);
+
+                        mContext.startActivity(intent);
+
+                    }else{//로컬 경로가 없음 = 영상을 다운받은 적 없음
+
+                        //다운로드 쓰레드를 시작한다
+                        VideoDownloader videoDownloader = new VideoDownloader(db_id, received_video_circleProgressBar,received_video_playBtn_imageView, received_video_textView);
+                        videoDownloader.execute();
+
+                    }
+
+                }
+            });
+
+
+            /*기본 정보를 띄워주는 뷰*/
             // Format the stored timestamp into a readable String using method.
-            received_time_textView.setText(Function.formatTime(message.getTimeMillis())); //메시지를 받은 시각 표시
-            received_username_textView.setText(message.getSenderUsername()); //보낸 사람 이름 표시
+            //메시지를 받은 시각, 보낸사람의 이름을 표시
+            received_time_textView.setText(Function.formatTime(message.getTimeMillis()));
+            received_username_textView.setText(message.getSenderUsername());
 
             // Insert the profile image from the URL into the ImageView.
-            Function.displayRoundImageFromUrl(mContext, message.getUserImage_url(), received_profileImage_imageView); //메시지 보낸 사람의 프로필사진을 표시
+            //메시지 보낸 사람의 프로필사진을 표시
+            Function.displayRoundImageFromUrl(mContext, message.getUserImage_url(), received_profileImage_imageView);
 
         }
 
@@ -469,7 +572,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
             final int room_id = message.getRoom_id();
             final int db_id = message.getDb_id();
-            final String video_file_path = message.getVideo_file_path();
+            final String video_file_path = message.getVideo_path();
 
 
             //썸네일 이미지를 띄운다
@@ -911,8 +1014,10 @@ public class MessageAdapter extends RecyclerView.Adapter {
                         Log.d("이미지", "Video uploader) 서버가 저장한 동영상 파일의 이름 = "+returned_filename);
 
 
+                        String video_url_server = Function.domain+"/images/"+room_id+"/"+returned_filename;
+
                         //2. db에 저장된 메시지 정보를 업데이트한다. video_path = 압축 동영상 파일의 path
-                        db.execSQL("UPDATE chat_logs SET video_path='"+compressed_video_file_path+"' WHERE id='" + message_db_id + "';");
+                        db.execSQL("UPDATE chat_logs SET video_path='"+compressed_video_file_path+"', video_path_server='"+video_url_server+"' WHERE id='" + message_db_id + "';");
 
                         Log.d("이미지", "Video uploader) db를 업데이트 함. video_path 수정");
 
@@ -928,7 +1033,16 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
 
                         //3. 채팅 서버로 메시지를 발송한다
-                        String msg = "msg_video/"+room_id+"/"+returned_filename;
+                        //msg_video/room_id/썸네일 파일 이름/동영상 파일 이름
+
+                        //db에서 썸네일 파일 이름을 가져온다
+                        Cursor cursor = db.rawQuery
+                                ("SELECT image_name FROM chat_logs WHERE id='" + message_db_id +"';", null);
+
+                        cursor.moveToFirst();
+                        String thumbnail_filename = cursor.getString(0);
+
+                        String msg = "msg_video/"+room_id+"/"+thumbnail_filename+"/"+returned_filename;
 
                         Intent intent = new Intent(mContext, MainService.class);
                         intent.putExtra("message", msg);
@@ -1053,6 +1167,211 @@ public class MessageAdapter extends RecyclerView.Adapter {
     }
 
 
+
+
+    //서버에 있는 동영상을 다운받는 클래스
+    class VideoDownloader extends AsyncTask<String, String, String> {
+
+        CircleProgressBar circleProgressBar;
+        ImageView playBtn_imageView;
+        TextView videoInfo_textView;
+
+        int db_id;
+        private String fileName;
+        private final String MY_FOLDER = "/Canaria"; //내가 원하는 저장 경로(폴더 이름)
+        String path_final = "";
+
+        public VideoDownloader(int db_id, CircleProgressBar circleProgressBar, ImageView playBtn_imageView, TextView videoInfo_textView){
+            this.db_id = db_id;
+            this.circleProgressBar = circleProgressBar;
+            this.playBtn_imageView = playBtn_imageView;
+            this.videoInfo_textView = videoInfo_textView;
+        }
+
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
+            videoInfo_textView.setVisibility(View.VISIBLE);
+            videoInfo_textView.setText("Downloading..");
+            circleProgressBar.setVisibility(View.VISIBLE);
+
+            Log.d("이미지", "VideoDownloader) onPreExecute() 프로그레스바, 다운로드 메시지가 보여야 함");
+        }
+
+        @Override protected String doInBackground(String... params) {
+
+
+            //웹 서버 쪽 파일이 있는 경로
+            String fileUrl = params[0];
+            Log.d("이미지", "VideoDownloader) doInBackground. fileUrl="+fileUrl);
+
+
+            //다운로드 경로를 지정
+            //Environment.getExternalStorageDirector() : 저장공간의 기본경로를 가져옴. 기기마다 저장공간에 대한 경로 명이 상이함
+            String savePath = Environment.getExternalStorageDirectory().toString() + MY_FOLDER;
+            File dir = new File(savePath);
+
+
+            //위에서 지정한 디렉토리가 존재하지 않을 경우, 새로 생성한다
+            if (!dir.exists()) {
+                dir.mkdirs();
+                Log.d("이미지", "VideoDownloader) 로컬 다운로드 폴더가 존재하지 않음. 생성함");
+                /*
+                 * mkdirs(): 원하는 경로의 상위 폴더가 없으면 상위 폴더까지 생성
+                 * mkdir(): 지정 폴더만 생성
+                 * */
+            }
+
+
+            //파일 이름 : Canaria_날짜_시간
+            Date day = new Date();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.KOREA);
+            fileName = "Canaria_"+String.valueOf(sdf.format(day));
+
+
+            //다운로드 폴더에 동일한 파일명이 존재하는지 확인
+            String pathname = savePath + "/" + fileName;
+            int fix_index = 0;
+            int flag = 0;
+            while(flag == 0){
+
+                fix_index++;
+
+                if (new File(pathname).exists()) { //중복파일이 있으면
+
+                    pathname = pathname+"("+fix_index+")";
+                    flag = 0;
+
+                    Log.d("이미지", "VideoDownloader) 다운로드 폴더에 중복파일이 있음");
+
+                } else { //중복파일이 없으면
+                    flag = 1;
+
+                    Log.d("이미지", "VideoDownloader) 다운로드 폴더에 중복파일이 없음");
+                }
+
+            }
+
+
+            path_final = pathname + ".mp4";
+            Log.d("이미지", "VideoDownloader) 최종 파일 이름 = "+path_final);
+
+
+            try {
+
+                URL imgUrl = new URL(fileUrl);
+
+                //서버와 접속하는 클라이언트 객체 생성
+                HttpURLConnection conn = (HttpURLConnection)imgUrl.openConnection();
+                int len = conn.getContentLength();
+                byte[] tmpByte = new byte[len];
+
+                //입력 스트림을 구한다
+                InputStream is = conn.getInputStream();
+                File file = new File(path_final);
+
+                //파일 저장 스트림 생성
+                FileOutputStream fos = new FileOutputStream(file);
+                int read;
+
+                int response = conn.getResponseCode();
+                if(response == HttpURLConnection.HTTP_OK){
+
+                }else{ //전송 실패 시, 쓰레드 종료
+                    return "failed";
+                }
+
+                long total = 0;
+                //입력 스트림을 파일로 저장
+                for (;;) {
+                    read = is.read(tmpByte);
+                    if (read <= 0) {
+                        break;
+                    }
+                    total += read;
+                    publishProgress(""+(int)((total*100)/len));
+
+                    fos.write(tmpByte, 0, read); //file 생성
+                }
+                is.close();
+                fos.close();
+                conn.disconnect();
+
+            } catch (Exception e) {
+                StringWriter sw = new StringWriter();
+                e.printStackTrace(new PrintWriter(sw));
+                String ex = sw.toString();
+
+                Log.d("이미지",ex);
+                return "failed";
+            }
+
+            return "succeeded";
+        }
+
+
+        @Override
+        protected void onProgressUpdate(String... values) {
+            super.onProgressUpdate(values);
+
+            circleProgressBar.setProgress(Integer.parseInt(values[0]));
+
+            Log.d("이미지", "VideoDownloader) 다운로드 progress를 표시함. 현재: "+Integer.parseInt(values[0])+" %");
+        }
+
+        @Override protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            Log.d("이미지", "VideoDownloader) onPostExecute");
+
+            if(s.equals("succeeded")){ //다운로드 성공 시
+
+                Log.d("이미지", "VideoDownloader) 다운로드 성공");
+
+                //db에 저장된 메시지 정보를 업데이트한다 - video_path 컬럼에 경로를 저장한다
+                db.execSQL("UPDATE chat_logs SET video_path='"+path_final+"' WHERE id='" + db_id + "';");
+
+                Log.d("이미지", "VideoDownloader) db를 업데이트 함. video_path 수정");
+
+
+                //프로그레스 바를 없앤다
+                circleProgressBar.setVisibility(View.GONE);
+
+                //재생버튼과 재생 시간을 보여준다
+                playBtn_imageView.setVisibility(View.VISIBLE);
+
+                String duration = getDuration(path_final);
+                videoInfo_textView.setText(duration);
+
+                Log.d("이미지", "VideoDownloader) 다운로드 성공 후 마지막 처리. 썸네일 위에 재생버튼, 재생시간이 보여야됨");
+
+                //이미지 스캔해서 갤러리 업데이트 -- 이걸 안 하면 어떻게 됨?
+//            context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(new File(path_final))));
+
+
+            }else{ //다운로드 실패 시
+
+                Log.d("이미지", "VideoDownloader) 다운로드 실패");
+
+                //프로그레스바를 없앤다
+                circleProgressBar.setVisibility(View.GONE);
+
+                //실패를 뜻하는 그림을 띄워준다
+                playBtn_imageView.setImageResource(0); //이미지뷰를 비움
+                playBtn_imageView.setImageResource(R.drawable.ic_warning_black_24dp);
+                playBtn_imageView.setVisibility(View.VISIBLE);
+
+                //실패 메시지를 띄워준다
+                videoInfo_textView.setText("Download Failed");
+
+                Log.d("이미지", "VideoDownloader) 다운로드 실패 후 마지막 처리. 썸네일 위에 warning 아이콘, upload failed 메시지가 보여야됨");
+            }
+
+
+        }
+
+    }
 
 }
 

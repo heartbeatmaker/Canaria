@@ -33,7 +33,7 @@ public class DBHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE IF NOT EXISTS chat_rooms (room_id INTEGER PRIMARY KEY, room_name TEXT, updateTime TEXT, members TEXT);");
 
         //채팅내용 테이블: id, 방id, 보낸사람 id, 보낸사람 username, 메시지내용, 이미지파일 이름, 보낸시각, 읽었는지
-        db.execSQL("CREATE TABLE IF NOT EXISTS chat_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, room_id INTEGER, sender_id INTEGER, sender_username TEXT, message TEXT, image_name TEXT, time TEXT, isRead INTEGER, video_path TEXT);");
+        db.execSQL("CREATE TABLE IF NOT EXISTS chat_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, room_id INTEGER, sender_id INTEGER, sender_username TEXT, message TEXT, image_name TEXT, time TEXT, isRead INTEGER, video_path TEXT, video_path_server TEXT);");
     }
 
 
@@ -113,6 +113,30 @@ public class DBHelper extends SQLiteOpenHelper {
 
         return (int)last_inserted_id;
     }
+
+    public int insert_chatLogs_with_videoServePath(int room_id, int sender_id, String sender_username, String message, String image_name, long time, int isRead, String video_server_path) {
+        // 읽고 쓰기가 가능하게 DB 열기
+        long last_inserted_id;
+
+        SQLiteDatabase db = getWritableDatabase();
+        // DB에 입력한 값으로 행 추가
+        ContentValues contentValues = new ContentValues();
+        contentValues.put("room_id", room_id);
+        contentValues.put("sender_id", sender_id);
+        contentValues.put("sender_username", sender_username);
+        contentValues.put("message", message);
+        contentValues.put("image_name", image_name);
+        contentValues.put("time", String.valueOf(time));
+        contentValues.put("isRead", isRead);
+        contentValues.put("video_server_path", video_server_path);
+
+        last_inserted_id = db.insert("chat_logs", null, contentValues);
+
+        Log.d(TAG, "chat_logs ITEM IS INSERTED. ID="+(int)last_inserted_id);
+
+        return (int)last_inserted_id;
+    }
+
 
 
 

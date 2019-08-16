@@ -21,25 +21,29 @@ public class MessageItem {
 
     private String image_name;
 
-    private String video_file_path;
+    private String video_path; //로컬 경로 : 자기가 보낸 동영상의 압축파일이 저장되는 곳 + 남한테 받은 동영상을 다운받았을 때 파일이 저장되는 곳
+    private String video_server_path; //서버 경로 : 서버가 동영상을 저장한 곳
 
+    private int db_id; //db의 chat_logs 테이블에서 이 메시지가 지닌 id. SentVideo 일 때만 적용된다. 받은 메시지 아이템에는 db_id 값이 항상 0이다
 
-    private int db_id;
-
-    public MessageItem(int sender_id, String senderUsername, String message, int room_id, String image_name, long timeMillis, int db_id, String video_path) {
+    public MessageItem(int sender_id, String senderUsername, String message, int room_id, String image_name, long timeMillis,
+                       int db_id, String video_path, String video_server_path) {
         this.room_id = room_id;
         this.sender_id = sender_id;
         this.senderUsername = senderUsername;
         this.message = message;
         this.timeMillis = timeMillis;
         this.image_name = image_name;
-        this.video_file_path = video_path;
+        this.video_path = video_path;
         this.db_id = db_id;
+        this.video_server_path = video_server_path;
     }
 
 
 
-
+    public String getVideo_server_path() {
+        return video_server_path;
+    }
 
     public int getDb_id() {
         return db_id;
@@ -49,12 +53,12 @@ public class MessageItem {
         this.db_id = db_id;
     }
 
-    public String getVideo_file_path() {
-        return video_file_path;
+    public String getVideo_path() {
+        return video_path;
     }
 
     public void setVideo_file_path(String video_file_path) {
-        this.video_file_path = video_file_path;
+        this.video_path = video_file_path;
     }
 
 

@@ -362,14 +362,21 @@ public class MainService extends Service {
                         String message = line_array[4];
 
 
-                        //이미지를 담은 메시지인지 확인한다
+                        //이미지 or 비디오 파일을 담은 메시지인지 확인한다
                         //image!-!파일이름1;파일이름2;파일이름3
+                        //video!-!thumbnail_filename!-!video_filename
                         boolean isImage = false;
                         String filename_string = "";
+
+                        //비디오일 경우 필요한 변수
+                        boolean isVideo = false;
+                        String thumbnail_filename = "";
+                        String video_filename = "";
+
                         int number_of_files = 0; //사진 개수
                         try{
                             String[] text_array = message.split("!-!");
-                            if(text_array.length>0 && text_array[0].equals("image")){
+                            if(text_array[0].equals("image")){
 
                                 isImage = true;
 
@@ -386,7 +393,20 @@ public class MainService extends Service {
                                     message = number_of_files +" Photos";
                                 }
 
+                            }else if(text_array[0].equals("video")){
+//                                msg/roomId/id/username/video!-!thumbnail_filename!-!video_filename
+
+                                isVideo = true;
+
+                                thumbnail_filename = text_array[1];
+                                video_filename = text_array[2];
+
+                                //푸쉬알람에 띄워줄 내용을 지정한다
+                                message = "1 Video";
                             }
+
+
+
                         }catch (Exception e){
                             StringWriter sw = new StringWriter();
                             e.printStackTrace(new PrintWriter(sw));
@@ -444,9 +464,16 @@ public class MainService extends Service {
                                 //filename_string = 파일이름1;파일이름2;파일이름3..
                                 dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, filename_string, curTime_long, isRead);
 
+                            }else if(isVideo){ //비디오일 경우
+
+                                String video_server_path = Function.domain+"/images/"+roomId_msg+"/"+video_filename;
+                                dbHelper.insert_chatLogs_with_videoServePath(roomId_msg, sender_id, sender_username, message, "N", curTime_long, isRead, video_server_path);
+
                             }else{ //텍스트 메시지일 경우
                                 dbHelper.insert_chatLogs(roomId_msg, sender_id, sender_username, message, "N", curTime_long, isRead);
                             }
+
+
 //                            String result_msg = dbHelper.getResult_table_chatLogs();
 //                            Log.d(TAG, "chat_logs table="+result_msg);
 

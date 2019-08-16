@@ -133,19 +133,19 @@ public class ImageActivity extends AppCompatActivity {
             Log.d("스와이프", "데이터 타입: 비디오 썸네일");
             position = 0; //동영상 썸네일: 다중이미지로 띄우지 않는다. 무조건 개별사진이므로, position = 0
 
-            String thumbnail_filename = getIntent().getStringExtra("thumbnail_filename");
+            filename_string = getIntent().getStringExtra("thumbnail_filename");
             room_id = getIntent().getIntExtra("room_id", 0);
 
-            String thumbnail_url = Function.domain+"/images/"+room_id+"/"+thumbnail_filename;
+            String thumbnail_url = Function.domain+"/images/"+room_id+"/"+filename_string;
 
             video_file_path = getIntent().getStringExtra("video_path");
 
             //썸네일 이미지를 url_list 에 담는다
 //            url_list.add(url);
-            imageItemArrayList.add(new SlideImageItem(data_type, room_id, thumbnail_filename, thumbnail_url, video_file_path));
+            imageItemArrayList.add(new SlideImageItem(data_type, room_id, filename_string, thumbnail_url, video_file_path));
         }
 
-
+        Log.d("스와이프", "이 화면을 열었을 때, 최초의 imageItemArrayList="+imageItemArrayList);
 
 
         /* 사진 스와이핑을 위한 뷰페이저를 초기화하는 곳 */
@@ -158,8 +158,12 @@ public class ImageActivity extends AppCompatActivity {
         if(imageItemArrayList.size() == 1){ //단독 이미지일 때
             Log.d("스와이프", "단독 이미지임");
 
+
+            Log.d("스와이프", "이전, 이후 데이터를 다 가져올 것임");
             //이전, 이후 데이터를 다 가져온다
             int position_updated = loadAllImages();
+
+            Log.d("스와이프", "추가된 이전 데이터 개수 = 이 사진의 현재 포지션 = "+position_updated);
 
             //어댑터를 연결한다
             slideAdapter = new SlideAdapter(this, imageItemArrayList);
@@ -167,6 +171,7 @@ public class ImageActivity extends AppCompatActivity {
 
             //많은 사진 중에서 아까 사용자가 클릭한 사진이 바로 뜰 수 있도록, 현재 아이템을 설정한다
             viewPager.setCurrentItem(position_updated);
+            Log.d("스와이프", "어댑터 연결하고, 포지션 설정함");
 
 
         } else if(imageItemArrayList.size()>1){ //다중이미지일 때
@@ -485,15 +490,20 @@ public class ImageActivity extends AppCompatActivity {
 
     public int loadAllImages(){
 
+        Log.d("스와이프", "loadAllImages()");
 
         //데이터가 추가되기 전, url_list 의 사이즈
         final int origin_size = imageItemArrayList.size();
+
+        Log.d("스와이프", "데이터가 추가되기 전, list 사이즈 = "+origin_size);
 
         //db에서 찾은 row의 개수를 담는 변수
         int result_count = 0;
 
         int added_image_count_left = 0;
 
+
+        Log.d("스와이프", "room_id="+room_id+" / filename_string = "+filename_string+" 현재 사진이 db의 chat_logs 테이블에서 어떤 id를 가지고 있는지 확인한다");
         //현재 사진이 db의 chat_logs 테이블에서 어떤 id를 가지고 있는지 확인한다
         int current_db_id = 0;
         //roomId와 image name이 일치하는 row를 찾는다
@@ -682,11 +692,29 @@ public class ImageActivity extends AppCompatActivity {
 
                 if(type.equals("image")){
 
-                    new ImageDownload().execute(imageItemArrayList.get(viewPager.getCurrentItem()).getUrl());
+                    new ImageDownload().execute(imageItemArrayList.get(viewPager.getCurrentItem()).getUrl(), "image");
 
                 }else if(type.equals("video")){
 
-                    new ImageDownload().execute(imageItemArrayList.get(viewPager.getCurrentItem()).getVideo_path());
+                    String video_path = imageItemArrayList.get(viewPager.getCurrentItem()).getVideo_path();
+
+
+                    //동영상 파일의 서버 경로를 가져온다
+                    Cursor cursor = db.rawQuery
+                            ("SELECT video_path_server FROM chat_logs WHERE video_path='"+video_path+"';", null);
+
+                    cursor.moveToFirst();
+                    String video_server_url = cursor.getString(0);
+
+                    //로컬 경로가 있으면
+                    if(video_server_url != null){
+                        Toast.makeText(this, "Downloading..", Toast.LENGTH_SHORT).show();
+                        new ImageDownload().execute(video_server_url, "video");
+
+                    }else{
+                        Toast.makeText(this, "Download failed: cannot find url", Toast.LENGTH_SHORT).show();
+                    }
+
                 }
 
                 break;
@@ -711,7 +739,7 @@ public class ImageActivity extends AppCompatActivity {
     private class ImageDownload extends AsyncTask<String, Void, String> {
 
         private String fileName;
-        private final String MY_FOLDER = "/Canaria"; //내가 원하는 저장 경로(폴더 이름)
+        private final String MY_FOLDER = "/Canaria_download"; //내가 원하는 저장 경로(폴더 이름)
         String path_final = "";
 
 
@@ -720,6 +748,7 @@ public class ImageActivity extends AppCompatActivity {
 
             //웹 서버 쪽 파일이 있는 경로
             String fileUrl = params[0];
+            String dataType = params[1];
 
 
             //다운로드 경로를 지정
@@ -764,8 +793,12 @@ public class ImageActivity extends AppCompatActivity {
 
             }
 
+            if(dataType.equals("image")){
+                path_final = pathname + ".jpg";
+            }else if(dataType.equals("video")){
+                path_final = pathname + ".mp4";
+            }
 
-            path_final = pathname + ".jpg";
             try {
 
                 URL imgUrl = new URL(fileUrl);
@@ -774,6 +807,7 @@ public class ImageActivity extends AppCompatActivity {
                 HttpURLConnection conn = (HttpURLConnection)imgUrl.openConnection();
                 int len = conn.getContentLength();
                 byte[] tmpByte = new byte[len];
+
 
                 //입력 스트림을 구한다
                 InputStream is = conn.getInputStream();
@@ -796,6 +830,7 @@ public class ImageActivity extends AppCompatActivity {
                     if (read <= 0) {
                         break;
                     }
+
                     fos.write(tmpByte, 0, read); //file 생성
                 }
                 is.close();
