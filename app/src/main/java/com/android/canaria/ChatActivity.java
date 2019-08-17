@@ -188,6 +188,9 @@ public class ChatActivity extends AppCompatActivity{
         linearLayoutManager = new LinearLayoutManager(this);
         rcv.setHasFixedSize(true);
         rcv.setLayoutManager(linearLayoutManager);
+        rcv.getRecycledViewPool().setMaxRecycledViews(MessageAdapter.VIEW_TYPE_VIDEO_RECEIVED, 0);
+        rcv.getRecycledViewPool().setMaxRecycledViews(MessageAdapter.VIEW_TYPE_VIDEO_SENT, 0);
+
         messageItemList = new ArrayList<>();
         adapter = new MessageAdapter(messageItemList, this);
         rcv.setAdapter(adapter);

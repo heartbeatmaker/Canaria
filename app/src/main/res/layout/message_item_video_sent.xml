@@ -6,7 +6,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingTop="8dp">
+    android:paddingTop="8dp"
+    android:layout_marginBottom="20dp">
 
     <RelativeLayout
         android:id="@+id/sent_video_relativeLayout"
@@ -36,8 +37,8 @@
 
         <ImageView
             android:id="@+id/sent_video_playBtn_imageView"
-            android:layout_width="50dp"
-            android:layout_height="50dp"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
             android:layout_below="@id/sent_video_textView"
             android:layout_centerInParent="true"
             android:paddingTop="10dp"

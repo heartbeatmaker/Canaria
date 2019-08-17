@@ -89,10 +89,10 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
     private static final int VIEW_TYPE_MESSAGE_SENT = 1;
     private static final int VIEW_TYPE_IMAGE_SENT = 2;
-    private static final int VIEW_TYPE_VIDEO_SENT = 3;
+    public static final int VIEW_TYPE_VIDEO_SENT = 3;
     private static final int VIEW_TYPE_MESSAGE_RECEIVED = 4;
     private static final int VIEW_TYPE_IMAGE_RECEIVED = 5;
-    private static final int VIEW_TYPE_VIDEO_RECEIVED = 6;
+    public static final int VIEW_TYPE_VIDEO_RECEIVED = 6;
     private static final int VIEW_TYPE_MESSAGE_SERVER = 7;
 
     DBHelper dbHelper;
@@ -503,13 +503,14 @@ public class MessageAdapter extends RecyclerView.Adapter {
                     //이 동영상이 이미 서버에 업로드 되어 있는지 확인한다 -- video_path 컬럼에 값이 있는지 검사한다
 
                     Cursor cursor = db.rawQuery
-                            ("SELECT id, video_path FROM chat_logs WHERE room_id='"+room_id+"' AND video_path_server='" + video_path_server +"';", null);
+                            ("SELECT id, video_path, video_path_server FROM chat_logs WHERE room_id='"+room_id+"' AND video_path_server='" + video_path_server +"';", null);
 
                     cursor.moveToFirst();
 
-                    // db에 저장된 id, 동영상의 로컬 경로를 가져온다
+                    // db에 저장된 id, 동영상의 로컬 경로, 동영상의 서버 경로를 가져온다
                     int db_id = cursor.getInt(0);
                     String video_path = cursor.getString(1);
+                    String video_path_server = cursor.getString(2);
 
                     if(video_path != null){//로컬 경로가 있음 = 이미 영상을 다운 받았음
 
@@ -528,9 +529,24 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
                     }else{//로컬 경로가 없음 = 영상을 다운받은 적 없음
 
-                        //다운로드 쓰레드를 시작한다
-                        VideoDownloader videoDownloader = new VideoDownloader(db_id, received_video_circleProgressBar,received_video_playBtn_imageView, received_video_textView);
-                        videoDownloader.execute();
+                        if(video_path_server != null){ //로컬 경로가 없을 경우, 반드시 서버 경로가 있어야 함
+
+                            //다운로드 쓰레드를 시작한다
+                            VideoDownloader videoDownloader = new VideoDownloader(db_id, received_video_circleProgressBar,received_video_playBtn_imageView, received_video_textView);
+                            videoDownloader.execute(video_path_server);
+
+                        }else{//로컬 경로와 서버 경로 둘 다 없는 경우
+
+                            Log.d("이미지", "video_path와 video_path_server 둘 다 없음. 오류임");
+                            //썸네일 위에 오류를 뜻하는 그림을 띄워준다
+                            received_video_playBtn_imageView.setImageResource(0); //이미지뷰를 비움
+                            received_video_playBtn_imageView.setImageResource(R.drawable.ic_warning_black_24dp);
+                            received_video_playBtn_imageView.setVisibility(View.VISIBLE);
+
+                            //다운로드 불가 메시지를 띄워준다
+                            received_video_textView.setText("Unable to download");
+                        }
+
                     }
 
                 }
@@ -844,6 +860,8 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
 
     private String getDuration(String path){
+
+        Log.d("오류", "getDuration) path="+path);
 
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         retriever.setDataSource(path);
@@ -1203,6 +1221,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
         protected void onPreExecute() {
             super.onPreExecute();
 
+            playBtn_imageView.setVisibility(View.GONE);
             videoInfo_textView.setVisibility(View.VISIBLE);
             videoInfo_textView.setText("Downloading..");
             circleProgressBar.setVisibility(View.VISIBLE);
@@ -1284,6 +1303,7 @@ public class MessageAdapter extends RecyclerView.Adapter {
 
                 //파일 저장 스트림 생성
                 FileOutputStream fos = new FileOutputStream(file);
+//                FileOutputStream fos = mContext.openFileOutput(fileName, Context.MODE_PRIVATE);
                 int read;
 
                 int response = conn.getResponseCode();
@@ -1349,6 +1369,8 @@ public class MessageAdapter extends RecyclerView.Adapter {
                 circleProgressBar.setVisibility(View.GONE);
 
                 //재생버튼과 재생 시간을 보여준다
+                playBtn_imageView.setImageResource(0);
+                playBtn_imageView.setImageResource(R.drawable.ic_play_circle_outline_black_24dp);
                 playBtn_imageView.setVisibility(View.VISIBLE);
 
                 String duration = getDuration(path_final);
