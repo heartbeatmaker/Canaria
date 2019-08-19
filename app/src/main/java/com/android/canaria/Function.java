@@ -15,6 +15,8 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.Drawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -89,12 +91,55 @@ import cz.msebera.android.httpclient.impl.cookie.BasicClientCookie;
 import cz.msebera.android.httpclient.message.BasicNameValuePair;
 import cz.msebera.android.httpclient.util.EntityUtils;
 
+
+/**
+ * 앱 전체적으로 필요한 메소드를 만들어 놓은 클래스
+ */
+
 public class Function {
 
     public static String domain = "http://15.164.193.65";
     public static String dbName = "canaria.db";
     public static int dbVersion = 1;
     public static int activeRoomId = 0;
+
+//    인터넷 연결 상태 확인할 때 사용하는 변수
+    public static final int TYPE_WIFI = 1;
+    public static final int TYPE_MOBILE = 2;
+    public static final int TYPE_NOT_CONNECTED = 3;
+
+
+
+    //네트워크 상태 확인
+    public static int getConnectivityStatus(Context context){
+
+        ConnectivityManager manager = (ConnectivityManager) context.getSystemService(context.CONNECTIVITY_SERVICE);
+
+        NetworkInfo networkInfo = manager.getActiveNetworkInfo();
+        if(networkInfo != null){
+            int type = networkInfo.getType();
+            if(type == ConnectivityManager.TYPE_MOBILE){//사용자가 모바일 데이터를 사용중
+                return TYPE_MOBILE;
+            }else if(type == ConnectivityManager.TYPE_WIFI){//사용자가 와이파이를 사용중
+                return TYPE_WIFI;
+            }
+        }
+        return TYPE_NOT_CONNECTED;  //연결이 되지않은 상태
+    }
+
+
+    public static boolean isNetworkConnected(Context context){
+
+        switch (getConnectivityStatus(context)){
+
+            case TYPE_MOBILE: case TYPE_WIFI:
+                return true;
+            case TYPE_NOT_CONNECTED:
+                return false;
+            default:
+                return false;
+        }
+    }
 
 
 

@@ -17,6 +17,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.MainService;
 import com.android.canaria.db.DBHelper;
@@ -77,7 +78,12 @@ public class MainActivity extends AppCompatActivity {
             startService(serviceIntent);
         }
 
-
+//        if(Function.isNetworkConnected(context)){
+//            clientSocket = new MainService.ClientSocket();
+//            clientSocket.start();
+//        }else{
+//            Toast.makeText(context, "Please check network connection.", Toast.LENGTH_SHORT).show();
+//        }
 
         //상단 액션바 설정
         actionBar = getSupportActionBar();

@@ -15,6 +15,7 @@ import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.android.canaria.ChatActivity;
 import com.android.canaria.Function;
@@ -78,6 +79,7 @@ public class MainService extends Service {
         //클라이언트 소켓 연결
         clientSocket = new ClientSocket();
         clientSocket.start();
+
 
         //db 연결
         dbHelper = new DBHelper(getApplicationContext(), Function.dbName, null, Function.dbVersion);
