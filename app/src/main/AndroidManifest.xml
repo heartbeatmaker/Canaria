@@ -29,8 +29,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
-        <activity
-            android:name=".ImageActivity" />
+        <activity android:name=".PikachuDetectorActivity"></activity>
+        <activity android:name=".ImageActivity" />
         <activity
             android:name=".SelectFriendsActivity"
             android:theme="@style/AppTheme.NoActionBar" />

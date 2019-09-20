@@ -93,13 +93,25 @@
         />
 
     <Button
-        android:id="@+id/myPage_pickYourInterest_btn"
+        android:id="@+id/myPage_pikachu_detector_btn"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@drawable/grad_bg"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:layout_marginTop="30dp"
+        android:text="Pikachu Detector"/>
+
+
+    <Button
+        android:id="@+id/myPage_blank"
         android:layout_weight="1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="#00ff0000"
         android:gravity="left"
-        android:textSize="14sp"/>
-    <!--android:text="관심사 선택" -->
+        android:textSize="14sp"
+        />
+
 
 </LinearLayout>

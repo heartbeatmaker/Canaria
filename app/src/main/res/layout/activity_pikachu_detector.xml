@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".PikachuDetectorActivity">
+
+    <TextView
+        android:id="@+id/pikachu_title_textView"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:text="Pikachu Detector"
+        android:textSize="25sp"
+        android:gravity="center"
+        android:textColor="@color/black"/>
+
+
+    <ImageView
+        android:id="@+id/pikachu_imageView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="30dp"
+        android:layout_below="@id/pikachu_title_textView"/>
+
+    <Button
+        android:id="@+id/pikachu_select_image_btn"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_below="@id/pikachu_imageView"
+        android:text="Select an Image"
+        android:background="@drawable/grad_bg"
+        android:layout_margin="10dp"/>
+
+</RelativeLayout>

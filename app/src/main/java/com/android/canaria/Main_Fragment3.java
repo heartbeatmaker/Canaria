@@ -67,6 +67,7 @@ import static android.app.Activity.RESULT_OK;
 public class Main_Fragment3 extends Fragment {
 
     ImageView profileImage_imageView;
+    Button pikachu_detector_btn;
     String mCurrentPhotoPath; //사진파일을 저장할 경로. 재사용을 위해 전역변수로 선언한다
     Bitmap rotatedBitmap;
     private static final int PICK_IMAGE_REQUEST = 2;
@@ -94,6 +95,8 @@ public class Main_Fragment3 extends Fragment {
         username = Function.getString(getContext(), "username");
         user_email = Function.getString(getContext(), "email");
         profileImage_imageView = (ImageView)view.findViewById(R.id.main_fragment3_profile_imageView);
+
+        pikachu_detector_btn = (Button)view.findViewById(R.id.myPage_pikachu_detector_btn);
 
 
         String profileImage_name = Function.getString(getActivity(), "profileImage");
@@ -236,6 +239,20 @@ public class Main_Fragment3 extends Fragment {
 
                 }
             });
+
+
+            //버튼을 누르면 -> 피카츄 디텍터 화면이 나타난다
+            pikachu_detector_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    Intent intent = new Intent(getActivity(), PikachuDetectorActivity.class);
+                    startActivity(intent);
+
+                }
+            });
+
+
         }
     }
 
@@ -509,7 +526,7 @@ public class Main_Fragment3 extends Fragment {
                 serverResponseCode = conn.getResponseCode();
                 String serverResponseMessage = conn.getResponseMessage();
 
-                Log.i("image", "HTTP Response is : "
+                Log.d("image", "HTTP Response is : "
                         + serverResponseMessage + ": " + serverResponseCode);
 
                 if(serverResponseCode == 200){
