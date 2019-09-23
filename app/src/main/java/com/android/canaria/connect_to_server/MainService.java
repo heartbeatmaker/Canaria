@@ -212,6 +212,13 @@ public class MainService extends Service {
             LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
         }
 
+        private void sendMsgToPikachuDetector(String message){
+            Log.d(TAG, "Broadcasting message");
+            Intent intent = new Intent("pikachu_event");
+            intent.putExtra("message", message);
+            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+        }
+
 
 
 
@@ -274,6 +281,11 @@ public class MainService extends Service {
                 isMainForeground = Function.isForegroundActivity(getApplicationContext(), MainActivity.class);
 
                 switch(signal){
+
+                    //피카츄 사진이 다 분석되었다는 알림
+                    //pikachu_output/success or fail/filename
+                    case "pikachu_output":
+                        sendMsgToPikachuDetector(line);
 
                     //방이 만들어졌다는 알림
                     //room_created/roomId/방이름/인원/memberInfo(참여자id;username..)

@@ -2,12 +2,16 @@ package com.android.canaria;
 
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.net.Uri;
 import android.os.Environment;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -21,6 +25,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.MainService;
+import com.android.canaria.recyclerView.FriendListItem;
+import com.android.canaria.recyclerView.MessageItem;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -32,6 +38,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
@@ -46,6 +53,7 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
     ImageView imageView;
     Button button;
+    TextView output_textView;
 
     private static final int PICK_IMAGE_REQUEST = 2;
     static final int REQUEST_TAKE_PHOTO = 3;
@@ -65,6 +73,8 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
     boolean isDetectionMode = false;
 
+    String filename_origin; //원본 사진의 이름을 기억한다
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,6 +83,7 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
         imageView = (ImageView)findViewById(R.id.pikachu_imageView);
         button = (Button)findViewById(R.id.pikachu_select_image_btn);
+        output_textView = (TextView)findViewById(R.id.pikachu_output_textView);
 
         user_id = Function.getString(this, "user_id");
         username = Function.getString(this, "username");
@@ -82,7 +93,11 @@ public class PikachuDetectorActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if(isDetectionMode){
                     Log.d("image", "Detect btn clicked");
+                    isDetectionMode = false;
 
+                    //채팅 서버로 메시지를 보낸다
+                    sendMsg("pikachu/"+filename_origin);
+                    Log.d("image", "Sent a message to ChatServer");
 
                 }else {
                     callGallery();
@@ -140,7 +155,6 @@ public class PikachuDetectorActivity extends AppCompatActivity {
             galleryAddPic();
             imageView.setImageURI(albumUri);
             button.setText("Start Detection");
-
             isDetectionMode = true;
 
             String[] imagePath_split = mCurrentPhotoPath.split("/");
@@ -162,7 +176,6 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
 
     public int uploadFile(String sourceFileUri) {
-
 
         HttpURLConnection conn = null;
         DataOutputStream dos = null;
@@ -198,11 +211,12 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
                 dos = new DataOutputStream(conn.getOutputStream());
 
+                Log.d("image", "http 요청 user id="+user_id);
 
                 //id를 보낸다
                 dos.writeBytes(twoHyphens + boundary + lineEnd);
 
-                dos.writeBytes("Content-Disposition: form-data; name=\"previous_fileName\"\r\n\r\n" + "haha" +lineEnd);
+                dos.writeBytes("Content-Disposition: form-data; name=\"user_id\"\r\n\r\n" + user_id +lineEnd);
 
                 //이미지 파일을 보낸다
                 dos.writeBytes(twoHyphens + boundary + lineEnd);
@@ -244,14 +258,6 @@ public class PikachuDetectorActivity extends AppCompatActivity {
                 if(serverResponseCode == 200){
 
                     Log.d("image", "File is successfully uploaded.");
-
-                    //채팅 서버로 메시지를 보낸다
-                    String[] filepath_split = sourceFileUri.split("/");
-                    String filename = filepath_split[filepath_split.length-1];
-
-
-                    sendMsg("pikachu/"+filename);
-                    Log.d("image", "Sent a message to ChatServer");
 
                 }
 
@@ -305,8 +311,8 @@ public class PikachuDetectorActivity extends AppCompatActivity {
     //이미지파일 만들기
     private File createImageFile() throws IOException {
 
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-        String imageFileName = user_id +"_"+ username +"_"+ timeStamp + "_";
+        String timeStamp = new SimpleDateFormat("dd-HH-mm-ss").format(new Date());
+        String imageFileName = user_id +"_"+ timeStamp;
 
         //여러 앱이 공용으로 사용할 수 있는 저장공간. 그림파일이 저장되는 디렉토리 경로를 불러온다
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_PICTURES); // = /mnt/sdcard/Pictures
@@ -323,6 +329,9 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
         mCurrentPhotoPath = image.getAbsolutePath(); //이건 왜 하는거지?
         Log.d("image", "createImageFile) mCurrentPhotoPath="+mCurrentPhotoPath);
+
+        String[] filename_split = mCurrentPhotoPath.split("/");
+        filename_origin = filename_split[filename_split.length-1];
 
         return image; //이미지 파일을 return
     }
@@ -343,7 +352,60 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
 
 
+    @Override
+    protected void onResume() {
+        super.onResume();
 
+        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, new IntentFilter("pikachu_event"));
+    }
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(messageReceiver);
+    }
+
+
+    private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String message = intent.getStringExtra("message");
+            Log.d("image", "Receiver) message received: " + message);
+
+            String[] message_array = message.split("/");
+            String signal = message_array[0];
+
+            switch (signal){
+
+                //이미지가 분석되었다는 알림
+                //pikachu_output/success or fail/filename
+                case "pikachu_output":
+
+                    String success_or_fail = message_array[1];
+                    String filename = message_array[2];
+
+                    //이미지분석이 정상적으로 완료되었을 경우
+                    if(success_or_fail.equals("success")){
+
+                        String[] filename_split = filename.split("_");
+                        int number_of_pikachu = Integer.valueOf(filename_split[1]);
+
+                        output_textView.setText("Found "+ number_of_pikachu +" Pikachu");
+
+                    }else{ //이미지 분석 중 오류가 났을 경우
+
+                        output_textView.setText("An error occurred. Please try again later");
+
+                    }
+
+                    break;
+            }
+
+
+        }
+    };
 
 
 
