@@ -287,6 +287,7 @@ public class MainService extends Service {
                     case "pikachu_output":
                         sendMsgToPikachuDetector(line);
 
+                        break;
                     //방이 만들어졌다는 알림
                     //room_created/roomId/방이름/인원/memberInfo(참여자id;username..)
                     case "room_created":

@@ -15,7 +15,16 @@
         android:gravity="center"
         android:textColor="@color/black"/>
 
+    <ProgressBar
+        android:id="@+id/pikachu_progressBar"
+        android:layout_width="300dp"
+        android:layout_height="300dp"
+        android:layout_centerInParent="true"
+        android:layout="@id/pikachu_scrollView"
+        android:visibility="gone"/>
+
     <ScrollView
+        android:id="@+id/pikachu_scrollView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/pikachu_title_textView">
@@ -28,15 +37,18 @@
                 android:id="@+id/pikachu_output_textView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="20dp"/>
+                android:paddingTop="20dp"
+                android:paddingBottom="10dp"
+                android:gravity="center"
+                android:textSize="20sp"
+                android:visibility="gone"/>
 
             <ImageView
                 android:id="@+id/pikachu_imageView"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="30dp"
+                android:layout_height="300dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginBottom="20dp"
                 android:layout_below="@id/pikachu_output_textView"/>
 
             <Button
