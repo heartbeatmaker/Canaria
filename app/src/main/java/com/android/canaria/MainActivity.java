@@ -20,6 +20,7 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.MainService;
+import com.android.canaria.connect_to_server.NetworkStatus;
 import com.android.canaria.db.DBHelper;
 import com.android.canaria.login.SignInActivity;
 
@@ -75,7 +76,15 @@ public class MainActivity extends AppCompatActivity {
 
         //지금 서비스가 실행되고 있지 않다면 -> 서비스를 실행한다
         if(!isMyServiceRunning(mainService.getClass())){
-            startService(serviceIntent);
+
+            int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
+            if(status == NetworkStatus.TYPE_NOT_CONNECTED){
+
+                Toast.makeText(this, "No Internet Connection", Toast.LENGTH_SHORT).show();
+
+            }else{
+                startService(serviceIntent);
+            }
         }
 
 //        if(Function.isNetworkConnected(context)){

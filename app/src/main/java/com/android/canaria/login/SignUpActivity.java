@@ -21,12 +21,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.canaria.Function;
 import com.android.canaria.MainActivity;
+import com.android.canaria.NoInternetActivity;
 import com.android.canaria.R;
+import com.android.canaria.connect_to_server.NetworkStatus;
 import com.google.android.gms.auth.api.credentials.Credential;
 import com.google.android.gms.auth.api.credentials.CredentialRequest;
 import com.google.android.gms.auth.api.credentials.CredentialRequestResponse;
@@ -98,249 +101,265 @@ public class SignUpActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_up);
+        Log.d("internet", "NoInternetActivity onCreate()");
 
-        Log.d(TAG,"oncreate");
+        int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
+        if(status == NetworkStatus.TYPE_NOT_CONNECTED){
+            Log.d("internet", "NoInternetActivity onCreate() - TYPE NOT CONNECTED");
 
-        //알람 설정을 true로 초기화한다
-        // -- 임시 설정임!! 원래 회원가입 완료했을 때 SmsVerification_SecondActivity에서 한 번만 실행하는 코드임
-        Function.setBoolean(getApplicationContext(), "alarm", true);
+            Intent intent = new Intent(this, NoInternetActivity.class);
+            startActivity(intent);
 
-        automaticLogin();//이미 로그인 상태면, 메인화면으로 전환한다
+            finish();
 
-        smsPermissionCheck(); //sms 수신 권한을 받지 않으면, 메시지를 읽어올 수 없다
+        }else{
+
+            Log.d(TAG,"oncreate");
+
+            //알람 설정을 true로 초기화한다
+            // -- 임시 설정임!! 원래 회원가입 완료했을 때 SmsVerification_SecondActivity에서 한 번만 실행하는 코드임
+            Function.setBoolean(getApplicationContext(), "alarm", true);
+
+            automaticLogin();//이미 로그인 상태면, 메인화면으로 전환한다
+
+            smsPermissionCheck(); //sms 수신 권한을 받지 않으면, 메시지를 읽어올 수 없다
 
 
-        //로그인상태가 true이면 -> 바로 메인화면으로 전환
+            //로그인상태가 true이면 -> 바로 메인화면으로 전환
 //        isLogin();
 
 
-        signup_with_email_linearLayout = (LinearLayout)findViewById(R.id.signup_with_email_linearLayout);
+            signup_with_email_linearLayout = (LinearLayout)findViewById(R.id.signup_with_email_linearLayout);
 
-        //입력창
-        username_editText = (EditText)findViewById(R.id.signup_username_editText);
-        email_editText = (EditText)findViewById(R.id.signup_email_editText);
-        password_editText = (EditText)findViewById(R.id.signup_password_editText);
-        password2_editText= (EditText)findViewById(R.id.signup_confirm_password_editText);
-
-
-        //사용자가 입력한 값에 문제가 있을 경우, 메시지를 띄워주는 뷰 - 현재 GONE 상태
-        username_warning = (TextView)findViewById(R.id.signup_username_warning_textView);
-        email_warning = (TextView)findViewById(R.id.signup_email_warning_textView);
-        password_warning = (TextView)findViewById(R.id.signup_password_warning_textView);
-        password2_warning = (TextView)findViewById(R.id.signup_password2_warning_textView);
+            //입력창
+            username_editText = (EditText)findViewById(R.id.signup_username_editText);
+            email_editText = (EditText)findViewById(R.id.signup_email_editText);
+            password_editText = (EditText)findViewById(R.id.signup_password_editText);
+            password2_editText= (EditText)findViewById(R.id.signup_confirm_password_editText);
 
 
-        signup_with_email_btn = (Button)findViewById(R.id.signup_with_email_btn);
-        signup_btn = (TextView)findViewById(R.id.signup_cofirm_btn);
-        signin_btn = (TextView) findViewById(R.id.signup_alreadyHaveAccount_textView);
+            //사용자가 입력한 값에 문제가 있을 경우, 메시지를 띄워주는 뷰 - 현재 GONE 상태
+            username_warning = (TextView)findViewById(R.id.signup_username_warning_textView);
+            email_warning = (TextView)findViewById(R.id.signup_email_warning_textView);
+            password_warning = (TextView)findViewById(R.id.signup_password_warning_textView);
+            password2_warning = (TextView)findViewById(R.id.signup_password2_warning_textView);
+
+
+            signup_with_email_btn = (Button)findViewById(R.id.signup_with_email_btn);
+            signup_btn = (TextView)findViewById(R.id.signup_cofirm_btn);
+            signin_btn = (TextView) findViewById(R.id.signup_alreadyHaveAccount_textView);
 
 
 
-        signup_with_email_btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            signup_with_email_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
 
-                //이메일 가입 양식을 보여준다
-                signup_with_email_linearLayout.setVisibility(View.VISIBLE);
+                    //이메일 가입 양식을 보여준다
+                    signup_with_email_linearLayout.setVisibility(View.VISIBLE);
 
-                getCredentials(); //구글 스마트락에 저장된 이메일을 가져온다
-
-            }
-        });
-
-
-        signin_btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                Log.d("tag","signin_btn clicked");
-
-                Intent intent = new Intent(getApplicationContext(), SignInActivity.class);
-                startActivity(intent);
-            }
-        });
-
-
-        //사용자가 입력한 텍스트를 가져온다
-        username = username_editText.getText().toString();
-        email = email_editText.getText().toString();
-        password = password_editText.getText().toString();
-        password_forConfirmation = password2_editText.getText().toString();
-
-
-        //확인 버튼을 누르면
-        signup_btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                Log.d("tag", "clicked");
-
-               //사용자가 입력한 값을 확인한다 -> 문제가 있는 칸 밑에 warning 메시지를 띄워준다
-                boolean isContentValid = false;
-
-
-                username_input = username_editText.getText().toString();
-                email_input = email_editText.getText().toString();
-                password_input = password_editText.getText().toString();
-                String password2_input = password2_editText.getText().toString();
-
-                //닉네임: 채워졌는지 확인
-                if(username_input.length()==0){
-                    username_warning.setVisibility(View.VISIBLE);
-                    username_warning.setText("Enter your name");
-                    isContentValid=false;
-                    Log.d(TAG, "username is invalid");
-                }else{
-                    isContentValid = true;
-                    Log.d(TAG, "username is valid");
-                }
-
-
-                //이메일: 채워졌는지, 올바른 양식인지 확인(정규표현식 사용)
-                if(email_input.length()==0){
-                    email_warning.setVisibility(View.VISIBLE);
-                    email_warning.setText("Enter your email");
-                    isContentValid=false;
-
-                }else{//사용자가 이메일을 입력했다면
-
-                    //올바른 양식인지 확인
-                    if(Patterns.EMAIL_ADDRESS.matcher(email_input).matches()){
-                        isContentValid = true;
-                    }else{
-                        email_warning.setVisibility(View.VISIBLE);
-                        email_warning.setText("Enter a valid email address");
-                        isContentValid = false;
-                    }
+                    getCredentials(); //구글 스마트락에 저장된 이메일을 가져온다
 
                 }
+            });
 
-                //첫번째 패스워드: 채워졌는지 + 올바른 양식인지 확인(정규표현식 사용)
-                if(password_input.length()==0){
-                    password_warning.setVisibility(View.VISIBLE);
-                    password_warning.setText("Enter your password");
-                    isContentValid=false;
 
-                }else{ //첫번째 패스워드를 입력했다면
+            signin_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
 
-                    //올바른 양식인지 확인 - 6자 이상
-                    if(Pattern.matches("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[$@$!%*#?&])[A-Za-z\\d$@$!%*#?&]{6,20}$", password_input)){
-                        isContentValid = true;
-                    }else{
-                        password_warning.setVisibility(View.VISIBLE);
-                        password_warning.setText("Passwords must be 6 to 20 characters of alphabets and numbers");
-                        isContentValid = false;
-                    }
+                    Log.d("tag","signin_btn clicked");
 
-                    //두번째 패스워드 확인: 채워졌는지 + 첫번째 패스워드와 일치하는지 검사한다
-                    if(password2_input.length()==0){
-                        password2_warning.setVisibility(View.VISIBLE);
-                        password2_warning.setText("Type your password again");
+                    Intent intent = new Intent(getApplicationContext(), SignInActivity.class);
+                    startActivity(intent);
+                }
+            });
+
+
+            //사용자가 입력한 텍스트를 가져온다
+            username = username_editText.getText().toString();
+            email = email_editText.getText().toString();
+            password = password_editText.getText().toString();
+            password_forConfirmation = password2_editText.getText().toString();
+
+
+            //확인 버튼을 누르면
+            signup_btn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    Log.d("tag", "clicked");
+
+                    //사용자가 입력한 값을 확인한다 -> 문제가 있는 칸 밑에 warning 메시지를 띄워준다
+                    boolean isContentValid = false;
+
+
+                    username_input = username_editText.getText().toString();
+                    email_input = email_editText.getText().toString();
+                    password_input = password_editText.getText().toString();
+                    String password2_input = password2_editText.getText().toString();
+
+                    //닉네임: 채워졌는지 확인
+                    if(username_input.length()==0){
+                        username_warning.setVisibility(View.VISIBLE);
+                        username_warning.setText("Enter your name");
                         isContentValid=false;
+                        Log.d(TAG, "username is invalid");
                     }else{
-                        if(password_input.equals(password2_input)){
+                        isContentValid = true;
+                        Log.d(TAG, "username is valid");
+                    }
+
+
+                    //이메일: 채워졌는지, 올바른 양식인지 확인(정규표현식 사용)
+                    if(email_input.length()==0){
+                        email_warning.setVisibility(View.VISIBLE);
+                        email_warning.setText("Enter your email");
+                        isContentValid=false;
+
+                    }else{//사용자가 이메일을 입력했다면
+
+                        //올바른 양식인지 확인
+                        if(Patterns.EMAIL_ADDRESS.matcher(email_input).matches()){
                             isContentValid = true;
                         }else{
-                            password2_warning.setVisibility(View.VISIBLE);
-                            password2_warning.setText("Passwords must match");
+                            email_warning.setVisibility(View.VISIBLE);
+                            email_warning.setText("Enter a valid email address");
                             isContentValid = false;
                         }
-                    }
-                }
 
-                Log.d("tag","isContentValid="+isContentValid);
-                if(isContentValid){
-                    //서버로 입력값을 보낸다
-                    Log.d("tag", "content is valid");
-
-                    try{
-
-                        SendPost sendPost = new SendPost();
-                        sendPost.execute(username_input, email_input, password_input);
-
-                        //execute(~~~).get() : retrieve your result once the work on the thread is done.
-                        //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다. 쓰레드 실행 중에 ui 변경이 불가 (ex.로딩바)
-                        //따라서 get()을 사용하지 않는다. 서버와 통신 후 처리는 onPostExecute()에서 한다
-
-                    }catch (Exception e){
-                        Log.d("tag", this.getClass().getName()+" Error: "+e);
                     }
 
+                    //첫번째 패스워드: 채워졌는지 + 올바른 양식인지 확인(정규표현식 사용)
+                    if(password_input.length()==0){
+                        password_warning.setVisibility(View.VISIBLE);
+                        password_warning.setText("Enter your password");
+                        isContentValid=false;
+
+                    }else{ //첫번째 패스워드를 입력했다면
+
+                        //올바른 양식인지 확인 - 6자 이상
+                        if(Pattern.matches("^(?=.*[A-Za-z])(?=.*\\d)(?=.*[$@$!%*#?&])[A-Za-z\\d$@$!%*#?&]{6,20}$", password_input)){
+                            isContentValid = true;
+                        }else{
+                            password_warning.setVisibility(View.VISIBLE);
+                            password_warning.setText("Passwords must be 6 to 20 characters of alphabets and numbers");
+                            isContentValid = false;
+                        }
+
+                        //두번째 패스워드 확인: 채워졌는지 + 첫번째 패스워드와 일치하는지 검사한다
+                        if(password2_input.length()==0){
+                            password2_warning.setVisibility(View.VISIBLE);
+                            password2_warning.setText("Type your password again");
+                            isContentValid=false;
+                        }else{
+                            if(password_input.equals(password2_input)){
+                                isContentValid = true;
+                            }else{
+                                password2_warning.setVisibility(View.VISIBLE);
+                                password2_warning.setText("Passwords must match");
+                                isContentValid = false;
+                            }
+                        }
+                    }
+
+                    Log.d("tag","isContentValid="+isContentValid);
+                    if(isContentValid){
+                        //서버로 입력값을 보낸다
+                        Log.d("tag", "content is valid");
+
+                        try{
+
+                            SendPost sendPost = new SendPost();
+                            sendPost.execute(username_input, email_input, password_input);
+
+                            //execute(~~~).get() : retrieve your result once the work on the thread is done.
+                            //get() 메소드는 AsyncTask가 실행되는 동안 UI 쓰레드를 block 시킨다. 쓰레드 실행 중에 ui 변경이 불가 (ex.로딩바)
+                            //따라서 get()을 사용하지 않는다. 서버와 통신 후 처리는 onPostExecute()에서 한다
+
+                        }catch (Exception e){
+                            Log.d("tag", this.getClass().getName()+" Error: "+e);
+                        }
+
+                    }
+
+                }
+            });
+
+
+
+            //사용자가 입력하는 동안에는 warning 창을 숨겨놓는다
+            username_editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    username_warning.setVisibility(View.GONE);
                 }
 
-            }
-        });
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+
+                }
+            });
+
+            email_editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    email_warning.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+
+                }
+            });
+
+            password_editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    password_warning.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+
+                }
+            });
+
+            password2_editText.addTextChangedListener(new TextWatcher() {
+                @Override
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    password2_warning.setVisibility(View.GONE);
+                }
+
+                @Override
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+                }
+
+                @Override
+                public void afterTextChanged(Editable s) {
+
+                }
+            });
 
 
+        }
 
-        //사용자가 입력하는 동안에는 warning 창을 숨겨놓는다
-        username_editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                username_warning.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-        email_editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                email_warning.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-        password_editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                password_warning.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-        password2_editText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                password2_warning.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
 
 
     }

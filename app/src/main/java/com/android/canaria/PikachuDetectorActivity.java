@@ -26,6 +26,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.MainService;
+import com.android.canaria.connect_to_server.NetworkStatus;
 import com.android.canaria.recyclerView.FriendListItem;
 import com.android.canaria.recyclerView.MessageItem;
 import com.bumptech.glide.Glide;
@@ -42,6 +43,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import id.zelory.compressor.Compressor;
@@ -50,6 +52,9 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+
+import com.esafirm.imagepicker.features.ImagePicker;
+import com.esafirm.imagepicker.model.Image;
 
 public class PikachuDetectorActivity extends AppCompatActivity {
 
@@ -79,15 +84,29 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
     int button_mode = 1; //1=select an image, 2=detect pikachu, 3=reset
 
+    String file_path;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pikachu_detector);
 
+        int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
+        if(status == NetworkStatus.TYPE_NOT_CONNECTED){
+
+            Intent intent = new Intent(this, NoInternetActivity.class);
+            startActivity(intent);
+
+            finish();
+        }
+
         progressBar = (ProgressBar)findViewById(R.id.pikachu_progressBar);
         imageView = (ImageView)findViewById(R.id.pikachu_imageView);
         button = (Button)findViewById(R.id.pikachu_select_image_btn);
         output_textView = (TextView)findViewById(R.id.pikachu_output_textView);
+
+        imageView.setImageResource(R.drawable.info);
+        output_textView.setText("[How it works]");
 
         user_id = Function.getString(this, "user_id");
         username = Function.getString(this, "username");
@@ -96,48 +115,75 @@ public class PikachuDetectorActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
-                switch (button_mode){
-                    case 1: //select an image
+                //인터넷이 연결되어 있을 때만 버튼 이벤트에 반응한다
+                int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
+                if(status == NetworkStatus.TYPE_NOT_CONNECTED){
 
-                        //갤러리를 연다
-                        callGallery();
-                        break;
-                    case 2: //detect pikachu
-                        Log.d("image", "Detect btn clicked");
+                    Toast.makeText(PikachuDetectorActivity.this, "No Internet Connection: Please check your network status", Toast.LENGTH_SHORT).show();
 
-                        //버튼의 역할을 바꾼다
-                        button_mode = 3;
+                }else{
+                    switch (button_mode){
+                        case 1: //select an image
 
-                        output_textView.setVisibility(View.VISIBLE);
-                        output_textView.setText("Processing.. please wait");
+                            output_textView.setText("");
+                            output_textView.setTextColor(Color.parseColor("#0F467D"));
+                            output_textView.setVisibility(View.INVISIBLE);
 
-                        //프로그레스바를 띄운다 -- 분석 완료 될 때까지 지속
-                        progressBar.setVisibility(View.VISIBLE);
-                        progressBar.bringToFront();
+                            ImagePicker.create(PikachuDetectorActivity.this)
+                                    .folderMode(false) // folder mode (false by default)
+                                    .toolbarFolderTitle("Folder") // folder selection title
+                                    .toolbarImageTitle("Tap to select") // image selection title
+                                    .toolbarArrowColor(Color.WHITE) // Toolbar 'up' arrow color
+                                    .includeVideo(true) // Show video on image picker
+                                    .single() // single mode
+                                    .limit(1) // max images can be selected (99 by default)
+                                    .showCamera(false) // show camera or not (true by default)
+                                    .imageDirectory("Camera") // directory name for captured image  ("Camera" folder by default)
+                                    .enableLog(false) // disabling log
+                                    .start(PICK_IMAGE_REQUEST); // start image picker activity with request code
 
-                        //채팅 서버로 메시지를 보낸다
-                        sendMsg("pikachu/"+filename_origin);
-                        Log.d("image", "Sent a message to ChatServer");
 
-                        //버튼을 안 보이게 만든다 -- 분석 완료 될 때까지 지속
-                        button.setVisibility(View.INVISIBLE);
-                        break;
-                    case 3: //reset
+                            //갤러리를 연다
+//                        callGallery();
+                            break;
+                        case 2: //detect pikachu
+                            Log.d("image", "Detect btn clicked");
 
-                        //버튼의 역할을 바꾼다
-                        button_mode = 1;
-                        button.setText("Select an image");
+                            //버튼의 역할을 바꾼다
+                            button_mode = 3;
 
-                        //이미지뷰를 초기화한다
-                        imageView.setImageResource(0);
+                            output_textView.setVisibility(View.VISIBLE);
+                            output_textView.setText("Processing.. please wait");
 
-                        //안내문구의 색깔을 검은색으로 바꾸고, 안 보이게 처리한다
-                        output_textView.setVisibility(View.GONE);
-                        output_textView.setTextColor(Color.parseColor("#000000"));
-                        //여기서 초기화 해야하는 변수가 무엇??
-                        break;
+                            //프로그레스바를 띄운다 -- 분석 완료 될 때까지 지속
+                            progressBar.setVisibility(View.VISIBLE);
+                            progressBar.bringToFront();
+
+                            //채팅 서버로 메시지를 보낸다
+                            sendMsg("pikachu/"+filename_origin);
+                            Log.d("image", "Sent a message to ChatServer");
+
+                            //버튼을 안 보이게 만든다 -- 분석 완료 될 때까지 지속
+                            button.setVisibility(View.INVISIBLE);
+                            break;
+                        case 3: //reset
+
+                            //버튼의 역할을 바꾼다
+                            button_mode = 1;
+                            button.setText("Select an image");
+
+                            //이미지뷰를 초기화한다
+                            imageView.setImageResource(0);
+                            imageView.setImageResource(R.drawable.info);
+
+                            //안내문구의 색깔을 검은색으로 바꾼다
+                            output_textView.setTextColor(Color.parseColor("#0F467D"));
+                            output_textView.setText("[How it works]");
+                            //여기서 초기화 해야하는 변수가 무엇??
+                            break;
+                    }
+
                 }
-
 
             }
         });
@@ -170,14 +216,62 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
             try{
 
-                File albumFile = null;
-                albumFile = createImageFile();
-                photoUri = data.getData(); //content URI
-                albumUri = Uri.fromFile(albumFile); // file URI
-                Log.d("image", "photoUri(=방금 가져온 data의 contentUri) : "+photoUri);
-                Log.d("image","albumUri(=새로 만든 file의 fileUri) : "+albumUri);
+                List<Image> images_list = ImagePicker.getImages(data);
+                file_path = images_list.get(0).getPath();
 
-                cropImage();
+                String[] path_split = file_path.split("/");
+                String file_name = path_split[path_split.length-1];
+                String[] file_name_split = file_name.split("\\.");
+
+                String extension = file_name_split[file_name_split.length-1];
+                Log.d("image", "extension: "+extension);
+
+                if(extension.equals("jpg")){
+
+                    imageView.setImageURI(Uri.parse(file_path));
+                    button.setText("Start Detection");
+                    button_mode = 2;
+
+                    filename_origin = user_id+"_"+file_name;
+
+                    new Thread(new Runnable() {
+
+                        public void run() {
+
+                            Log.d("image", "Uploading file...");
+                            uploadFile(file_path);
+                        }
+
+                    }).start();
+                }else{
+                    output_textView.setVisibility(View.VISIBLE);
+                    output_textView.setText("Warning: please select only 'jpg' file");
+                    output_textView.setTextColor(Color.parseColor("#AA0000"));
+                }
+
+//                photoUri = data.getData(); //content URI
+//                String string_uri = photoUri.toString();
+//                String[] uri_split = string_uri.split("\\.");
+//                String extension = uri_split[uri_split.length-1];
+//
+//                Log.d("image", "extension: "+extension);
+//
+//                if(extension.equals("jpg")){
+//                    File albumFile = null;
+//                    albumFile = createImageFile();
+////                    photoUri = data.getData(); //content URI
+//                    albumUri = Uri.fromFile(albumFile); // file URI
+//                    Log.d("image", "photoUri(=방금 가져온 data의 contentUri) : "+photoUri);
+//                    Log.d("image","albumUri(=새로 만든 file의 fileUri) : "+albumUri);
+//
+//                    cropImage();
+//
+//                }else{
+//                    output_textView.setVisibility(View.VISIBLE);
+//                    output_textView.setText("Warning: please select only 'jpg' file");
+//                    output_textView.setTextColor(Color.parseColor("#AA0000"));
+//                }
+
 
             }catch(Exception e){
                 e.printStackTrace();
@@ -189,6 +283,7 @@ public class PikachuDetectorActivity extends AppCompatActivity {
         else if(requestCode == REQUEST_IMAGE_CROP && resultCode == RESULT_OK) {
 
             galleryAddPic();
+            imageView.setImageResource(0);
             imageView.setImageURI(albumUri);
             button.setText("Start Detection");
             button_mode = 2;
@@ -324,6 +419,7 @@ public class PikachuDetectorActivity extends AppCompatActivity {
 
 
     void sendMsg(String msg){
+
         Intent intent = new Intent(getApplicationContext(), MainService.class);
         intent.putExtra("message", msg);
 

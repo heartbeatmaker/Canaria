@@ -21,6 +21,8 @@ import com.android.canaria.ChatActivity;
 import com.android.canaria.Function;
 import com.android.canaria.MainActivity;
 import com.android.canaria.Main_Fragment2;
+import com.android.canaria.NoInternetActivity;
+import com.android.canaria.PikachuDetectorActivity;
 import com.android.canaria.R;
 import com.android.canaria.db.DBHelper;
 import com.android.canaria.recyclerView.RoomListItem;
@@ -105,6 +107,7 @@ public class MainService extends Service {
                 Log.d(TAG, "Received a message from Activity: "+message);
 
                 clientSocket.sendMsgToServer(message);
+
             }
 //            startTimer();
 
@@ -129,8 +132,11 @@ public class MainService extends Service {
         //메인화면이 onDestroy()될 때 서비스를 종료하도록 설정했다
         Log.d(TAG, "MainService - onDestroy()");
 
-        Intent broadcastIntent = new Intent(this, ServiceStopReceiver.class);
-        sendBroadcast(broadcastIntent);
+        int status = NetworkStatus.getConnectivityStatus(getApplicationContext());
+        if(status != NetworkStatus.TYPE_NOT_CONNECTED){
+            Intent broadcastIntent = new Intent(this, ServiceStopReceiver.class);
+            sendBroadcast(broadcastIntent);
+        }
 
 //        setAlarmTimer();
 //        stopTimerTask();
@@ -276,16 +282,22 @@ public class MainService extends Service {
 
                 boolean isChatForeground = false;
                 boolean isMainForeground = false;
+                boolean isPikaForeground = false;
 
                 isChatForeground = Function.isForegroundActivity(getApplicationContext(), ChatActivity.class);
                 isMainForeground = Function.isForegroundActivity(getApplicationContext(), MainActivity.class);
+                isPikaForeground = Function.isForegroundActivity(getApplicationContext(), PikachuDetectorActivity.class);
 
                 switch(signal){
 
                     //피카츄 사진이 다 분석되었다는 알림
                     //pikachu_output/success or fail/filename
                     case "pikachu_output":
-                        sendMsgToPikachuDetector(line);
+
+                        //해당 화면을 보고 있을 때에만 결과를 띄워준다
+                        if(isPikaForeground){
+                            sendMsgToPikachuDetector(line);
+                        }
 
                         break;
                     //방이 만들어졌다는 알림
