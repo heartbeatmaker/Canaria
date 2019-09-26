@@ -44,9 +44,20 @@
         android:layout_alignParentBottom="true"
         android:id="@+id/dialog_linearLayout"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
+        android:layout_height="180dp"
         android:orientation="vertical"
         android:padding="10dp">
+
+
+        <Button
+            android:id="@+id/set_btn"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="SET as a profile Image"
+            android:background="@color/colorPrimary"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:visibility="invisible"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -67,14 +78,17 @@
                 android:layout_weight="1"
                 android:text="GALLERY" />
 
+            <Button
+                android:id="@+id/random_btn"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="Random\nFace" />
+
+
         </LinearLayout>
 
-        <Button
-            android:id="@+id/dialog_cancel_btn"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:text="CANCEL" />
+
 
     </LinearLayout>
 

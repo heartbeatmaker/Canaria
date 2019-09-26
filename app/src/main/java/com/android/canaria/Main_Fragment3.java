@@ -33,6 +33,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -81,6 +82,8 @@ public class Main_Fragment3 extends Fragment {
     Switch alarm_switch;
 
     String previous_fileName;
+    String random_face_filename;
+    String random_image_path;
 
     int serverResponseCode = 0;
     ProgressDialog dialog = null;
@@ -172,16 +175,15 @@ public class Main_Fragment3 extends Fragment {
 
                     //카메라로 사진찍기 or 갤러리에서 사진 가져오기 선택
                     AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-                    View view = LayoutInflater.from(getActivity()).inflate(R.layout.camera_dialog, null, false);
+                    final View view = LayoutInflater.from(getActivity()).inflate(R.layout.camera_dialog, null, false);
                     builder.setView(view);
 
                     final ProgressBar progressBar = (ProgressBar)view.findViewById(R.id.dialog_progressBar);
                     progressBar.setIndeterminate(true);
                     progressBar.getIndeterminateDrawable().setColorFilter(Color.WHITE, PorterDuff.Mode.MULTIPLY); //색 변경
 
-                    ImageView profile_imageView = (ImageView)view.findViewById(R.id.profile_imageView);
-                    String profileImage_path = "http://15.164.193.65/uploads/"+Function.getString(getActivity(), "profileImage");
-
+                    final ImageView profile_imageView = (ImageView)view.findViewById(R.id.profile_imageView);
+                    final String profileImage_path = "http://15.164.193.65/uploads/"+Function.getString(getActivity(), "profileImage");
 
                     Glide.with(view).asBitmap().load(profileImage_path)
                             .listener(new RequestListener<Bitmap>() {
@@ -201,15 +203,38 @@ public class Main_Fragment3 extends Fragment {
 
                     final Button camera = (Button) view.findViewById(R.id.camera_btn);
                     final Button gallery = (Button) view.findViewById(R.id.gallery_btn);
-                    Button cancel_btn = (Button)view.findViewById(R.id.dialog_cancel_btn);
+                    final Button random_face_btn = (Button) view.findViewById(R.id.random_btn);
+                    final Button set_btn = (Button)view.findViewById(R.id.set_btn);
 
                     final AlertDialog dialog = builder.create();
 
-                    cancel_btn.setOnClickListener(new View.OnClickListener() {
+
+                    //방금 누른 random face를 사용자가 set 하면
+                    set_btn.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
 
-                            dialog.dismiss();
+                            //다이얼로그 바깥 화면의 프로필 이미지를 변경한다
+                            random_image_path = "http://15.164.193.65/uploads/"+random_face_filename;
+                            Glide.with(view).asBitmap().load(random_image_path).into(profileImage_imageView);
+
+                            //새로운 사진 파일 이름을 shared preference 에 저장
+                            Function.setString(getActivity(), "profileImage", random_face_filename);
+
+                        }
+                    });
+
+
+                    //random face 버튼을 누르면 -> 얼굴 사진이 랜덤으로 화면에 뜬다
+                    random_face_btn.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            set_btn.setVisibility(View.VISIBLE);
+
+                            int rand_number = (int)(Math.random()*82) +1 ;
+                            random_face_filename = "face_"+rand_number+".jpg";
+                            random_image_path = "http://15.164.193.65/uploads/"+random_face_filename;
+                            Glide.with(view).asBitmap().load(random_image_path).into(profile_imageView);
                         }
                     });
 
