@@ -273,7 +273,7 @@ public class MainService extends Service {
                     //맨 앞 문자열: 클라이언트에게 보내는 신호(어떤 행동을 해라)
                     //그다음부터는 화면에 띄워줄 데이터
                     String line = bufferedReader.readLine();
-                    Log.d(TAG, "readMsg(). message: "+line);
+                    Log.d("방나감", "readMsg(). message: "+line);
 
                     String[] line_array = line.split("/");
                     String signal = line_array[0];
@@ -677,6 +677,155 @@ public class MainService extends Service {
                                 }
                                 Log.d("초대", "MainService) 채팅화면으로 roomInfo 보내기 직전. roomInfo_plus:"+msg_roomInfo);
                                 sendMsgToChat(msg_roomInfo);
+
+
+                            }else{ //채팅방이 일치하지 않을 때
+                                // (이 메시지 = 다른 방과 관련된 메시지)
+
+                                //채팅 화면으로 메시지를 전달해서는 안 된다
+                            }
+
+                        }else if(isMainForeground){ //사용자가 메인화면을 보고 있다면
+
+                            //방목록 어댑터를 업데이트 하라고 메시지를 보낸다
+                            sendMsgToMain("inserted/");
+
+                        }
+
+
+
+                        break;
+
+                    case "member_out": //참여하던 방에서 누가 나갔다는 메시지
+                        //member_out/방id/떠난사람 id
+
+                        int out_roomId = Integer.valueOf(line_array[1]);
+                        int out_memberId = Integer.valueOf(line_array[2]);
+
+                        Log.d("방나감", "누군가 방을 나갔다고 함. 나간사람 id = "+out_memberId+" / 방 id = "+out_roomId);
+
+                        /*-------1. db 업데이트(방 정보)--------*/
+                        String out_members_string = "";
+                        String out_roomName_origin = "";
+                        Cursor out_cursor = dbHelper.db.rawQuery("SELECT room_name, members FROM chat_rooms WHERE room_id='" + out_roomId + "';", null);
+                        while (out_cursor.moveToNext()) {
+                            out_roomName_origin = out_cursor.getString(0);
+                            out_members_string = out_cursor.getString(1);
+                        }
+
+                        String[] out_memberInfo_array = out_members_string.split(";");
+                        int out_numberOfMembers_origin = out_memberInfo_array.length/2; //기존 채팅 참여자 수
+
+                        //원래 있던 사용자를 멤버정보에서 삭제해야함 (id로 찾음 -> id와 닉넴을 동시 삭제)
+                        int index = 10000;
+                        for(int i=0; i<out_memberInfo_array.length; i++){
+
+                            if(i%2==0){ //참여자 목록에서 나간사람의 id를 찾는다
+                                if(Integer.valueOf(out_memberInfo_array[i]) == out_memberId){
+                                    index = i;
+                                    break;
+                                }
+                            }
+                        }
+
+                        String out_members_updated = "";
+                        for(int i=0; i<out_memberInfo_array.length; i++){
+
+                            if(i==index || i==index+1){ }else{
+                                out_members_updated += out_memberInfo_array[i]+";";
+                            }
+                        }
+
+                        //마지막 ';' 제거
+                        out_members_updated = out_members_updated.substring(0, out_members_updated.length()-1);
+
+                        Log.d("방나감", "memberInfo 업데이트: "+out_members_string+" -> "+out_members_updated);
+
+
+                        String out_roomName_updated = out_roomName_origin; //원래 단체채팅인 경우: 기존이름(group chat이나 사용자 지정 이름)에서 변하지 않는다
+
+                        if(out_numberOfMembers_origin == 2){ //원래 1대1 채팅인데 거기서 상대방이 나갔다면 -> 현재 1명
+                            out_roomName_updated = "No users"; //방 이름 = No users
+                        }else if(out_numberOfMembers_origin == 3){ //3명짜리 단체채팅에서 한 명 나간 상황 -> 현재 2명
+
+                            //이름을 지정한 적이 있다면 그 이름 그대로 남겨둠
+
+                            //지정한 적 없을 경우 -> 채팅방 이름을 상대방의 이름으로 변경
+                            if(out_roomName_origin.equals("Group chat")){
+
+                                String[] out_memberInfo_updated = out_members_updated.split(";");
+                                for(int i=0; i<out_memberInfo_updated.length; i++){
+
+                                    if(i%2==1){ //사용자 2명중에서, 자신의 이름과 다른 이름 = 상대방 이름 = 방 이름
+                                        if(!out_memberInfo_updated[i].equals(username)){
+                                            out_roomName_updated = out_memberInfo_updated[i];
+                                            break;
+                                        }
+                                    }
+                                }
+
+                            }
+                        }
+
+                        Log.d("방나감", "db에 저장하기 직전. roomName: "+out_roomName_origin+" -> "+out_roomName_updated);
+
+                        //db 업데이트(방이름, 멤버정보)
+                        dbHelper.db.execSQL("UPDATE chat_rooms SET room_name = '"+out_roomName_updated+"', members='" + out_members_updated + "' WHERE room_id='" + out_roomId + "';");
+
+                        //방 정보가 잘 업데이트 되었는지 확인
+                        dbHelper.get_chatRoomInfo(out_roomId);
+
+
+                        /*-------2. 방 목록 화면 업데이트--------*/
+                        //방목록 아이템을 업데이트한다(roomName, 인원)
+
+                        int out_total_numberOfMembers = out_numberOfMembers_origin - 1;
+                        try{
+                            for(RoomListItem room : Main_Fragment2.roomItemList){
+                                if(room.getRoomId() == out_roomId){
+
+                                    room.setRoomName(out_roomName_updated);
+                                    //방 인원이 3명 미만이면, 화면에 보여주지 않음 - RoomListAdapter에서 처리
+                                    room.setNumberOfMembers(out_total_numberOfMembers);
+                                }
+                            }
+                        }catch (Exception e){
+                            //앱이 꺼져있는데, 서비스가 돌면서 roomItemList를 업데이트 하면 오류가 날 수 있다
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            Log.d(TAG,ex);
+                        }
+
+
+
+                        //사용자가 현재 채팅화면을 보고 있을 때
+                        if(isChatForeground){
+
+                            //메인화면의 roomItemList를 업데이트한다 - 위에서 완료
+                            //insert 메시지는 보내지 않는다. 이 채팅화면이 종료되면, 방목록화면이 onResume() 되면서 adapter가 refresh된다
+
+
+                            //지금 보고있는 채팅방 = 메시지가 발신된 채팅방일 때
+                            //(이 메시지 = 이 방에서 보낸 메시지)
+                            if(ChatActivity.roomId == out_roomId){
+                                /*-------3. 채팅화면 제목 업데이트--------*/
+                                /*-------4. 채팅화면의 멤버목록 업데이트--------*/
+
+
+                                //ChatActivity에 방 정보를 전달한다
+                                String out_msg_roomInfo = "";
+                                if(out_total_numberOfMembers <= 2){ //1대1 채팅, 혼자방의 경우: 방 인원을 발송하지 않는다
+
+                                    //roomInfo_minus/방이름/나간사람id
+                                    out_msg_roomInfo = "roomInfo_minus/"+out_roomName_updated+"/"+out_memberId;
+                                }else{
+                                    //roomInfo_minus/방이름 (인원)/나간사람id
+                                    out_msg_roomInfo = "roomInfo_minus/"+out_roomName_updated+" ("+out_total_numberOfMembers+")"+"/"+out_memberId;
+                                }
+                                Log.d("방나감", "MainService) 채팅화면으로 roomInfo 보내기 직전. roomInfo_plus:"+out_msg_roomInfo);
+                                sendMsgToChat(out_msg_roomInfo);
 
 
                             }else{ //채팅방이 일치하지 않을 때

@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -39,6 +40,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.canaria.connect_to_server.HttpRequest;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -221,6 +223,25 @@ public class Main_Fragment3 extends Fragment {
                             //새로운 사진 파일 이름을 shared preference 에 저장
                             Function.setString(getActivity(), "profileImage", random_face_filename);
 
+
+                            Log.d("image", "사용자가 고른 얼굴사진을 프로필사진으로 저장하라고 서버에 알려줘야 함");
+                            //이 사진을 사용자의 프로필사진으로 저장하라고 서버에 알려줘야 한다
+                            ContentValues data = new ContentValues();
+                            data.put("set_profile", "Y");
+                            data.put("face_filename", random_face_filename);
+                            data.put("user_id", user_id);
+                            data.put("username", username);
+
+                            //result로 받는 것: 검색된 사용자의 닉네임, 사진, id
+                            String response = "";
+
+                            try {
+                                response = new HttpRequest("image.php", data).execute().get();
+                            } catch (Exception e) {
+                                Log.d("image", "Error: "+e);
+                            }
+
+                            Log.d("image", "서버의 응담 = "+response);
                         }
                     });
 
@@ -586,6 +607,13 @@ public class Main_Fragment3 extends Fragment {
         } // End else block
 
     }
+
+
+
+
+
+
+
 
 
 

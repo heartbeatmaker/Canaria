@@ -36,6 +36,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.canaria.connect_to_server.MainService;
 import com.android.canaria.db.DBHelper;
 import com.android.canaria.recyclerView.MessageItem;
 import com.android.canaria.recyclerView.RoomListAdapter;
@@ -133,7 +134,7 @@ public class Main_Fragment2 extends Fragment implements View.OnCreateContextMenu
 
 
                 //방 이름 수정하는 다이얼로그가 나타남
-                AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
                 View view = LayoutInflater.from(getActivity()).inflate(R.layout.editroom_dialog, null, false);
                 builder.setView(view);
 
@@ -178,8 +179,36 @@ public class Main_Fragment2 extends Fragment implements View.OnCreateContextMenu
 
                 return true;
             case 122: //방 나가기
-                int item_position = item.getGroupId();
-                int item_roomId = roomItemList.get(item_position).getRoomId();
+                final int item_position = item.getGroupId();
+                final int item_roomId = roomItemList.get(item_position).getRoomId();
+
+
+                //진짜 방을 나갈 것인지 물어보는 다이얼로그가 뜬다
+                AlertDialog.Builder builder1 = new AlertDialog.Builder(getContext());
+                builder1.setTitle("Are you sure to leave this room?").setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                }).setPositiveButton("Leave", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+
+                        //나가기 버튼을 누르면
+
+                        //1. 방 목록에서 이 방 삭제, 리사이클러뷰 업데이트
+                        roomItemList.remove(item_position);
+                        adapter.notifyItemRemoved(item_position);
+
+                        //2. sqlite 에서 이 방 데이터 삭제
+                        db.execSQL("DELETE FROM chat_rooms WHERE room_id='" + item_roomId + "';");
+
+                        //3. 서버에 메시지 전달: leave/방 id
+                        sendMsg("leave/"+item_roomId);
+
+                        dialog.dismiss();
+                    }
+                }).setCancelable(false).show();
 
                 return true;
 
@@ -189,6 +218,12 @@ public class Main_Fragment2 extends Fragment implements View.OnCreateContextMenu
     }
 
 
+    void sendMsg(String msg){
+        Intent intent = new Intent(getActivity(), MainService.class);
+        intent.putExtra("message", msg);
+
+        getActivity().startService(intent);
+    }
 
 
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {

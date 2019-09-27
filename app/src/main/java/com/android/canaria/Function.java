@@ -358,68 +358,96 @@ public class Function {
         cursor.moveToFirst();
         String memberInfo = cursor.getString(0);
 
+        Log.d("방나감", "memberInfo="+memberInfo);
+
         int count = 0;
         String memberInfo_string = "";
         String[] memberInfo_split = memberInfo.split(";");
-        for(int i=0; i<memberInfo_split.length; i++){
 
-            if(i%2 == 0){ //i가 짝수일 때: id
-                int member_id = Integer.valueOf(memberInfo_split[i]);
+        if(memberInfo_split.length == 2){ //이 방에 나 혼자일 경우
 
-                //자신의 id는 포함하지 않는다
-                if(member_id != Integer.valueOf(getString(context, "user_id"))){
-                    memberInfo_string += member_id +";";
-                    count += 1;
+            try{
+
+                List<String> urls_list = new ArrayList<String>();
+                urls_list.add(domain+"/uploads/person.jpg");
+
+                collageView
+//                    .useCards(true)
+                        .photoMargin(0)
+                        .photoPadding(3)
+                        .placeHolder(R.drawable.bird)
+                        .useFirstAsHeader(false) // makes first photo fit device widtdh and use full line
+                        .defaultPhotosForLine(2) // sets default photos number for line of photos (can be changed by program at runtime)
+                        .loadPhotos(urls_list); // here you can use Array/List of photo urls or array of resource ids
+            }catch (Exception e){
+
+            }
+
+        }else{ //이 방에 다른 사용자가 있을 경우
+
+            for(int i=0; i<memberInfo_split.length; i++){
+
+                if(i%2 == 0){ //i가 짝수일 때: id
+                    int member_id = Integer.valueOf(memberInfo_split[i]);
+
+                    //자신의 id는 포함하지 않는다
+                    if(member_id != Integer.valueOf(getString(context, "user_id"))){
+                        memberInfo_string += member_id +";";
+                        count += 1;
+                    }
+
                 }
 
+                if(count == 4){ //4명의 id만 필요하다. 방목록에는 최대 4인의 프로필 사진이 들어간다
+                    break;
+                }
             }
 
-            if(count == 4){ //4명의 id만 필요하다. 방목록에는 최대 4인의 프로필 사진이 들어간다
-                break;
-            }
-        }
-
-        //마지막 ';' 제거
-        memberInfo_string = memberInfo_string.substring(0, memberInfo_string.length()-1);
+            //마지막 ';' 제거
+            memberInfo_string = memberInfo_string.substring(0, memberInfo_string.length()-1);
 
 
 
-        //2. php 서버로 보낸다 -> 각 참여자의 프로필 사진 url을 응답받는다
-        ContentValues data = new ContentValues();
-        data.put("user_id_group", memberInfo_string);
+            //2. php 서버로 보낸다 -> 각 참여자의 프로필 사진 url을 응답받는다
+            ContentValues data = new ContentValues();
+            data.put("user_id_group", memberInfo_string);
 
-        try {
-            //String response 를 jsonArray 로 파싱한다
-            final String response = new HttpRequest("image.php", data).execute().get();
-            JSONArray jsonArray = new JSONArray(response);
-
-
-            List<String> urls_list = new ArrayList<String>();
-            //3. collageView에 glide로 프로필 사진을 넣는다 -- 썸네일을 가져온다
-            for(int k=0; k<jsonArray.length(); k++){
-
-                String url = domain+"/uploads_thumb/"+jsonArray.getString(k);
-                urls_list.add(url);
-
-                Log.d("프로필", "url="+url);
-
-                RequestOptions options = new RequestOptions().placeholder(R.drawable.user);
-
-            }
+            try {
+                //String response 를 jsonArray 로 파싱한다
+                final String response = new HttpRequest("image.php", data).execute().get();
+                JSONArray jsonArray = new JSONArray(response);
 
 
-            collageView
+                List<String> urls_list = new ArrayList<String>();
+                //3. collageView에 glide로 프로필 사진을 넣는다 -- 썸네일을 가져온다
+                for(int k=0; k<jsonArray.length(); k++){
+
+                    String url = domain+"/uploads_thumb/"+jsonArray.getString(k);
+                    urls_list.add(url);
+
+                    Log.d("프로필", "url="+url);
+
+                    RequestOptions options = new RequestOptions().placeholder(R.drawable.user);
+
+                }
+
+
+                collageView
 //                    .useCards(true)
-                    .photoMargin(0)
-                    .photoPadding(3)
-                    .placeHolder(R.drawable.bird)
-                    .useFirstAsHeader(false) // makes first photo fit device widtdh and use full line
-                    .defaultPhotosForLine(2) // sets default photos number for line of photos (can be changed by program at runtime)
-                    .loadPhotos(urls_list); // here you can use Array/List of photo urls or array of resource ids
+                        .photoMargin(0)
+                        .photoPadding(3)
+                        .placeHolder(R.drawable.bird)
+                        .useFirstAsHeader(false) // makes first photo fit device widtdh and use full line
+                        .defaultPhotosForLine(2) // sets default photos number for line of photos (can be changed by program at runtime)
+                        .loadPhotos(urls_list); // here you can use Array/List of photo urls or array of resource ids
 
-        } catch (Exception e) {
-            Log.d("tag", "Error: "+e);
+            } catch (Exception e) {
+                Log.d("tag", "Error: "+e);
+            }
+
         }
+
+
 
 
     }

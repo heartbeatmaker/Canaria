@@ -223,7 +223,7 @@ public class DBHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = getReadableDatabase();
         String result = "";
 
-        Log.d("초대", "get_chatRoomInfo. roomId = "+roomId);
+        Log.d("방나감", "get_chatRoomInfo. roomId = "+roomId);
 
         Cursor cursor = db.rawQuery("SELECT * FROM chat_rooms WHERE room_id='" + roomId + "';", null);
         while (cursor.moveToNext()) {

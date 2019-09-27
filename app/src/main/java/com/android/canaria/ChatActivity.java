@@ -1342,7 +1342,35 @@ public class ChatActivity extends AppCompatActivity{
                     });
 
                     break;
+                case "roomInfo_minus": //누군가 방을 나갔다는 알림이 왔을 때, 화면에 보이는 방 정보를 업데이트한다
 
+                    //roomInfo_minus/방이름 (인원)/나간사람 id
+                    //roomInfo_minus/방이름/나간사람 id - 2명 이하일 때
+
+                    final String __roomInfo_atTitleBar = message_array[1];
+                    final int out_member_id = Integer.valueOf(message_array[2]); //나간 사람의 아이디
+
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+
+                            //drawerLayout에 있는 참여자 목록에서 나간 사람을 제거한다
+                            int index = 1000;
+                            for(int k=0; k<memberList.size(); k++){
+                                int random_friend_id = memberList.get(k).getFriendId();
+                                if(random_friend_id == out_member_id){
+                                    index = k;
+                                }
+                            }
+                            memberList.remove(index);
+                            members_adapter.notifyItemRemoved(index);
+
+                            //채팅방 상단의 방 제목, 인원을 업데이트한다
+                            actionBar.setTitle(__roomInfo_atTitleBar);
+                        }
+                    });
+
+                    break;
                 case "msg":
 //                    [텍스트] msg/roomId/sender_id/sender_username/message
 //                    [이미지] msg/roomId/sender_id/sender_username/image!-!파일이름1;파일이름2;파일이름3
