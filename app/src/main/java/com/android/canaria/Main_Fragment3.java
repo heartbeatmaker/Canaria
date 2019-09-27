@@ -216,14 +216,6 @@ public class Main_Fragment3 extends Fragment {
                         @Override
                         public void onClick(View v) {
 
-                            //다이얼로그 바깥 화면의 프로필 이미지를 변경한다
-                            random_image_path = "http://15.164.193.65/uploads/"+random_face_filename;
-                            Glide.with(view).asBitmap().load(random_image_path).into(profileImage_imageView);
-
-                            //새로운 사진 파일 이름을 shared preference 에 저장
-                            Function.setString(getActivity(), "profileImage", random_face_filename);
-
-
                             Log.d("image", "사용자가 고른 얼굴사진을 프로필사진으로 저장하라고 서버에 알려줘야 함");
                             //이 사진을 사용자의 프로필사진으로 저장하라고 서버에 알려줘야 한다
                             ContentValues data = new ContentValues();
@@ -232,7 +224,7 @@ public class Main_Fragment3 extends Fragment {
                             data.put("user_id", user_id);
                             data.put("username", username);
 
-                            //result로 받는 것: 검색된 사용자의 닉네임, 사진, id
+                            //result로 받는 것: 카피된 얼굴 이미지 filename or failed(실패했을 경우)
                             String response = "";
 
                             try {
@@ -242,6 +234,25 @@ public class Main_Fragment3 extends Fragment {
                             }
 
                             Log.d("image", "서버의 응담 = "+response);
+
+                            if(response.length() == 0){
+                                Toast.makeText(getActivity(), "An error occurred. Please try again", Toast.LENGTH_SHORT).show();
+
+                            } else if(response.equals("failed")){
+                                Toast.makeText(getActivity(), "An error occurred. Please try again later", Toast.LENGTH_SHORT).show();
+
+                            }else{ //성공 시
+
+                                //다이얼로그 바깥 화면의 프로필 이미지를 변경한다
+                                random_image_path = "http://15.164.193.65/uploads/"+response;
+                                Log.d("image", "profile image path = "+random_image_path);
+
+                                Glide.with(view).asBitmap().load(random_image_path).into(profileImage_imageView);
+
+                                //새로운 사진 파일 이름을 shared preference 에 저장
+                                Function.setString(getActivity(), "profileImage", response);
+
+                            }
                         }
                     });
 
@@ -254,7 +265,7 @@ public class Main_Fragment3 extends Fragment {
 
                             int rand_number = (int)(Math.random()*82) +1 ;
                             random_face_filename = "face_"+rand_number+".jpg";
-                            random_image_path = "http://15.164.193.65/uploads/"+random_face_filename;
+                            random_image_path = "http://15.164.193.65/face_images/"+random_face_filename;
                             Glide.with(view).asBitmap().load(random_image_path).into(profile_imageView);
                         }
                     });
