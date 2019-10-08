@@ -22,6 +22,7 @@ import android.widget.Toast;
 
 import com.android.canaria.connect_to_server.HttpRequest;
 import com.android.canaria.recyclerView.FriendListItem;
+import com.bumptech.glide.Glide;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -150,6 +151,7 @@ public class FriendFinder_Fragment2 extends Fragment {
 //            friend_id;
             String friend_username = "";
             String friend_profileImage = "";
+            String url = "http://15.164.193.65/uploads_thumb/";
             try{
 
                 JSONObject result_object = new JSONObject(response);
@@ -157,7 +159,8 @@ public class FriendFinder_Fragment2 extends Fragment {
                 result = result_object.getString("result");
                 friend_id = result_object.getInt("friend_id");
                 friend_username = result_object.getString("friend_username");
-//                friend_profileImage = result_object.getString("friend_profileImage");
+                friend_profileImage = result_object.getString("friend_profileImage");
+                url += friend_profileImage;
 
             }catch (Exception e){
                 Log.d("tag"+this.getClass().getName(), " Error: "+e);
@@ -173,7 +176,7 @@ public class FriendFinder_Fragment2 extends Fragment {
                     addBtn.setVisibility(View.GONE);
 
                     //친구의 사진을 보여준다
-//                    setProfileImageAtView(input);
+                    Glide.with(getActivity()).load(url).into(friend_profileImage_imageView);
                     result_textView.setText(friend_username);
                     result_small_textView.setText("is your friend!");
                     break;
@@ -199,7 +202,7 @@ public class FriendFinder_Fragment2 extends Fragment {
                     addBtn.setVisibility(View.VISIBLE);
 
                     //친구의 사진을 보여준다
-//                    setProfileImageAtView(input);
+                    Glide.with(getActivity()).load(url).into(friend_profileImage_imageView);
                     result_textView.setText(friend_username);
 
 
@@ -254,7 +257,7 @@ public class FriendFinder_Fragment2 extends Fragment {
         }
 
         if(response.equals("success")){
-            Toast.makeText(getActivity(), "친구 추가되었습니다", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getActivity(), "Added", Toast.LENGTH_SHORT).show();
 
         }else{ //오류가 발생했다고 표시해주기
             friend_profileImage_imageView.setVisibility(View.GONE);

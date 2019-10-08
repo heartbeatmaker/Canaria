@@ -187,6 +187,7 @@ public class Main_Fragment3 extends Fragment {
                     final ImageView profile_imageView = (ImageView)view.findViewById(R.id.profile_imageView);
                     final String profileImage_path = "http://15.164.193.65/uploads/"+Function.getString(getActivity(), "profileImage");
 
+
                     Glide.with(view).asBitmap().load(profileImage_path)
                             .listener(new RequestListener<Bitmap>() {
                                 @Override
@@ -202,6 +203,7 @@ public class Main_Fragment3 extends Fragment {
                                 }
                             })
                             .into(profile_imageView);
+
 
                     final Button camera = (Button) view.findViewById(R.id.camera_btn);
                     final Button gallery = (Button) view.findViewById(R.id.gallery_btn);

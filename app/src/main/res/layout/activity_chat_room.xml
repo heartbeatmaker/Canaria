@@ -69,15 +69,15 @@
                     android:layout_toRightOf="@id/chat_cameraBtn"/>
 
 
-                <ImageButton
-                    android:id="@+id/chat_videoBtn"
-                    android:layout_width="70dp"
-                    android:layout_height="70dp"
-                    android:layout_marginLeft="30dp"
-                    android:adjustViewBounds="true"
-                    android:scaleType="fitCenter"
-                    android:background="@drawable/ic_video_call_black_24dp"
-                    android:layout_toRightOf="@id/chat_galleryBtn"/>
+                <!--<ImageButton-->
+                    <!--android:id="@+id/chat_videoBtn"-->
+                    <!--android:layout_width="70dp"-->
+                    <!--android:layout_height="70dp"-->
+                    <!--android:layout_marginLeft="30dp"-->
+                    <!--android:adjustViewBounds="true"-->
+                    <!--android:scaleType="fitCenter"-->
+                    <!--android:background="@drawable/ic_video_call_black_24dp"-->
+                    <!--android:layout_toRightOf="@id/chat_galleryBtn"/>-->
 
             </RelativeLayout>
 

@@ -127,6 +127,7 @@ public class RoomListAdapter extends RecyclerView.Adapter<RoomListAdapter.ViewHo
 //            menu.setHeaderTitle();
             menu.add(this.getAdapterPosition(), 121,0, "Edit Chatroom Name");
             menu.add(this.getAdapterPosition(), 122,1, "Leave");
+            menu.add(this.getAdapterPosition(), 123,0, "More.."); // - 필요없음
         }
 
 

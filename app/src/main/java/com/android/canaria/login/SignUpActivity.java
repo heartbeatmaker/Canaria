@@ -243,7 +243,7 @@ public class SignUpActivity extends AppCompatActivity {
                             isContentValid = true;
                         }else{
                             password_warning.setVisibility(View.VISIBLE);
-                            password_warning.setText("Passwords must be 6 to 20 characters of alphabets and numbers");
+                            password_warning.setText("Passwords should be between 6 - 20 characters, including alphabets and numbers and special characters");
                             isContentValid = false;
                         }
 
@@ -637,7 +637,7 @@ public class SignUpActivity extends AppCompatActivity {
                 SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
                 SharedPreferences.Editor editor = pref.edit();
                 editor.putString("user_id", user_id);
-                editor.putString("username", username);
+                editor.putString("username", username_input);
                 editor.putString("email", email_input);
                 editor.commit();
 

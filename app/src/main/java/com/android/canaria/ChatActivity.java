@@ -179,7 +179,7 @@ public class ChatActivity extends AppCompatActivity{
         pickAction_relativeLayout = (RelativeLayout) findViewById(R.id.chat_pickAction_relativeLayout);
         gallery_imageBtn = (ImageButton)findViewById(R.id.chat_galleryBtn);
         takePic_imageBtn = (ImageButton)findViewById(R.id.chat_cameraBtn);
-        videoBtn = (ImageButton)findViewById(R.id.chat_videoBtn);
+//        videoBtn = (ImageButton)findViewById(R.id.chat_videoBtn);
         cancel_btn = (ImageButton)findViewById(R.id.chat_cancelBtn);
 
 
@@ -366,39 +366,39 @@ public class ChatActivity extends AppCompatActivity{
 
 
 
-        videoBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-
-                ImagePicker.create(ChatActivity.this)
-//                        .returnMode(ReturnMode.ALL) // set whether pick and / or camera action should return immediate result or not.
-                        .folderMode(true) // folder mode (false by default)
-                        .toolbarFolderTitle("Folder") // folder selection title
-                        .toolbarImageTitle("Tap to select") // image selection title
-                        .toolbarArrowColor(Color.WHITE) // Toolbar 'up' arrow color
-                        .includeVideo(true) // Show video on image picker
-//                        .single() // single mode
-                        .multi() // multi mode (default mode)
-                        .limit(10) // max images can be selected (99 by default)
-                        .showCamera(true) // show camera or not (true by default)
-                        .imageDirectory("Camera") // directory name for captured image  ("Camera" folder by default)
-//                        .origin(images) // original selected images, used in multi mode
-//                        .exclude(images) // exclude anything that in image.getPath()
-//                        .excludeFiles(files) // same as exclude but using ArrayList<File>
-//                        .theme(R.style.CustomImagePickerTheme) // must inherit ef_BaseTheme. please refer to sample
-                        .enableLog(false) // disabling log
-//                        .imageLoader(new GrayscaleImageLoder()) // custom image loader, must be serializeable
-                        .start(PICK_VIDEO_REQUEST); // start image picker activity with request code
-
-
-                //뷰 안보이게 처리
-                pickAction_relativeLayout.setVisibility(View.INVISIBLE);
-                input_linearLayout.setVisibility(View.VISIBLE);
-                isPlusBtnActive = false;
-
-
-            }
-        });
+//        videoBtn.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//
+//                ImagePicker.create(ChatActivity.this)
+////                        .returnMode(ReturnMode.ALL) // set whether pick and / or camera action should return immediate result or not.
+//                        .folderMode(true) // folder mode (false by default)
+//                        .toolbarFolderTitle("Folder") // folder selection title
+//                        .toolbarImageTitle("Tap to select") // image selection title
+//                        .toolbarArrowColor(Color.WHITE) // Toolbar 'up' arrow color
+//                        .includeVideo(true) // Show video on image picker
+////                        .single() // single mode
+//                        .multi() // multi mode (default mode)
+//                        .limit(10) // max images can be selected (99 by default)
+//                        .showCamera(true) // show camera or not (true by default)
+//                        .imageDirectory("Camera") // directory name for captured image  ("Camera" folder by default)
+////                        .origin(images) // original selected images, used in multi mode
+////                        .exclude(images) // exclude anything that in image.getPath()
+////                        .excludeFiles(files) // same as exclude but using ArrayList<File>
+////                        .theme(R.style.CustomImagePickerTheme) // must inherit ef_BaseTheme. please refer to sample
+//                        .enableLog(false) // disabling log
+////                        .imageLoader(new GrayscaleImageLoder()) // custom image loader, must be serializeable
+//                        .start(PICK_VIDEO_REQUEST); // start image picker activity with request code
+//
+//
+//                //뷰 안보이게 처리
+//                pickAction_relativeLayout.setVisibility(View.INVISIBLE);
+//                input_linearLayout.setVisibility(View.VISIBLE);
+//                isPlusBtnActive = false;
+//
+//
+//            }
+//        });
 
 
 

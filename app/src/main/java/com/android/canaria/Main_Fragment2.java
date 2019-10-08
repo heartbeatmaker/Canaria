@@ -212,6 +212,14 @@ public class Main_Fragment2 extends Fragment implements View.OnCreateContextMenu
 
                 return true;
 
+            case 123: //방 hide
+                final int item_position_hide = item.getGroupId();
+                final int item_roomId_hide = roomItemList.get(item_position_hide).getRoomId();
+
+                roomItemList.remove(item_position_hide);
+                adapter.notifyItemRemoved(item_position_hide);
+
+                return true;
             default:
                 return super.onContextItemSelected(item);
         }
